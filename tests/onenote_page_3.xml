@@ -1,0 +1,86 @@
+<one:Page xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote" ID="{52649BB7-986D-453A-BBC0-99E2E9339D2C}{1}{E19548867697255241241120155643556087890953171}" name="My no tag page" dateTime="2024-06-14T07:59:04.000Z" lastModifiedTime="2024-06-14T08:01:17.000Z" pageLevel="1" isCurrentlyViewed="true" selected="partial" lang="en-US">
+  <one:QuickStyleDef index="0" name="PageTitle" fontColor="automatic" highlightColor="automatic" font="Calibri Light" fontSize="20.0" spaceBefore="0.0" spaceAfter="0.0" />
+  <one:QuickStyleDef index="1" name="p" fontColor="automatic" highlightColor="automatic" font="Calibri" fontSize="11.0" spaceBefore="0.0" spaceAfter="0.0" />
+  <one:QuickStyleDef index="2" name="h1" fontColor="#1E4E79" highlightColor="automatic" font="Calibri" fontSize="16.0" spaceBefore="0.0" spaceAfter="0.0" />
+  <one:QuickStyleDef index="3" name="h2" fontColor="#2E75B5" highlightColor="automatic" font="Calibri" fontSize="14.0" spaceBefore="0.0" spaceAfter="0.0" />
+  <one:PageSettings RTL="false" color="automatic">
+    <one:PageSize>
+      <one:Automatic />
+    </one:PageSize>
+    <one:RuleLines visible="false" />
+  </one:PageSettings>
+  <one:Title lang="en-US">
+    <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{15}{B0}" lastModifiedTime="2024-06-14T07:59:23.000Z" creationTime="2024-06-14T07:59:17.000Z" author="Vincent Debruycker" authorInitials="VD" lastModifiedBy="Vincent Debruycker" lastModifiedByInitials="VD" alignment="left" quickStyleIndex="0">
+      <one:T><![CDATA[My no tag page]]></one:T>
+    </one:OE>
+  </one:Title>
+  <one:Outline objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{62}{B0}" lastModifiedTime="2024-06-14T08:01:00.000Z" author="Vincent Debruycker" authorInitials="VD" lastModifiedBy="Vincent Debruycker" lastModifiedByInitials="VD">
+    <one:Position x="36.0" y="86.4000015258789" z="0" />
+    <one:Size width="540.0" height="364.9898376464844" />
+    <one:OEChildren>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{63}{B0}" lastModifiedTime="2024-06-14T08:00:28.000Z" creationTime="2024-06-14T08:00:28.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{65}{B0}" lastModifiedTime="2024-06-14T08:00:30.000Z" creationTime="2024-06-14T08:00:28.000Z" alignment="left" quickStyleIndex="2">
+        <one:T><![CDATA[What is Lorem Ipsum?]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{67}{B0}" lastModifiedTime="2024-06-14T08:00:28.000Z" creationTime="2024-06-14T08:00:28.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{69}{B0}" lastModifiedTime="2024-06-14T08:00:28.000Z" creationTime="2024-06-14T08:00:28.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{78}{B0}" lastModifiedTime="2024-06-14T08:00:39.000Z" creationTime="2024-06-14T08:00:39.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{100}{B0}" lastModifiedTime="2024-06-14T08:00:45.000Z" creationTime="2024-06-14T08:00:45.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{102}{B0}" lastModifiedTime="2024-06-14T08:00:49.000Z" creationTime="2024-06-14T08:00:45.000Z" alignment="left" quickStyleIndex="2">
+        <one:T><![CDATA[Where does it come from?]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{104}{B0}" lastModifiedTime="2024-06-14T08:00:45.000Z" creationTime="2024-06-14T08:00:45.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{106}{B0}" lastModifiedTime="2024-06-14T08:00:45.000Z" creationTime="2024-06-14T08:00:45.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of &quot;de Finibus Bonorum et Malorum&quot; (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, &quot;Lorem ipsum dolor sit amet..&quot;, comes from a line in section 1.10.32.]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{115}{B0}" lastModifiedTime="2024-06-14T08:00:54.000Z" creationTime="2024-06-14T08:00:54.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{112}{B0}" lastModifiedTime="2024-06-14T08:01:00.000Z" creationTime="2024-06-14T08:00:55.000Z" alignment="left" quickStyleIndex="3">
+        <one:T><![CDATA[Standard chunk]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{108}{B0}" lastModifiedTime="2024-06-14T08:00:45.000Z" creationTime="2024-06-14T08:00:45.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{110}{B0}" lastModifiedTime="2024-06-14T08:00:45.000Z" creationTime="2024-06-14T08:00:45.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from &quot;de Finibus Bonorum et Malorum&quot; by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{75}{B0}" lastModifiedTime="2024-06-14T08:00:39.000Z" creationTime="2024-06-14T08:00:39.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[]]></one:T>
+      </one:OE>
+    </one:OEChildren>
+  </one:Outline>
+  <one:Outline objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{119}{B0}" lastModifiedTime="2024-06-14T08:01:15.000Z" author="Vincent Debruycker" authorInitials="VD" lastModifiedBy="Vincent Debruycker" lastModifiedByInitials="VD">
+    <one:Position x="666.0" y="86.4000015258789" z="1" />
+    <one:Size width="172.1065979003906" height="32.95897674560547" />
+    <one:OEChildren>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{120}{B0}" lastModifiedTime="2024-06-14T08:01:09.000Z" creationTime="2024-06-14T08:01:04.000Z" alignment="left" quickStyleIndex="2">
+        <one:T><![CDATA[Side text panel]]></one:T>
+      </one:OE>
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{122}{B0}" lastModifiedTime="2024-06-14T08:01:15.000Z" creationTime="2024-06-14T08:01:11.000Z" alignment="left" quickStyleIndex="1">
+        <one:T><![CDATA[Content of the side text panel]]></one:T>
+      </one:OE>
+    </one:OEChildren>
+  </one:Outline>
+  <one:Outline objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{124}{B0}" lastModifiedTime="2024-06-14T08:01:17.000Z" selected="partial" author="Vincent Debruycker" authorInitials="VD" lastModifiedBy="Vincent Debruycker" lastModifiedByInitials="VD">
+    <one:Position x="738.0" y="176.4000091552734" z="2" />
+    <one:Size width="72.0" height="13.42771339416504" />
+    <one:OEChildren selected="partial">
+      <one:OE objectID="{4B0F4E48-8E2F-4B95-AFE3-1AFE97D5A226}{125}{B0}" lastModifiedTime="2024-06-14T08:01:17.000Z" creationTime="2024-06-14T08:01:17.000Z" alignment="left" quickStyleIndex="1" selected="partial">
+        <one:T selected="all"><![CDATA[]]></one:T>
+      </one:OE>
+    </one:OEChildren>
+  </one:Outline>
+</one:Page>
