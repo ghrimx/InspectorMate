@@ -214,7 +214,7 @@ Ready to contribute? Here's how to set up `InspectorMate` for local development.
 
 None yet. Why not be the first?
 
-💖 Help will be greatly appreciated for issue [#22](https://github.com/ghrimx/InspectorMate/issues/22#issue-2524060283)
+💖 Help will be greatly appreciated for issue [#01]()
 
 <!-- LICENSE -->
 ## License

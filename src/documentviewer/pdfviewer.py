@@ -64,10 +64,10 @@ class PdfViewWithLinks(QtPdfWidgets.QPdfView):
         self.link_model: QtPdf.QPdfLinkModel = None
 
     def mouseMoveEvent(self, event: QtGui.QMouseEvent | None) -> None:
-        return  # issue #22
+        return  # issue #01
 
     def mouseReleaseEvent(self, event: QtGui.QMouseEvent | None) -> None:
-        return  # issue #22
+        return  # issue #01
 
     def mousePressEvent(self, event: QtGui.QMouseEvent | None) -> None:      
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
@@ -164,7 +164,7 @@ class PdfViewer(ViewerWidget):
         self.pdfdocument = QtPdf.QPdfDocument(self.pdfView)
         self.linkmodel = QtPdf.QPdfLinkModel(self.pdfView)
 
-        # self.pdfView.setLinkModel(self.linkmodel)  # issue #22
+        # self.pdfView.setLinkModel(self.linkmodel)  # issue #01
 
         self.scroll_area.setWidget(self.pdfView)
 
@@ -192,7 +192,7 @@ class PdfViewer(ViewerWidget):
         self.linklist.clicked.connect(self.onLinkListClicked)
         linktab_idx = self.left_pane.addTab(self.linklist, "Link")
         
-        self.left_pane.setTabVisible(linktab_idx, False)  # remove this code to show the link tab > see issue #22
+        self.left_pane.setTabVisible(linktab_idx, False)  # remove this code to show the link tab > see issue #01
 
         # TOOLBAR
 
