@@ -70,6 +70,8 @@ InspectorMate is a Windows desktop application designed to streamline the workfl
 
 Document requests, referred to as "requests," are organized within a dedicated tab for streamlined access and handling.
 
+A "workspace" is a dedicated folder where all files and folders related to an inspection are systematically organized. When setting up a workspace, two primary folders are created: “Evidence” and “Notebook.” The “Evidence” folder serves as the repository for documents received in response to requests, from which the app will generate references. The “Notebook” folder is designated for note files, which have the “.phv” extension. Additionally, the “Notebook” folder contains a “.image” subfolder that stores all images copy-pasted into note files.
+
 ### Drag and Drop frames to organize the layout
 ![flexible-layout]
 
@@ -92,9 +94,15 @@ You can create a note for any item organized in a table by using the Note tab in
 ![annotate-table-item]
 
 ### Explore the content of the workspace folder and open any file in the default app
+
+Effortlessly navigate your workspace files and folder structure with the intuitive popup panel located on the left side of the interface. This panel provides a view of your directories within your workspace, making it easy to find what you need without hassle. The "Explorer" panel allows you to open any file with ease, using the default system applications. The "Notebook" tab offers quick access to your notes. To create new notes, right-click within the panel to open the context menu that provides additional options to manage your notes and files.
+
 ![explore-workspace]
 
 ### Write note
+
+Right-click within the "Explorer" or "Notebook" panel to open the context menu. Use the system file dialog to create folders and files. When you create a note, it is saved by default in the Notebook folder assigned during the workspace setup. Note files have the “.phv” extension, but they are standard HTML files that can be opened with any web browser.
+
 ![write-note]
 
 *For more examples, please refer to the [Documentation](documentation)*
