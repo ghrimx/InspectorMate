@@ -70,7 +70,10 @@ InspectorMate is a Windows desktop application designed to streamline the workfl
 
 Document requests, referred to as "requests," are organized within a dedicated tab for streamlined access and handling.
 
-A "workspace" is a dedicated folder where all files and folders related to an inspection are systematically organized. When setting up a workspace, two primary folders are created: “Evidence” and “Notebook.” The “Evidence” folder serves as the repository for documents received in response to requests, from which the app will generate references. The “Notebook” folder is designated for note files, which have the “.phv” extension. Additionally, the “Notebook” folder contains a “.image” subfolder that stores all images copy-pasted into note files.
+A *"workspace"* is a dedicated folder where all files and folders related to an inspection are systematically organized. When setting up a workspace, two primary folders are created: “Evidence” and “Notebook.” The “Evidence” folder serves as the repository for documents received in response to requests, from which the app will generate references. The “Notebook” folder is designated for note files, which have the “.phv” extension. Additionally, the “Notebook” folder contains a “.image” subfolder that stores all images copy-pasted into note files.
+
+### Create Workspace
+![create-workspace]
 
 ### Drag and Drop frames to organize the layout
 ![flexible-layout]
@@ -284,5 +287,6 @@ The best way to get in touch is to file an issue at https://github.com/ghrimx/In
 [pylama-url]: https://pypi.org/project/pylama/
 [project-status-progress]: https://img.shields.io/badge/Project--Status-In_Progress-orange?style=flat-square
 [project-status-maintanance]: https://img.shields.io/badge/Project--Status-Maintanance-blue?style=flat-square
+[create-workspace]: images/create-workspace.gif
 
 
