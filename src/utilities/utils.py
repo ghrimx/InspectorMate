@@ -34,9 +34,9 @@ def hexuuid():
     return uuid.uuid4().hex
 
 def createFolder(fpath: str):
-        _path = Path(fpath)
-        if not _path.exists():
-            _path.mkdir()
+    _path = Path(fpath)
+    if not _path.exists() and _path.parent.exists():
+        _path.mkdir()
             
 def open_file(filepath: Path|str) -> None:
     """Open file using the operating system default app"""
