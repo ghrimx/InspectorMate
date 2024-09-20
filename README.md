@@ -117,7 +117,7 @@ Right-click within the "Explorer" or "Notebook" panel to open the context menu. 
 ### OneNote COM error
 If the app failed to connect to OneNote try the following workarounds:
 
-1. Delete the registry key
+#### Workaround 1: Delete the registry key
 run regedit.exe, and navigate to
 ```HKEY_CLASSES_ROOT\TypeLib\{0EA692EE-BB50-4E3C-AEF0-356D91732725}```
 
@@ -144,7 +144,10 @@ if (Test-Path -Path registry::$path){
 }
 ```
 
-2. Clear the content of ```C:\Users\<username>\AppData\Local\Temp\gen_py```
+#### Workaround 2: Delete gen_py
+Clear the content of ```C:\Users\<username>\AppData\Local\Temp\gen_py```
+
+Type ```%temp%``` in the address bar in FileExplorer and delete the folder ```gen_py```.
 
 ### HyperLink warning in OneNote
 1. In the Registry Editor, locate the following subkey:
