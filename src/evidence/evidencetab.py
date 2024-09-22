@@ -306,8 +306,6 @@ class DocTab(BaseTab):
         self.doctable_model.layoutChanged.connect(self.doctable_proxy_model.invalidateFilter)
         self.doctable_model.layoutChanged.connect(lambda: self.doctable_proxy_model.setDynamicSortFilter(True))
 
-        self.doctable_model.dataChanged.connect(self.summary_tab.refreshWidget)
-
     def selectedIndex(self) -> QtCore.QModelIndex:
         return self.selected_index
 
