@@ -1,7 +1,6 @@
-from qtpy import (Qt, QtWidgets, QtGui, Slot)
-
+from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot)
 from db.database import AppDatabase
-from utilities.utils import createFolder
+from utilities.utils import (createFolder, open_file)
 
 class FileSystem(QtWidgets.QTreeView):
     def __init__(self, rootpath: str, parent=None):
@@ -25,9 +24,15 @@ class FileSystem(QtWidgets.QTreeView):
                                            "Delete",
                                            self,
                                            triggered=self.deleteItem)
-        
+
+        self.action_open_externally = QtGui.QAction(QtGui.QIcon(":share-forward-2-line"),
+                                                    "Open externally",
+                                                    self,
+                                                    triggered=self.openExternally)
+
         self.addAction(self.action_addfile)
         self.addAction(self.action_delete)
+        self.addAction(self.action_open_externally)
 
     def set_root_path(self, rootpath: str):
         index = self._model.setRootPath(rootpath)
@@ -57,3 +62,9 @@ class FileSystem(QtWidgets.QTreeView):
                 text = ""
                 f.write(text)
                 f.close()
+
+    @Slot()
+    def openExternally(self):
+        selected_index: QtCore.QModelIndex = self.selectionModel().currentIndex()
+        open_file(self._model.filePath(selected_index))
+
