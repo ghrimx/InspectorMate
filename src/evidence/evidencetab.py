@@ -318,7 +318,8 @@ class DocTab(BaseTab):
                                                  self.doctable_model.Fields.Title.index,
                                                  self.doctable_model.Fields.Note.index,
                                                  self.doctable_model.Fields.Reference.index,
-                                                 self.doctable_model.Fields.Subtitle.index])
+                                                 self.doctable_model.Fields.Subtitle.index,
+                                                 self.doctable_model.Fields.Filepath.index])
         self.doctable_proxy_model.invalidateFilter()
 
     @Slot()
