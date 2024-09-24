@@ -59,12 +59,14 @@ class TextEdit(QtWidgets.QTextEdit):
             createFolder(image_dir)
             image_path = f'{image_dir}/{uuid}.png'
 
-            image_saved = QtGui.QImage(image).save(image_path)
+            image_saved = QtGui.QImage(image).save(image_path, "PNG", 100)
             if not image_saved:
                 logger.error(f"Error saving image saved: {image_path}")
             
             document.addResource(QtGui.QTextDocument.ResourceType.ImageResource, QtCore.QUrl(image_path), image)
-            cursor.insertImage(image_path)
+
+            # insert image with relative path for web browser
+            cursor.insertImage(QtGui.QImage(image), f".images/{uuid}.png")
 
             # Add citation below the image
             # Get the Pixmap cacheKey from the Qsettings if cachekeys match then insert the citation along with the image
