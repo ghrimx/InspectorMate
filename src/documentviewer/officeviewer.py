@@ -58,8 +58,9 @@ class OfficeViewer(PdfViewer):
         converted_pdf = self.converter.pdf()
 
         if not isinstance(converted_pdf, Exception):
-            self._pdfdocument.load(str(converted_pdf))
-            self._pdfView.setDocument(self._pdfdocument)
+            self.pdfdocument.load(str(converted_pdf))
+            self.pdfView.setDocument(self.pdfdocument)
+            self.page_count.setText(f" of {self.pdfdocument.pageCount()}")
         else:
             logger.error(f"Error converting doc: {converted_pdf}")
 
