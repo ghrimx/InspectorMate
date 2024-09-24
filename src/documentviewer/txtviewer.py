@@ -47,7 +47,7 @@ class TxtViewer(ViewerWidget):
         self.action_snip.setIcon(QtGui.QIcon(":capture_area"))
         self.action_snip.setShortcut(QtGui.QKeySequence("Ctrl+Alt+S"))
         self.action_snip.setToolTip("Capture Area (Ctrl+Alt+S)")
-        self.action_snip.clicked.connect(self.capture)
+        self.action_snip.clicked.connect(lambda: self.capture(self.citation()))
         self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_snip)
 
         self.createMapper(model_index)

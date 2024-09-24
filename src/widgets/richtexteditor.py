@@ -63,10 +63,13 @@ class TextEdit(QtWidgets.QTextEdit):
             if not image_saved:
                 logger.error(f"Error saving image saved: {image_path}")
             
-            document.addResource(QtGui.QTextDocument.ResourceType.ImageResource, QtCore.QUrl(image_path), image)
+            img_url = QtCore.QUrl.fromLocalFile(f'.images/{uuid}.png')
+            resolved_url = document.baseUrl().resolved(img_url)
+
+            document.addResource(QtGui.QTextDocument.ResourceType.ImageResource, resolved_url, image)
 
             # insert image with relative path for web browser
-            cursor.insertImage(QtGui.QImage(image), f".images/{uuid}.png")
+            cursor.insertImage(QtGui.QImage(image), img_url.toString())
 
             # Add citation below the image
             # Get the Pixmap cacheKey from the Qsettings if cachekeys match then insert the citation along with the image
@@ -110,6 +113,9 @@ class RichTextEditor(QtWidgets.QWidget):
         self.cursor = self.editor.textCursor() 
 
         self.editor.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse | Qt.TextInteractionFlag.TextEditorInteraction)
+
+        base_url = QtCore.QUrl(f"file:///{AppDatabase.active_workspace.notebook_path}/")
+        self.editor.document().setBaseUrl(base_url)
 
         # Define CSS for blockquote
         # Set the CSS to the QTextEdit
