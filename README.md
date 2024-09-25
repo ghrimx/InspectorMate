@@ -108,7 +108,7 @@ Right-click within the "Explorer" or "Notebook" panel to open the context menu. 
 
 ![write-note]
 
-*For more examples, please refer to the [Documentation](documentation)*
+*For more examples, please refer to the [Documentation](wiki)*
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -256,7 +256,7 @@ The best way to get in touch is to file an issue at https://github.com/ghrimx/In
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) 
+* [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) by Riverbank Computing. License under GPL license.
 * [Fugue Icons](http://p.yusukekamiyamane.com/) by Yusuke Kamiyamane. Licensed under a Creative Commons Attribution 3.0 License.
 * [Remix Icon](https://remixicon.com/) Licensed under Apache License.
 * [Qt Advanced Docking System](https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System/) Licensed under LGPL-2.1 license.
