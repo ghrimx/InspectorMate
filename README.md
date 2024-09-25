@@ -264,6 +264,10 @@ The best way to get in touch is to file an issue at https://github.com/ghrimx/In
 * [PyQt-Template](https://github.com/gciftci/PyQT-Template.git) Licensed under MIT license. 
 * [one-py](https://github.com/varunsrin/one-py/tree/master) Licensed under MIT license.
 * [QtWaitingSpinner](https://github.com/fbjorn/QtWaitingSpinner.git) Licensed under MIT license.
+* [html2text](https://github.com/Alir3z4/html2text.git) by Aaron Swartz. Licensed under GPL-3.0 license
+* [openpyxl](https://openpyxl.readthedocs.io/en/stable/) Licensed under MIT license.
+* [pywin32](https://github.com/mhammond/pywin32) by  Mark Hammond (et al). Licensed under Python Software Foundation License (PSF)
+* [pandas](https://pandas.pydata.org/) Licensed under BSD License (BSD 3-Clause License Copyright (c) 2008-2011, AQR Capital Management, LLC, Lambda Foundry, Inc. and ...) 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
