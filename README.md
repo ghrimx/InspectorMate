@@ -18,7 +18,7 @@
   <p align="center">
     InspectorMate provides a central place to inspector to gather all the information needed to conduct a successful inspection.
     <br />
-    <a href="https://github.com/ghrimx/InspectorMate"><strong>Explore the docs »</strong></a>
+    <a href=[documentation-url]><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/ghrimx/InspectorMate/issues">Report Bug</a>
@@ -306,5 +306,6 @@ The best way to get in touch is to file an issue at https://github.com/ghrimx/In
 [project-status-progress]: https://img.shields.io/badge/Project--Status-In_Progress-orange?style=flat-square
 [project-status-maintanance]: https://img.shields.io/badge/Project--Status-Maintanance-blue?style=flat-square
 [create-workspace]: images/create-workspace.gif
+[documentation-url]: wiki
 
 
