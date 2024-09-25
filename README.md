@@ -18,7 +18,8 @@
   <p align="center">
     InspectorMate provides a central place to inspector to gather all the information needed to conduct a successful inspection.
     <br />
-    <a href=[documentation-url]><strong>Explore the docs »</strong></a>
+    <br />
+    <a href="https://github.com/ghrimx/InspectorMate/wiki"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/ghrimx/InspectorMate/issues">Report Bug</a>
