@@ -256,15 +256,16 @@ The best way to get in touch is to file an issue at https://github.com/ghrimx/In
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
+* [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) 
 * [Fugue Icons](http://p.yusukekamiyamane.com/) by Yusuke Kamiyamane. Licensed under a Creative Commons Attribution 3.0 License.
 * [Remix Icon](https://remixicon.com/) Licensed under Apache License.
 * [Qt Advanced Docking System](https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System/) Licensed under LGPL-2.1 license.
 * [PyMuPDF](https://pypi.org/project/PyMuPDF/) by Artiflex. Licensed under GNU AFFERO GPL 3.0.
 * [PyQt-Template](https://github.com/gciftci/PyQT-Template.git) Licensed under MIT license. 
-* [one-py](https://github.com/varunsrin/one-py/tree/master) Licensed under MIT license. 
+* [one-py](https://github.com/varunsrin/one-py/tree/master) Licensed under MIT license.
+* [QtWaitingSpinner](https://github.com/fbjorn/QtWaitingSpinner.git) Licensed under MIT license.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
@@ -277,7 +278,7 @@ The best way to get in touch is to file an issue at https://github.com/ghrimx/In
 [issues-shield]: https://img.shields.io/github/issues/github_username/repo_name.svg?style=for-the-badge
 [issues-url]: https://github.com/ghrimx/InspectorMate.git/issues
 [license-shield]: https://img.shields.io/badge/License-GPL--3.0-yellow?style=flat-square
-[license-url]: https://github.com/ghrimx/InspectorMate/blob/4e7484312bfc6a8d3da2aeb56affd62ee467704d/LICENSE.txt
+[license-url]: LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username
 [product-screenshot]: images/screenshot.png
