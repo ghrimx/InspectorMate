@@ -49,14 +49,14 @@ InspectorMate is a Windows desktop application designed to streamline the workfl
 
 - **View Multiple File Formats**: Safely view various file types, including Microsoft Office formats (requires MS Office suite), with no risk of altering the original files. Convert Office documents and text files to PDF for secure, unchangeable viewing. (Supported formats: .pdf, .txt, .md, .png, .jpeg, .jpg, .docx, .doc, .xlsx, .xls, .ppt, .pptx)  
 - **Import Tags from OneNote**: Seamlessly import tags from specific OneNote sections for efficient categorization.
-- **Bulk Import of "Signage"**: Import data from multiple Excel files simultaneously, streamlining the signage management * process.
-- **Export to Excel**: Easily export requests, findings, and questions into structured Excel files for reporting or further * analysis.
+- **Bulk Import of "Signage"**: Import data from multiple Excel files simultaneously, streamlining the signage management process.
+- **Export to Excel**: Easily export requests, findings, and questions into structured Excel files for reporting or further analysis.
 - **Recursive Zip File Extraction**: Unpack zip files recursively, ensuring that all nested content is extracted.
 - **Embedded PDF Extraction**: Automatically unpack embedded PDFs within files for quick access.
 - **Excel Sheet Merging**: Merge multiple Excel sheets into a single document, simplifying data consolidation.
 - **Create Stylish Notes**: Write detailed, beautifully formatted notes using the rich text editor, and save them as clean HTML files for easy sharing and access.
 - **Automatic Reference Key Detection**: Effortlessly detect reference keys from filenames or folder names to streamline document organization.
-- **Smart Reference Key Increment**: Automatically increment signage reference keys, with or without a prefix, ensuring consistency in document tracking.
+- **Smart Reference Key Increment**: Automatically increment signage reference key, with or without a prefix, ensuring consistency in document tracking.
 - **File Access Flexibility**: Open files seamlessly, even if they've been renamed or moved, maintaining a smooth workflow without manual re-linking.
 
 *to come* : visualize and annotate database extract from Excel or csv
