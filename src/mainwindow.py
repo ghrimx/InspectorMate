@@ -22,6 +22,7 @@ from widgets.filedialog import (MergeExcelDialog, UnzipDialog)
 from utilities import utils
 from utilities import config as mconf
 from db.database import AppDatabase
+from db.dbstructure import SignageType
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -236,6 +237,7 @@ class MainWindow(QtWidgets.QMainWindow):
             signage = self.signage_tab.create_dialog.getNewSignage()
 
             icon = None
+            signage_type: SignageType
             for signage_type in AppDatabase.cache_signage_type.values():
                 if signage_type.type_id == signage.type_id:
                     icon = signage_type.icon
