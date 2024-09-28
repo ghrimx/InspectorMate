@@ -15,12 +15,12 @@ from utilities import config as mconf
 logger = logging.getLogger(__name__)
 
 class ViewerWidget(QtWidgets.QWidget):
-    def __init__(self, model, parent = None):
+    def __init__(self, model, parent=None):
         super().__init__(parent)
         self._document: Document = None
         self.model: DocTableModel = model
 
-        self.createToolbar()
+        self.createToolbar(parent)
 
         self.left_splitter_size = 150
         self.central_splitter_size = 500
@@ -100,16 +100,14 @@ class ViewerWidget(QtWidgets.QWidget):
         self.note_tab = RichTextEditor.fromMapper(bar=False, parent=self)
         self.right_pane.addTab(self.note_tab, "Note")
 
-    def createToolbar(self) :
+    def createToolbar(self, parent=None) :
         self._toolbar = ToolBar(self, icon_size=(24,24))
 
         # Fold Left Pane
-        self.btn_fold_left_pane = QtWidgets.QPushButton(self._toolbar)
-        self.btn_fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
-        self.btn_fold_left_pane.setToolTip('Fold Pane')
-        self.btn_fold_left_pane.setCheckable(True)
-        self.btn_fold_left_pane.clicked.connect(self.onFoldLeftSidebarTriggered)
-        self.action_fold_left_sidebar = self._toolbar.addWidget(self.btn_fold_left_pane)
+        self.fold_left_pane = QtGui.QAction(QtGui.QIcon(':sidebar-fold-line'), "Fold left pane", self._toolbar)
+        self.fold_left_pane.setCheckable(True)
+        self.fold_left_pane.triggered.connect(self.onFoldLeftSidebarTriggered)
+        self._toolbar.addAction(self.fold_left_pane)
 
         # Separator
         self.action_first_separator = self._toolbar.addSeparator()
@@ -118,16 +116,14 @@ class ViewerWidget(QtWidgets.QWidget):
         self._toolbar_spacer = self._toolbar.add_spacer()
 
         # Fold Right Pane
-        self.btn_fold_right_pane = QtWidgets.QPushButton(self._toolbar)
-        self.btn_fold_right_pane.setIcon(QtGui.QIcon(":sidebar-unfold-line"))
-        self.btn_fold_right_pane.setToolTip("Fold Pane")
-        self.btn_fold_right_pane.setCheckable(True)
-        self.btn_fold_right_pane.clicked.connect(self.onFoldRightSidebarTriggered)
-        self.action_fold_right_sidebar = self._toolbar.addWidget(self.btn_fold_right_pane)
+        self.fold_right_pane = QtGui.QAction(QtGui.QIcon(":sidebar-unfold-line"), "Fold right pane", self._toolbar)
+        self.fold_right_pane.setCheckable(True)
+        self.fold_right_pane.triggered.connect(self.onFoldRightSidebarTriggered)
+        self._toolbar.addAction(self.fold_right_pane)
 
     def toolbar(self) -> ToolBar:
         return self._toolbar
-    
+
     def toolbarFreeSpace(self):
         return self._toolbar_spacer
     
@@ -160,23 +156,23 @@ class ViewerWidget(QtWidgets.QWidget):
 
     @Slot()
     def onFoldLeftSidebarTriggered(self):
-        if self.btn_fold_left_pane.isChecked():
+        if self.fold_left_pane.isChecked():
             self.left_splitter_size = 0
-            self.btn_fold_left_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
+            self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
         else:
             self.left_splitter_size = 150
-            self.btn_fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+            self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
 
         self.splitter.setSizes([self.left_splitter_size, 500, self.right_splitter_size])
     
     @Slot()
     def onFoldRightSidebarTriggered(self):
-        if self.btn_fold_right_pane.isChecked():
+        if self.fold_right_pane.isChecked():
             self.right_splitter_size = 0
-            self.btn_fold_right_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+            self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
         else:
             self.right_splitter_size = 100
-            self.btn_fold_right_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
+            self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
 
         self.splitter.setSizes([self.left_splitter_size, 500, self.right_splitter_size])
 

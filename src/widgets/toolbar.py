@@ -1,5 +1,6 @@
 from qtpy import (Qt, QtCore, QtWidgets, QtGui)
 
+
 class ToolBar(QtWidgets.QToolBar):
     """
     Initialize the toolbar.
@@ -11,14 +12,14 @@ class ToolBar(QtWidgets.QToolBar):
         icon_size: The toolbar's icon size.
     """
 
-    def __init__(self, parent,
+    def __init__(self,
+                 parent,
                  orientation: Qt.Orientation = Qt.Orientation.Horizontal,
-                 style: Qt.ToolButtonStyle = Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+                 style: Qt.ToolButtonStyle = Qt.ToolButtonStyle.ToolButtonIconOnly,
                  icon_size: tuple[int, int] = (32, 32)) -> None:
         super().__init__(parent)
         self.actions_call = {}
         self.setOrientation(orientation)
-
         self.setToolButtonStyle(style)
         self.setIconSize(QtCore.QSize(icon_size[0], icon_size[1]))
 
@@ -65,4 +66,3 @@ class ToolBar(QtWidgets.QToolBar):
             QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         action = self.addWidget(spacer)
         return action
-    

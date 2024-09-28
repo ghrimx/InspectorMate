@@ -287,33 +287,26 @@ class PdfViewer(ViewerWidget):
         self._zoomselector.reset()
 
         # Citation
-        self.action_cite = QtWidgets.QToolButton(self)
-        self.action_cite.setIcon(QtGui.QIcon(":double-quotes"))
+        self.action_cite = QtGui.QAction(QtGui.QIcon(":double-quotes"), "Copy citation (Ctrl+Alt+C)", self)
         self.action_cite.setShortcut(QtGui.QKeySequence("Ctrl+Alt+C"))
         self.action_cite.setToolTip("Copy citation (Ctrl+Alt+C)")
-        self.action_cite.clicked.connect(lambda: self.cite(self.citation()))
-        self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_cite)
+        self.action_cite.triggered.connect(lambda: self.cite(self.citation()))
+        self._toolbar.insertAction(self.toolbarFreeSpace(), self.action_cite)
 
         # Snipping tool
-        self.action_snip = QtWidgets.QToolButton(self)
-        self.action_snip.setIcon(QtGui.QIcon(":capture_area"))
-        self.action_snip.setShortcut(QtGui.QKeySequence("Ctrl+Alt+S"))
-        self.action_snip.setToolTip("Capture Area (Ctrl+Alt+S)")
-        self.action_snip.clicked.connect(lambda: self.capture(self.citation()))
-        self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_snip)
+        self.clip = QtGui.QAction(QtGui.QIcon(":capture_area"), "Capture Area (Ctrl+Alt+S)", self)
+        self.clip.setShortcut(QtGui.QKeySequence("Ctrl+Alt+S"))
+        self.clip.triggered.connect(lambda: self.capture(self.citation()))
+        self._toolbar.insertAction(self.toolbarFreeSpace(), self.clip)
 
         # Rotate
-        self.action_rotate = QtWidgets.QToolButton(self)
-        self.action_rotate.setIcon(QtGui.QIcon(":anticlockwise"))
-        self.action_rotate.setToolTip("Rotate anticlockwise")
-        self.action_rotate.clicked.connect(lambda: self.rotate(-90))
-        self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_rotate)
+        self.rotate_anticlockwise = QtGui.QAction(QtGui.QIcon(":anticlockwise"), "Rotate left", self)
+        self.rotate_anticlockwise.triggered.connect(lambda: self.rotate(-90))
+        self._toolbar.insertAction(self.toolbarFreeSpace(), self.rotate_anticlockwise)
 
-        self.action_rotate = QtWidgets.QToolButton(self)
-        self.action_rotate.setIcon(QtGui.QIcon(":clockwise"))
-        self.action_rotate.setToolTip("Rotate clockwise")
-        self.action_rotate.clicked.connect(lambda: self.rotate(90))
-        self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_rotate)
+        self.rotate_clockwise = QtGui.QAction(QtGui.QIcon(":clockwise"), "Rotate right", self)
+        self.rotate_clockwise.triggered.connect(lambda: self.rotate(90))
+        self._toolbar.insertAction(self.toolbarFreeSpace(), self.rotate_clockwise)
 
         self.createMapper(model_index)
 
