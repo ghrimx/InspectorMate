@@ -239,18 +239,21 @@ class RichTextEditor(QtWidgets.QWidget):
         self.action_highlight = QtGui.QAction(QtGui.QIcon(":mark_pen"), "Highlight (Ctrl+Alt+H)", self, triggered= self.text_highlight)
 
         # Quoteblock
-        self.action_blockquote = QtGui.QAction(QtGui.QIcon(':double-quotes'),"Block quote",self, triggered=self.blockquote)       
+        self.action_blockquote = QtGui.QAction(QtGui.QIcon(':double-quotes'),"Block quote", self, triggered=self.blockquote)       
 
         # Horizontal line
         self.action_horizontal_line = QtGui.QAction(QtGui.QIcon(':horizontal-line'), "Horizontal line (Ctrl+Alt+L)", self, triggered=self.add_horizontal_line)
 
         # Clear formatting
-        self.action_clear_formatting = QtGui.QAction(QtGui.QIcon(':format-clear'),"Clear formatting (Ctrl+Shift+N)", self,triggered=self.clear_formatting)
+        self.action_clear_formatting = QtGui.QAction(QtGui.QIcon(':format-clear'),"Clear formatting (Ctrl+Shift+N)", self, triggered=self.clear_formatting)
 
         pix = QtGui.QPixmap(16, 16)
         pix.fill(Qt.GlobalColor.black)
 
-        self.color_action = QtGui.QAction(QtGui.QIcon(pix),"Color Text",self,triggered=self.text_color)
+        self.color_action = QtGui.QAction(QtGui.QIcon(pix),"Color Text", self, triggered=self.text_color)
+
+        # Bullet List
+        self.action_bullet = QtGui.QAction(QtGui.QIcon(":list-unordered"), "Bullet list (ctrl+;)", self, triggered=self.bulletList)
 
         self.action_help = QtGui.QAction(QtGui.QIcon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
         
@@ -295,6 +298,7 @@ class RichTextEditor(QtWidgets.QWidget):
         self.toolbar.addWidget(self.heading_toolbutton)
         self.toolbar.addAction(self.action_blockquote)
         self.toolbar.addAction(self.action_clear_formatting)
+        self.toolbar.addAction(self.action_bullet)
         self.toolbar.addAction(self.color_action)
 
         spacer = QtWidgets.QWidget(self)
@@ -322,7 +326,7 @@ class RichTextEditor(QtWidgets.QWidget):
         self.shortcut_strikeout = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+-"), self.editor, self.text_strikeout, ambiguousMember=self.text_strikeout, context=Qt.ShortcutContext.WidgetShortcut)
         self.shortcut_underline = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+U"), self.editor, self.text_underline, ambiguousMember=self.text_underline, context=Qt.ShortcutContext.WidgetShortcut)
         self.shortcut_insertLine = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+L"), self.editor, self.add_horizontal_line, ambiguousMember=self.add_horizontal_line, context=Qt.ShortcutContext.WidgetShortcut)
-        
+        self.shortcut_bulletList = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+;"), self.editor, self.bulletList, ambiguousMember=self.bulletList, context=Qt.ShortcutContext.WidgetShortcut)
 
     @Slot()
     def helpClicked(self):
@@ -351,6 +355,7 @@ class RichTextEditor(QtWidgets.QWidget):
         form.addRow("Heading 3:", QtWidgets.QLabel("Ctrl+Alt+3"))
         form.addRow("Heading 4:", QtWidgets.QLabel("Ctrl+Alt+4"))
         form.addRow("Paragraph:", QtWidgets.QLabel("Ctrl+Alt+P"))
+        form.addRow("Insert Bullet list:", QtWidgets.QLabel("Ctrl+;"))
 
         dlg.exec()
 
@@ -597,4 +602,31 @@ class RichTextEditor(QtWidgets.QWidget):
             self.merge_format_on_line_or_selection(fmt)
 
         cursor.endEditBlock()
-   
+
+    @Slot()
+    def bulletList(self):
+        cursor = self.editor.textCursor()
+        marker = QtGui.QTextBlockFormat.MarkerType.NoMarker
+
+        if cursor.currentList():
+            style = cursor.currentList().format().style()
+        else:
+            style = QtGui.QTextListFormat.Style.ListDisc
+
+        cursor.beginEditBlock()
+        block_fmt = cursor.blockFormat()
+
+        block_fmt.setMarker(marker)
+        cursor.setBlockFormat(block_fmt)
+        list_fmt = QtGui.QTextListFormat()
+        if cursor.currentList():
+            list_fmt = cursor.currentList().format()
+        else:
+            list_fmt.setIndent(block_fmt.indent() + 1)
+            block_fmt.setIndent(0)
+            cursor.setBlockFormat(block_fmt)
+        list_fmt.setStyle(style)
+        cursor.createList(list_fmt)
+
+
+        cursor.endEditBlock()

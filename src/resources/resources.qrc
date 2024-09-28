@@ -53,6 +53,7 @@
     <file alias="expand-height-line">icons/remix/expand-height-line.svg</file>
     <file alias="key-2-line">icons/remix/key-2-line.svg</file>
     <file alias="close-line">icons/remix/close-line.svg</file>
+    <file alias="list-unordered">icons/remix/list-unordered.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>
