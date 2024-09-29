@@ -80,6 +80,14 @@ class TextEdit(QtWidgets.QTextEdit):
                     citation = capture[1]
                     cursor.insertBlock()
                     cursor.insertText(citation)
+                    
+                    # set a blue color to the foreground of the citation
+                    cursor.select(QtGui.QTextCursor.SelectionType.LineUnderCursor)
+                    fmt = QtGui.QTextCharFormat()
+                    fmt.setForeground(QtGui.QColor(85, 0, 255))
+                    cursor.mergeCharFormat(fmt)
+                    self.mergeCurrentCharFormat(fmt)
+
         elif source.hasText():
             hyperlink = QtCore.QUrl(source.text())
             if not hyperlink.isRelative():
@@ -498,6 +506,7 @@ class RichTextEditor(QtWidgets.QWidget):
                 cursor.insertText(selected_text, QtGui.QTextCharFormat())
 
         cursor.setCharFormat(default_format)
+        cursor.setBlockFormat(block_format)
         cursor.endEditBlock()
         cursor.clearSelection()
 
