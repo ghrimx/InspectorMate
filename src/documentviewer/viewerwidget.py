@@ -184,6 +184,5 @@ class ViewerWidget(QtWidgets.QWidget):
     @Slot()
     def capture(self, citation):
         self.capturer = Capture(source=citation)
-        self.capturer.show()  
-        
-    
+        self.capturer.show()
+

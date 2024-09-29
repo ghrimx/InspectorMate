@@ -267,6 +267,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if self.viewer is not None:
                 doc_dock_widget = QtAds.CDockWidget(doc.title[:15])
+                doc_dock_widget.closed.connect(self.doctab_dock_widget.setAsCurrentTab) #  Activate Evidence tab after closing a document viewer
                 doc_dock_widget.setWidget(self.viewer)
                 self.dock_manager.addDockWidgetTabToArea(doc_dock_widget, self.request_area)
                 self.doc_tabs[doc.id] = doc_dock_widget
