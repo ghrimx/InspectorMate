@@ -25,6 +25,11 @@ class HeadingStyle(Enum):
     H5 = 5
     H6 = 6
 
+class LineSpacing(Enum):
+    NORMAL = 100
+    NORMAL_HALF = 150
+    DOUBLE = 200
+
 class TextEdit(QtWidgets.QTextEdit):
     def __init__(self):
         super().__init__()
@@ -163,6 +168,7 @@ class RichTextEditor(QtWidgets.QWidget):
 
         # Initialize default font size.
         font = QtGui.QFont("Segoe UI", 12)
+        font.setStyleHint(QtGui.QFont.StyleHint.SansSerif)
         self.editor.setFont(font)
         self.editor.setFontPointSize(12)
 
@@ -263,8 +269,12 @@ class RichTextEditor(QtWidgets.QWidget):
         # Bullet List
         self.action_bullet = QtGui.QAction(QtGui.QIcon(":list-unordered"), "Bullet list (ctrl+;)", self, triggered=self.bulletList)
 
+        # Line Spacing
+        self.action_line_spacing_normal = QtGui.QAction("1.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL))
+        self.action_line_spacing_1_5 = QtGui.QAction("1.5", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL_HALF))
+        self.action_line_spacing_double = QtGui.QAction("2.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.DOUBLE))
+
         self.action_help = QtGui.QAction(QtGui.QIcon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
-        
 
     def createToolbar(self):
         self.toolbar = QtWidgets.QToolBar(self)
@@ -295,6 +305,18 @@ class RichTextEditor(QtWidgets.QWidget):
         self.heading_menu.addAction(self.action_h4)
         self.heading_toolbutton.setMenu(self.heading_menu)
 
+        # Line Spacing
+        self.line_spacing_toolbutton = QtGui.QAction(self)
+        self.line_spacing_toolbutton.setText("Line Spacing")
+        self.line_spacing_toolbutton.setToolTip("Line Spacing")
+        self.line_spacing_toolbutton.setIcon(QtGui.QIcon(":line-height"))
+
+        self.line_spacing_menu = QtWidgets.QMenu("Line spacing", self)
+        self.line_spacing_menu.addAction(self.action_line_spacing_normal)
+        self.line_spacing_menu.addAction(self.action_line_spacing_1_5)
+        self.line_spacing_menu.addAction(self.action_line_spacing_double)
+        self.line_spacing_toolbutton.setMenu(self.line_spacing_menu)
+
         # Add to Toolbar
         self.toolbar.addAction(self.bold_action)
         self.toolbar.addAction(self.italic_action)
@@ -308,6 +330,7 @@ class RichTextEditor(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_clear_formatting)
         self.toolbar.addAction(self.action_bullet)
         self.toolbar.addAction(self.color_action)
+        self.toolbar.addAction(self.line_spacing_toolbutton)
 
         spacer = QtWidgets.QWidget(self)
         spacer.setContentsMargins(0,0,0,0)
@@ -638,4 +661,21 @@ class RichTextEditor(QtWidgets.QWidget):
         cursor.createList(list_fmt)
 
 
+        cursor.endEditBlock()
+
+    @Slot()
+    def setLineSpacing(self, spacing: LineSpacing):
+        cursor = self.editor.textCursor()
+
+        if not cursor.hasSelection():
+            cursor.select(QtGui.QTextCursor.SelectionType.BlockUnderCursor)
+
+        block_fmt = cursor.blockFormat()
+        block_char_fmt = cursor.blockCharFormat()
+
+        cursor.beginEditBlock()
+        block_fmt.setLineHeight(spacing.value, QtGui.QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+
+        cursor.mergeBlockCharFormat(block_char_fmt)
+        cursor.mergeBlockFormat(block_fmt)
         cursor.endEditBlock()
