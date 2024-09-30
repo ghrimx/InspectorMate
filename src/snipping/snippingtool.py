@@ -14,8 +14,12 @@ class Capture(QtWidgets.QWidget):
         self.global_final_origin = None
         
         self.setMouseTracking(True)
-        desk_size = QtWidgets.QApplication.primaryScreen().virtualGeometry()
-        self.setGeometry(0, 0, desk_size.width(), desk_size.height())
+        screen_geometry = QtWidgets.QApplication.primaryScreen().geometry()
+
+        for screen in QtWidgets.QApplication.screens():
+            screen_geometry = screen_geometry.united(screen.geometry())
+
+        self.setGeometry(0, 0, screen_geometry.width(), screen_geometry.height())
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setWindowOpacity(0.15)
 
