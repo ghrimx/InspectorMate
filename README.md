@@ -115,7 +115,7 @@ Right-click within the "Explorer" or "Notebook" panel to open the context menu. 
 
 ## Known issues
 
-### OneNote COM error
+### 1. OneNote COM error
 If the app failed to connect to OneNote try the following workarounds:
 
 #### Workaround 1: Delete the registry key
@@ -150,7 +150,7 @@ Clear the content of ```C:\Users\<username>\AppData\Local\Temp\gen_py```
 
 Type ```%temp%``` in the address bar in FileExplorer and delete the folder ```gen_py```.
 
-### HyperLink warning in OneNote
+### 2. HyperLink warning in OneNote
 1. In the Registry Editor, locate the following subkey:
 
 ```HKEY_CURRENT_USER\Software\Microsoft\Office\16.0\Common```
@@ -161,7 +161,15 @@ Type ```%temp%``` in the address bar in FileExplorer and delete the folder ```ge
 
 4. Double click the above value, select Decimal and change the Value data to ```1```, then click OK.
 
+### 3. Blurry images
+The document viewer has the functionality of taking screen capture. Depending on the Windows display configuration, the images might be blurry.
+The solution is to set the Windows text size to 100 % instead of 150 % (default).
 
+1. Right-click on the desktop
+2. Display parameters
+3. Change the value of the dropdown menu under "Scale and layout" to 100 %
+
+Remember that in most Windows applications, you can change the text font size by using "Ctrl + wheel"
 
 <!-- CONTRIBUTING -->
 ## Contributing
