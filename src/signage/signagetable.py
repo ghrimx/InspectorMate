@@ -34,7 +34,7 @@ class SignageTable(TreeView):
 
         self.createAction()
         self.setDelegate()
-
+        self.setAutoScroll(False)
         self.customContextMenuRequested.connect(self.contextMenuEvent)
 
     def createAction(self):

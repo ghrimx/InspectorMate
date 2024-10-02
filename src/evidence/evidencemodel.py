@@ -122,7 +122,7 @@ class DocTableModel(BaseRelationalTableModel):
         self.Fields.Status = DatabaseField('status_id', self.fieldIndex('status_id'), True)
         self.Fields.Type = DatabaseField('type_id', self.fieldIndex('type_id'), False)
         self.Fields.Subtitle = DatabaseField('subtitle', self.fieldIndex("subtitle"), False)
-        self.Fields.Reference = DatabaseField('reference', self.fieldIndex("reference"), False)
+        self.Fields.Reference = DatabaseField('reference', self.fieldIndex("reference"), True)
         self.Fields.Filename = DatabaseField('filename', self.fieldIndex("filename"), False)
         self.Fields.Filepath = DatabaseField('filepath', self.fieldIndex("filepath"), False)
         self.Fields.Folderpath = DatabaseField('dirpath', self.fieldIndex("dirpath"), False)

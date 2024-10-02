@@ -235,7 +235,8 @@ class DocTab(BaseTab):
         self.table.resizeColumnToContents(self.doctable_model.Fields.RefKey.index)
         self.table.resizeColumnToContents(self.doctable_model.Fields.Status.index)
         self.table.resizeColumnToContents(self.doctable_model.Fields.Note.index)
-        self.table.header().setSectionResizeMode(self.doctable_model.Fields.Title.index, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.table.resizeColumnToContents(self.doctable_model.Fields.Title.index)
+        self.table.header().setSectionResizeMode(self.doctable_model.Fields.Reference.index, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.table.sortByColumn(self.doctable_model.Fields.RefKey.index, Qt.SortOrder.AscendingOrder)
         self.splitter.addWidget(self.table)
 
