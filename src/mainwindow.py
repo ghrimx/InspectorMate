@@ -165,6 +165,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tools_menu.addAction(QtGui.QAction("Unpack PDF",
                                                 self.menubar,
                                                 triggered=self.handleUnpackPDF))
+        
+        # About
+        self.about_menu = self.menubar.addMenu("Help")
+        self.about_menu.addAction(QtGui.QAction("About InspectorMate",
+                                                self.menubar,
+                                                triggered=self.showAbout))
 
     def connectSignals(self):
         self.doctab.sig_open_document.connect(self.handle_sig_open_doc)
@@ -173,6 +179,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notebook_explorer.doubleClicked.connect(lambda: self.OnFilesystemDoubleClicked(self.notebook_explorer))
         self.document_model.dataChanged.connect(self.signage_model.refresh)
         self.signage_model.dataChanged.connect(self.doctab.onSignageModelChanged)
+
+
+    def showAbout(self):
+        about = QtWidgets.QMessageBox.information(self, "About InspectorMate", f"InspectorMate v{QtWidgets.QApplication.applicationVersion()}")
 
     @Slot()
     def addRemoveOwner(self):
