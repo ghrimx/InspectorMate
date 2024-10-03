@@ -28,6 +28,9 @@ def main() -> int:
     app.setStyle("Fusion")
     app.setWindowIcon(QtGui.QIcon(":mylogo"))
     app.setApplicationVersion('1.2.1-alpha')
+    app_font = app.font()
+    app_font.setPointSizeF(10.0)
+    app.setFont(app_font)
 
     # Splashscreen
     pixmap = QtGui.QPixmap(":mylogo")
