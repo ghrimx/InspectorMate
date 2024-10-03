@@ -62,6 +62,9 @@ class ViewerWidget(QtWidgets.QWidget):
         self.vbox.addWidget(self._toolbar)
         self.vbox.addWidget(self.splitter)
         self.setLayout(self.vbox)
+        
+        self.onFoldLeftSidebarTriggered()
+        self.onFoldRightSidebarTriggered()
 
     @classmethod
     def viewerName(cls):
@@ -107,6 +110,7 @@ class ViewerWidget(QtWidgets.QWidget):
         self.fold_left_pane = QtGui.QAction(QtGui.QIcon(':sidebar-fold-line'), "Fold left pane", self._toolbar)
         self.fold_left_pane.setCheckable(True)
         self.fold_left_pane.triggered.connect(self.onFoldLeftSidebarTriggered)
+        self.fold_left_pane.setChecked(True)
         self._toolbar.addAction(self.fold_left_pane)
 
         # Separator
@@ -119,6 +123,7 @@ class ViewerWidget(QtWidgets.QWidget):
         self.fold_right_pane = QtGui.QAction(QtGui.QIcon(":sidebar-unfold-line"), "Fold right pane", self._toolbar)
         self.fold_right_pane.setCheckable(True)
         self.fold_right_pane.triggered.connect(self.onFoldRightSidebarTriggered)
+        self.fold_right_pane.setChecked(True)
         self._toolbar.addAction(self.fold_right_pane)
 
     def toolbar(self) -> ToolBar:
