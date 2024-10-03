@@ -1,9 +1,10 @@
+import logging
 from qtpy import (QtCore, QtWidgets, QtGui, Slot)
 
 from documentviewer.viewerwidget import ViewerWidget
-
 from db.dbstructure import Document
 
+logger = logging.getLogger(__name__)
 
 class ImageViewer(ViewerWidget):
     def __init__(self, model, parent):
@@ -26,14 +27,17 @@ class ImageViewer(ViewerWidget):
 
     def loadDocument(self):
         self._image.load(self._document.filepath.as_posix())
-        self._imageView.setPixmap(QtGui.QPixmap.fromImage(self._image))
+        try:
+            self._imageView.setPixmap(QtGui.QPixmap.fromImage(self._image))
+        except Exception as e:
+            logger.error(e)
         self.normalSize()
 
     def initViewer(self, doc: Document, model_index: QtCore.QModelIndex):
         self._document = doc
 
         self.left_pane.hide()
-        self._toolbar.removeAction(self.action_fold_left_sidebar)
+        self._toolbar.removeAction(self.fold_left_pane)
         self._toolbar.removeAction(self.action_first_separator)
 
         self._imageView = QtWidgets.QLabel(self)
