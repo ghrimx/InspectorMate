@@ -32,6 +32,7 @@ class DocTable(TreeView):
 
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.setAutoScroll(False)
 
         self.createAction()
 
