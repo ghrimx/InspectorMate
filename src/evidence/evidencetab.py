@@ -145,13 +145,15 @@ class RefKeyTab(QtWidgets.QWidget):
         form.addRow("Total request:", self.count_request)
 
         self.request_list = TreeView(self)
+        self.request_list.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.request_list.setModel(self._proxy_model)
         _model: SignageTablelModel = self._proxy_model.sourceModel()
         self.request_list.hide_columns(set(range(_model.columnCount())) - {_model.Fields.RefKey.index, _model.Fields.Title.index})
-        # self._model.refresh()
+        self.request_list.resizeColumnToContents(_model.Fields.Title.index)
 
         self.request_list.setRootIsDecorated(False)
         self.request_list.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
+        self.request_list.setAutoScroll(False)
 
         vbox.addWidget(self.request_list)
 
