@@ -5,7 +5,7 @@ from qtpy import (Qt, QtWidgets, QtGui, QtCore, Signal, Slot)
 
 from evidence.evidencemodel import (DocTableModel, DocExplorerModel, DocStatusSummary)
 from evidence.evidencetable import DocTable
-from signage.signagemodel import RequestRefkeyModel
+from signage.signagemodel import SignageTablelModel
 
 from models.model import ProxyModel
 
@@ -127,12 +127,13 @@ class SummaryTab(QtWidgets.QWidget):
 
 
 class RefKeyTab(QtWidgets.QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, model: ProxyModel = None, parent=None):
         super().__init__(parent=parent)
 
-        self._model = RequestRefkeyModel()
-        self._proxy_model = QtCore.QSortFilterProxyModel()
-        self._proxy_model.setSourceModel(self._model)
+        # self._model = RequestRefkeyModel()
+        # self._proxy_model = QtCore.QSortFilterProxyModel()
+        self._proxy_model = model
+        # self._proxy_model.setSourceModel(self._model)
 
         vbox = QtWidgets.QVBoxLayout()
         self.setLayout(vbox)
@@ -145,16 +146,18 @@ class RefKeyTab(QtWidgets.QWidget):
 
         self.request_list = TreeView(self)
         self.request_list.setModel(self._proxy_model)
-        self._model.refresh()
+        _model: SignageTablelModel = self._proxy_model.sourceModel()
+        self.request_list.hide_columns(set(range(_model.columnCount())) - {_model.Fields.RefKey.index, _model.Fields.Title.index})
+        # self._model.refresh()
 
         self.request_list.setRootIsDecorated(False)
         self.request_list.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
 
         vbox.addWidget(self.request_list)
 
-    def refreshWidget(self):
-        self._model.refresh()
-        self.count_request.setText(str(self._model.rowCount()))
+    # def refreshWidget(self):
+    #     self._model.refresh()
+    #     self.count_request.setText(str(self._model.rowCount()))
 
 
 class FilterDialog(QtWidgets.QDialog):
@@ -214,18 +217,18 @@ class DocTab(BaseTab):
         self.tag_filter = QtWidgets.QListView(self)
 
         # Request filter tab
-        self.request_filter_tab = RefKeyTab(self)
-        self.request_filter_tab.request_list.addAction(action_reset_doc_explorer_filter)
-        self.request_filter_tab.refreshWidget()
-        self.request_filter_tab.request_list.clicked.connect(self.onRequestFilterClicked)
-        self.request_filter_tab.request_list.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+        # self.request_filter_tab = RefKeyTab(self)
+        # self.request_filter_tab.request_list.addAction(action_reset_doc_explorer_filter)
+        # self.request_filter_tab.refreshWidget()
+        # self.request_filter_tab.request_list.clicked.connect(self.onRequestFilterClicked)
+        # self.request_filter_tab.request_list.sortByColumn(0, Qt.SortOrder.AscendingOrder)
 
         # Summary tab
         self.summary_tab = SummaryTab(self.doctable_model)
         self.summary_tab.refreshWidget()
 
         self.left_pane.addTab(self.doc_filter, QtGui.QIcon(":node-tree"), "")
-        self.left_pane.addTab(self.request_filter_tab, QtGui.QIcon(":request"), "")
+        # self.left_pane.addTab(self.request_filter_tab, QtGui.QIcon(":request"), "")
         self.left_pane.addTab(self.tag_filter, QtGui.QIcon(":tags"), "")
         self.left_pane.addTab(self.summary_tab, QtGui.QIcon(":percent-line"), "")
 
@@ -277,6 +280,12 @@ class DocTab(BaseTab):
         self.btn_filter.setToolTip("Filter")
         self.btn_filter.clicked.connect(self.setFilters)
         self.toolbar.insertWidget(self.action_separator, self.btn_filter)
+
+    def createRefKeyFilterPane(self, model):
+        self.request_filter_tab = RefKeyTab(model=model)
+        self.request_filter_tab.request_list.clicked.connect(self.onRequestFilterClicked)
+        self.request_filter_tab.request_list.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+        self.left_pane.addTab(self.request_filter_tab, QtGui.QIcon(":request"), "")
 
     @Slot()
     def setFilters(self):
@@ -429,7 +438,3 @@ class DocTab(BaseTab):
             self.doctable_model.refresh()
             err = False
         return err
-
-    @Slot()
-    def onSignageModelChanged(self):
-        self.request_filter_tab.refreshWidget()

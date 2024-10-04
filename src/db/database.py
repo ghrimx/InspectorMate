@@ -220,7 +220,6 @@ class AppDatabase(QtSql.QSqlDatabase):
                            query.value(13),
                            query.value(14),
                            query.value(15))
-            logger.info(f"querytDocumentByID > success: doc_id={doc_id}")
             return doc
         else:
             logger.error(f"querytDocumentByID > No rows found with query : {query.lastQuery()}")
@@ -278,5 +277,4 @@ class AppDatabase(QtSql.QSqlDatabase):
         else:
             while query.next():
                 review_progress[query.value(0)] = {"progress": int(query.value(1)), "count": query.value(2), "closed": query.value(3)}
-            logger.info("reviewProgress > success")
             return review_progress

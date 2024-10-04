@@ -151,7 +151,7 @@ class DocTableModel(BaseRelationalTableModel):
 
                 fileid = utils.queryFileID(file.path)
 
-                r = self.record()
+                r:QtSql.QSqlRecord = self.record()
                 r.setValue(self.Fields.Display.index, 1)
                 r.setValue(self.Fields.RefKey.index, refkey)
                 r.setValue(self.Fields.Filename.index, file.name)
@@ -163,7 +163,11 @@ class DocTableModel(BaseRelationalTableModel):
                 r.setValue(self.Fields.Type.index, AppDatabase.cache_doc_type.get(Path(file.path).suffix.lower()) if AppDatabase.cache_doc_type.get(Path(file.path).suffix.lower()) else 1)
                 r.setValue(self.Fields.Workspace.index, AppDatabase.active_workspace.id)
                 r.setValue(self.Fields.FileID.index, fileid)
-                self.insertRecord(-1, r)
+                inserted = self.insertRecord(-1, r)
+
+                if inserted == False:
+                    err = AppDatabase.database().lastError().text()
+                    logger.error(f"Error inserting file: {file.name} - {err}")
 
             self.endInsertRows()
             self.select()

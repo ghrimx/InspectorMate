@@ -93,6 +93,9 @@ class FilterDialog(QtWidgets.QDialog):
         # self.owner_combobox.addItems(_owners)
         # form.addRow("Owner:", self.owner_combobox)
 
+        self.document_received = QtWidgets.QCheckBox(self)
+        form.addRow("Doc received:", self.document_received)
+
         form.addWidget(self.buttonBox)
 
     def accept(self):
@@ -100,6 +103,16 @@ class FilterDialog(QtWidgets.QDialog):
 
     def filters(self):
         return '|'.join([f"({x})" for x in self.status_combobox.currentData()])
+    
+    def chainedFilters(self):
+        status_filter = '|'.join([f"({x})" for x in self.status_combobox.currentData()])
+        if self.document_received.isChecked():
+            doc_received_filter = "[1-9]"
+        else:
+            doc_received_filter = "[0-9]"
+
+        return status_filter, doc_received_filter
+        
 
     # def ownerFilter(self):
     #     return '|'.join([f"({x})" for x in self.owner_combobox.currentData()])
@@ -226,6 +239,11 @@ class SignageTab(BaseTab):
     def applyFilters(self):
         self.table_proxy_model.setUserFilter(self.filter_dialog.filters(), [self.table_model.Fields.Status.index])
         # self.table_proxy_model.setUserFilter(self.filter_dialog.ownerFilter(), [self.table_model.Fields.Owner.index])
+        filters = self.filter_dialog.chainedFilters()
+        columns = [self.table_model.Fields.Status.index, self.table_model.Fields.Evidence.index]
+
+        self.table_proxy_model.setChainedFilters(filters, columns)
+
         self.table_proxy_model.invalidateFilter()
 
     def exportSignage(self):
