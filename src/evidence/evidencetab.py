@@ -146,7 +146,6 @@ class RefKeyTab(QtWidgets.QWidget):
         form.addRow("Total request:", self.count_request)
 
         self.request_list = TreeView(self)
-        self.request_list.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.request_list.setModel(self.table_proxy_model)
         self.request_list.hide_columns(set(range(self.model.columnCount())) - {self.model.Fields.RefKey.index, self.model.Fields.Title.index})
         self.request_list.resizeColumnToContents(self.model.Fields.RefKey.index)
@@ -225,7 +224,6 @@ class DocTab(BaseTab):
         self.summary_tab.refreshWidget()
 
         self.left_pane.addTab(self.doc_filter, QtGui.QIcon(":node-tree"), "")
-        # self.left_pane.addTab(self.request_filter_tab, QtGui.QIcon(":request"), "")
         self.left_pane.addTab(self.tag_filter, QtGui.QIcon(":tags"), "")
         self.left_pane.addTab(self.summary_tab, QtGui.QIcon(":percent-line"), "")
 

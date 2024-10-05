@@ -10,6 +10,7 @@ class TreeView(QtWidgets.QTreeView):
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: aliceblue;")
         self.setMinimumWidth(150)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Make ReadOnly
 
     def set_border(self, border):
         if not border: 
