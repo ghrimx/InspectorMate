@@ -93,7 +93,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.doctab_dock_widget.setMinimumSize(200, 150)
         self.doctab_area = self.dock_manager.addDockWidgetTabToArea(self.doctab_dock_widget, self.signage_area)
 
-        self.doctab.createRefKeyFilterPane(self.request_tab.proxyModel())
+        self.doctab.createRefKeyFilterPane(self.signage_model)
 
         # TextEditor Area
         self.first_note_dockwidget = QtAds.CDockWidget("Note")
@@ -180,6 +180,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer.doubleClicked.connect(lambda: self.OnFilesystemDoubleClicked(self.workspace_explorer))
         self.notebook_explorer.doubleClicked.connect(lambda: self.OnFilesystemDoubleClicked(self.notebook_explorer))
         self.document_model.dataChanged.connect(self.signage_model.refresh)
+
+        self.signage_model.rowsInserted.connect(self.doctab.request_filter_tab.updateCounter)
+        self.signage_model.rowsRemoved.connect(self.doctab.request_filter_tab.updateCounter)
 
     def showAbout(self):
         about = QtWidgets.QMessageBox.information(self, "About InspectorMate", f"InspectorMate v{QtWidgets.QApplication.applicationVersion()}")

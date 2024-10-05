@@ -127,13 +127,14 @@ class SummaryTab(QtWidgets.QWidget):
 
 
 class RefKeyTab(QtWidgets.QWidget):
-    def __init__(self, model: ProxyModel = None, parent=None):
-        super().__init__(parent=parent)
+    def __init__(self, model: SignageTablelModel = None, parent=None):
+        super().__init__(parent)
 
-        # self._model = RequestRefkeyModel()
-        # self._proxy_model = QtCore.QSortFilterProxyModel()
-        self._proxy_model = model
-        # self._proxy_model.setSourceModel(self._model)
+        self.model = model
+        self.table_proxy_model = ProxyModel(self.model)
+        self.table_proxy_model.setPermanentFilter('request', [self.model.Fields.Type.index])
+        self.table_proxy_model.setUserFilter('', self.model.visible_fields())
+        self.table_proxy_model.setDynamicSortFilter(False)
 
         vbox = QtWidgets.QVBoxLayout()
         self.setLayout(vbox)
@@ -146,10 +147,10 @@ class RefKeyTab(QtWidgets.QWidget):
 
         self.request_list = TreeView(self)
         self.request_list.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.request_list.setModel(self._proxy_model)
-        _model: SignageTablelModel = self._proxy_model.sourceModel()
-        self.request_list.hide_columns(set(range(_model.columnCount())) - {_model.Fields.RefKey.index, _model.Fields.Title.index})
-        self.request_list.resizeColumnToContents(_model.Fields.Title.index)
+        self.request_list.setModel(self.table_proxy_model)
+        self.request_list.hide_columns(set(range(self.model.columnCount())) - {self.model.Fields.RefKey.index, self.model.Fields.Title.index})
+        self.request_list.resizeColumnToContents(self.model.Fields.RefKey.index)
+        self.request_list.resizeColumnToContents(self.model.Fields.Title.index)
 
         self.request_list.setRootIsDecorated(False)
         self.request_list.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
@@ -157,10 +158,11 @@ class RefKeyTab(QtWidgets.QWidget):
 
         vbox.addWidget(self.request_list)
 
-    # def refreshWidget(self):
-    #     self._model.refresh()
-    #     self.count_request.setText(str(self._model.rowCount()))
+        self.count_request.setText(str(self.table_proxy_model.rowCount()))
 
+    @Slot()
+    def updateCounter(self):
+        self.count_request.setText(f"{AppDatabase.countRequest()}")
 
 class FilterDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -286,7 +288,7 @@ class DocTab(BaseTab):
     def createRefKeyFilterPane(self, model):
         self.request_filter_tab = RefKeyTab(model=model)
         self.request_filter_tab.request_list.clicked.connect(self.onRequestFilterClicked)
-        self.request_filter_tab.request_list.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+        self.request_filter_tab.request_list.sortByColumn(SignageTablelModel.Fields.RefKey.index, Qt.SortOrder.AscendingOrder)
         self.left_pane.addTab(self.request_filter_tab, QtGui.QIcon(":request"), "")
 
     @Slot()
@@ -381,8 +383,9 @@ class DocTab(BaseTab):
         self.table.updateAction()
 
     @Slot(QtCore.QModelIndex)
-    def onRequestFilterClicked(self, idx):
+    def onRequestFilterClicked(self, index: QtCore.QModelIndex):
         """Filter the Evidence table on Request Refkey clicked"""
+        idx = self.request_filter_tab.request_list.model().index(index.row(), SignageTablelModel.Fields.RefKey.index)
         refkey = self.request_filter_tab.request_list.model().data(idx, Qt.ItemDataRole.DisplayRole)
         self.doctable_proxy_model.setUserFilter(f"^{refkey}", [self.doctable_model.Fields.RefKey.index])
         self.doctable_proxy_model.invalidateFilter()

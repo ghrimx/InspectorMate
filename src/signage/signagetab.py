@@ -137,6 +137,9 @@ class SignageTab(BaseTab):
     def proxyModel(self) -> ProxyModel:
         return self.table_proxy_model
 
+    def signageType(self):
+        return self.signage_type
+
     def initUI(self):
         self.export_dialog = None
         self.create_dialog = None
@@ -178,7 +181,7 @@ class SignageTab(BaseTab):
         self.table.resizeColumnToContents(self.table_model.Fields.Title.index)
 
         self.table.setUniformRowHeights(True)
-        self.table.sortByColumn(self.table_model.Fields.RefKey.index, QtCore.Qt.SortOrder.AscendingOrder)
+        self.table.sortByColumn(SignageTablelModel.Fields.RefKey.index, QtCore.Qt.SortOrder.AscendingOrder)
 
         self.splitter.addWidget(self.table)
 

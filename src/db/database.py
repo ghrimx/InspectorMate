@@ -253,6 +253,22 @@ class AppDatabase(QtSql.QSqlDatabase):
             logger.info("cacheSignageStatus > success")
 
     @classmethod
+    def countRequest(cls):
+        query = QtSql.QSqlQuery()
+        query.prepare("""SELECT COUNT(1) FROM signage where workspace_id = :workspace_id and type_id = :type_id""")
+        query.bindValue(":workspace_id", cls.active_workspace.id)
+        query.bindValue(":type_id", cls.cache_signage_type['Request'].type_id)
+
+        query.exec()
+
+        if not query.exec():
+            logger.error(f"countRequest: Query execution failed - ERROR: {query.lastError().text()}")
+        elif query.next():
+            return query.value(0)
+        else:
+            logger.error(f"countRequest: No rows found with query - QUERY: {query.lastQuery()}")
+
+    @classmethod
     def reviewProgress(cls):
         review_progress = {}
 
