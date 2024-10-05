@@ -33,7 +33,6 @@ class EmptyIconProvider(QtWidgets.QFileIconProvider):
     def icon(self, _):
         return QtGui.QIcon()
 
-
 class DocExplorerModel(QtGui.QFileSystemModel):
     """Model for the navigation pane (FileSystemModel) to filter the document based on their location in the directory tree"""
     def __init__(self) -> None:
@@ -43,6 +42,12 @@ class DocExplorerModel(QtGui.QFileSystemModel):
     def get_path(self, selected_index):
         folderpath = self.filePath(self.proxy_model.mapToSource(selected_index))
         return Path(folderpath)
+    
+    #  Reimplemented method to remove the decoration if not child
+    def hasChildren(self, index):
+        file_info = self.fileInfo(index)
+        _dir = QtCore.QDir(file_info.absoluteFilePath())
+        return bool(_dir.entryList(self.filter()))
 
     def create_models(self):
         self.folderpath = AppDatabase.active_workspace.evidence_path

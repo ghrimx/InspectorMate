@@ -1,8 +1,7 @@
 import typing
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QTreeView
+from qtpy import (QtCore, QtWidgets)
 
-class TreeView(QTreeView):
+class TreeView(QtWidgets.QTreeView):
     def __init__(self, parent=None, sorting_enabled: bool = True, hide_header: bool = False, border: bool = True) -> None:
         super().__init__(parent)
         self.setSortingEnabled(sorting_enabled)
@@ -30,7 +29,7 @@ class TreeView(QTreeView):
         self.destroy(destroySubWindows=True)
 
     def set_sorting_column(self, col: int):
-        self.sortByColumn(col, Qt.SortOrder.AscendingOrder)
+        self.sortByColumn(col, QtCore.Qt.SortOrder.AscendingOrder)
 
     def selectedRows(self) -> list[int]:
         indexes = self.selectedIndexes()

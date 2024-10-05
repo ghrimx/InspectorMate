@@ -209,9 +209,9 @@ class DocTab(BaseTab):
         self.doc_filter = TreeView(parent=self, border=False)
         self.doc_filter.setModel(self.doc_explorer_model.proxy_model)
         self.doc_filter.setRootIndex(self.doc_explorer_model.proxy_index)
-        self.doc_filter.setRootIsDecorated(True)
         self.doc_filter.hide_columns(range(1, self.doc_explorer_model.columnCount()))
         self.doc_filter.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
+        self.doc_filter.sortByColumn(0, Qt.SortOrder.AscendingOrder)
 
         action_reset_doc_explorer_filter = QtGui.QAction("Reset filter", self.doc_filter)
         action_reset_doc_explorer_filter.triggered.connect(self.reset_doc_explorer_filter)
@@ -219,13 +219,6 @@ class DocTab(BaseTab):
 
         # Tag filter tab
         self.tag_filter = QtWidgets.QListView(self)
-
-        # Request filter tab
-        # self.request_filter_tab = RefKeyTab(self)
-        # self.request_filter_tab.request_list.addAction(action_reset_doc_explorer_filter)
-        # self.request_filter_tab.refreshWidget()
-        # self.request_filter_tab.request_list.clicked.connect(self.onRequestFilterClicked)
-        # self.request_filter_tab.request_list.sortByColumn(0, Qt.SortOrder.AscendingOrder)
 
         # Summary tab
         self.summary_tab = SummaryTab(self.doctable_model)
@@ -289,7 +282,7 @@ class DocTab(BaseTab):
         self.request_filter_tab = RefKeyTab(model=model)
         self.request_filter_tab.request_list.clicked.connect(self.onRequestFilterClicked)
         self.request_filter_tab.request_list.sortByColumn(SignageTablelModel.Fields.RefKey.index, Qt.SortOrder.AscendingOrder)
-        self.left_pane.addTab(self.request_filter_tab, QtGui.QIcon(":request"), "")
+        self.left_pane.insertTab(1, self.request_filter_tab, QtGui.QIcon(":request"), "")
 
     @Slot()
     def setFilters(self):
