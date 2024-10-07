@@ -1,5 +1,6 @@
 from src.utilities import utils
 import fitz
+from pathlib import Path
 
 def test_image2hex():
     # image = r"C:\Users\debru\Documents\GitHub\InspectorMate\tests\files\tick.png"
@@ -35,3 +36,9 @@ def test_unpackpdf():
     
     r = utils.unpackPDF(filepath)
     print(r)
+
+def test_walkfolder():
+    l: set[Path] = utils.walkFolder(r"C:\Users\debru\Documents\Inspections\biosimilar\Evidence")
+    print(len(l))
+    for e in l:
+        print(e)

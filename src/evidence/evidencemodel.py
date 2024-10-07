@@ -1,5 +1,5 @@
 import logging
-from pathlib import Path
+from pathlib import Path, WindowsPath
 from os import DirEntry
 
 from qtpy import (QtWidgets, QtCore, Qt, QtGui, QtSql)
@@ -64,7 +64,7 @@ class DocExplorerModel(QtGui.QFileSystemModel):
 
 
 class DocTableModel(BaseRelationalTableModel):
-    """Document model build from the document table of database"""
+    """Document model build from the document table of database"""  
 
     class Fields:
         ID = DatabaseField
@@ -86,6 +86,7 @@ class DocTableModel(BaseRelationalTableModel):
 
     def __init__(self):
         super().__init__()
+        self.cache_files: set = set()
         self.status_color_cache = {}
 
         self.setTable("document")
@@ -114,6 +115,12 @@ class DocTableModel(BaseRelationalTableModel):
                            Qt.Orientation.Horizontal,
                            "Note")
         self.select()
+        self.init_cache_files()
+
+    def init_cache_files(self):
+        for row in range(self.rowCount()):
+            filepath = self.index(row, self.Fields.Filepath.index).data(Qt.ItemDataRole.DisplayRole)
+            self.cache_files.add(WindowsPath(filepath))
 
     def init_fields(self):
         self.Fields.ID = DatabaseField('doc_id', self.fieldIndex('doc_id'), False)
@@ -134,42 +141,46 @@ class DocTableModel(BaseRelationalTableModel):
         self.Fields.FileID = DatabaseField('fileid', self.fieldIndex('fileid'), False)
 
     def insertDocument(self):
-        files = []
-        files = utils.folder_scanner(AppDatabase.active_workspace.evidence_path)
+        files: set[Path] = set()
+        files = utils.walkFolder(AppDatabase.active_workspace.evidence_path)
 
         pattern = mconf.default_regex if mconf.settings.value("regex") is None else mconf.settings.value("regex")
 
-        self.layoutAboutToBeChanged.emit()
+        files.difference_update(self.cache_files)
 
         if files:
-            file: DirEntry
+    
             self.beginInsertRows(QtCore.QModelIndex(), self.rowCount(), self.rowCount() + len(files))
 
             for file in files:
 
-                refkey = self.findRefKeyFromPath(file.path, pattern)
+                refkey = self.findRefKeyFromPath(file.as_posix(), pattern)
 
-                fileid = utils.queryFileID(file.path)
+                fileid = utils.queryFileID(file.as_posix())
 
                 r = self.record()
                 r.setValue(self.Fields.Display.index, 1)
                 r.setValue(self.Fields.RefKey.index, refkey)
                 r.setValue(self.Fields.Filename.index, file.name)
-                r.setValue(self.Fields.Filepath.index, Path(file.path).as_posix())
-                r.setValue(self.Fields.Title.index, Path(file.name).stem)
+                r.setValue(self.Fields.Filepath.index, file.as_posix())
+                r.setValue(self.Fields.Title.index, file.stem)
                 r.setValue(self.Fields.ModificationDate.index, str(file.stat().st_mtime))
                 r.setValue(self.Fields.CreationDate.index, str(file.stat().st_birthtime))
-                r.setValue(self.Fields.Folderpath.index, Path(file.path).parent.as_posix())
-                r.setValue(self.Fields.Type.index, AppDatabase.cache_doc_type.get(Path(file.path).suffix.lower()) if AppDatabase.cache_doc_type.get(Path(file.path).suffix.lower()) else 1)
+                r.setValue(self.Fields.Folderpath.index, file.parent.as_posix())
+                r.setValue(self.Fields.Type.index, AppDatabase.cache_doc_type.get(file.suffix.lower()) if AppDatabase.cache_doc_type.get(file.suffix.lower()) else 1)
                 r.setValue(self.Fields.Workspace.index, AppDatabase.active_workspace.id)
                 r.setValue(self.Fields.FileID.index, fileid)
-                self.insertRecord(-1, r)
+                inserted = self.insertRecord(-1, r)
+
+                if inserted:
+                    self.cache_files.add(file)
+                else:
+                    logger.error(f"Cannot insert: {file.as_posix()}")
 
             self.endInsertRows()
             self.select()
 
             self.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
-            self.layoutChanged.emit()
 
     def document(self, selected_index: QtCore.QModelIndex) -> Document:
         """

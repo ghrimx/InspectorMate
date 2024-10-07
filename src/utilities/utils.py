@@ -1,4 +1,5 @@
 import os
+from pathlib import Path, WindowsPath
 import io
 import re
 import typing
@@ -15,19 +16,21 @@ from base64 import (b64decode, b64encode)
 
 from qtpy import (QtWidgets, QtCore, QtGui)
 
-def folder_scanner(folderpath: str) -> typing.List[object]:
+
+def walkFolder(path: str | Path) -> set[Path]:
     """
     Scan the directory tree and return a list of file
     Ignore files that starts with a dot
     """
-    file_list = []
-    folderpath = PureWindowsPath(folderpath)
-    with scandir(folderpath) as it:
-        for entry in it:
-            if not entry.name.startswith('.') and entry.is_file():
-                file_list.append(entry)
-            elif entry.is_dir():
-                file_list.extend(folder_scanner(entry.path))
+    
+    file_list = set()
+
+    for entry in Path(path).iterdir():
+        if not entry.name.startswith('.') and entry.is_file():
+            file_list.add(WindowsPath(entry))
+        elif entry.is_dir():
+            file_list.update(walkFolder(entry))
+
     return file_list
 
 def hexuuid():
