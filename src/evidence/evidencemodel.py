@@ -33,7 +33,6 @@ class EmptyIconProvider(QtWidgets.QFileIconProvider):
     def icon(self, _):
         return QtGui.QIcon()
 
-
 class DocExplorerModel(QtGui.QFileSystemModel):
     """Model for the navigation pane (FileSystemModel) to filter the document based on their location in the directory tree"""
     def __init__(self) -> None:
@@ -43,6 +42,12 @@ class DocExplorerModel(QtGui.QFileSystemModel):
     def get_path(self, selected_index):
         folderpath = self.filePath(self.proxy_model.mapToSource(selected_index))
         return Path(folderpath)
+    
+    #  Reimplemented method to remove the decoration if not child
+    def hasChildren(self, index):
+        file_info = self.fileInfo(index)
+        _dir = QtCore.QDir(file_info.absoluteFilePath())
+        return bool(_dir.entryList(self.filter()))
 
     def create_models(self):
         self.folderpath = AppDatabase.active_workspace.evidence_path
@@ -151,7 +156,7 @@ class DocTableModel(BaseRelationalTableModel):
 
                 fileid = utils.queryFileID(file.path)
 
-                r = self.record()
+                r:QtSql.QSqlRecord = self.record()
                 r.setValue(self.Fields.Display.index, 1)
                 r.setValue(self.Fields.RefKey.index, refkey)
                 r.setValue(self.Fields.Filename.index, file.name)
@@ -163,7 +168,11 @@ class DocTableModel(BaseRelationalTableModel):
                 r.setValue(self.Fields.Type.index, AppDatabase.cache_doc_type.get(Path(file.path).suffix.lower()) if AppDatabase.cache_doc_type.get(Path(file.path).suffix.lower()) else 1)
                 r.setValue(self.Fields.Workspace.index, AppDatabase.active_workspace.id)
                 r.setValue(self.Fields.FileID.index, fileid)
-                self.insertRecord(-1, r)
+                inserted = self.insertRecord(-1, r)
+
+                if inserted == False:
+                    err = AppDatabase.database().lastError().text()
+                    logger.error(f"Error inserting file: {file.name} - {err}")
 
             self.endInsertRows()
             self.select()

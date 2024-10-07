@@ -16,15 +16,6 @@ from utilities import (utils, config as mconf)
 logger = logging.getLogger(__name__)
 
 
-class RequestRefkeyModel(QtSql.QSqlQueryModel):
-    """Model for document refkey filter"""
-    def __init__(self):
-        super().__init__()
-
-    def refresh(self):
-        self.setQuery(AppDatabase.queryAllRefKey(1))
-
-
 class SignageTablelModel(BaseRelationalTableModel):
 
     class Fields:
@@ -251,17 +242,21 @@ class SignageTablelModel(BaseRelationalTableModel):
     def insertSignage(self, signage: Signage) -> bool:
         record = self.signageRecord(signage)
 
+        self.layoutAboutToBeChanged.emit()
         self.beginInsertRows(QtCore.QModelIndex(), self.rowCount(), self.rowCount())
-        res = self.insertRecord(self.rowCount(), record)
+        inserted = self.insertRecord(-1, record)
         self.endInsertRows()
+        self.layoutChanged.emit()
 
-        if res is not True:
-            logger.error(f"Cannot insert: {signage}")
+        if inserted == True:
+            self.refresh()
+        else:
+            err = self.database().lastError().text()
+            logger.error(f"Cannot insert: {signage} - Error: {err}")
 
-        self.submitAll()
-        self.refresh()
+        # self.submitAll()
 
-        return res
+        return inserted
 
     def export2Excel(self, signage_type: list, destination: str) -> Exception | None:
         wb = Workbook()
@@ -304,10 +299,16 @@ class SignageTablelModel(BaseRelationalTableModel):
     @Slot()
     def deleteRows(self, indexes: list[QtCore.QModelIndex]) -> bool:
         """Delete a row from the model and refresh the model"""
+
+        self.beginRemoveRows(QtCore.QModelIndex(), indexes[0].row(), indexes[-1].row())
+
         for index in indexes:
             self.removeRow(index.row())
 
+        self.endRemoveRows()
+
         self.refresh()
+
 
     def importFromFiles(self, files: list, update: bool = True):
         df = utils.mergeExcelFiles(files, drop_duplicate="first", outfile="")

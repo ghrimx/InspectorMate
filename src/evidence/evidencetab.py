@@ -5,7 +5,7 @@ from qtpy import (Qt, QtWidgets, QtGui, QtCore, Signal, Slot)
 
 from evidence.evidencemodel import (DocTableModel, DocExplorerModel, DocStatusSummary)
 from evidence.evidencetable import DocTable
-from signage.signagemodel import RequestRefkeyModel
+from signage.signagemodel import SignageTablelModel
 
 from models.model import ProxyModel
 
@@ -127,12 +127,14 @@ class SummaryTab(QtWidgets.QWidget):
 
 
 class RefKeyTab(QtWidgets.QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
+    def __init__(self, model: SignageTablelModel = None, parent=None):
+        super().__init__(parent)
 
-        self._model = RequestRefkeyModel()
-        self._proxy_model = QtCore.QSortFilterProxyModel()
-        self._proxy_model.setSourceModel(self._model)
+        self.model = model
+        self.table_proxy_model = ProxyModel(self.model)
+        self.table_proxy_model.setPermanentFilter('request', [self.model.Fields.Type.index])
+        self.table_proxy_model.setUserFilter('', self.model.visible_fields())
+        self.table_proxy_model.setDynamicSortFilter(False)
 
         vbox = QtWidgets.QVBoxLayout()
         self.setLayout(vbox)
@@ -144,18 +146,22 @@ class RefKeyTab(QtWidgets.QWidget):
         form.addRow("Total request:", self.count_request)
 
         self.request_list = TreeView(self)
-        self.request_list.setModel(self._proxy_model)
-        self._model.refresh()
+        self.request_list.setModel(self.table_proxy_model)
+        self.request_list.hide_columns(set(range(self.model.columnCount())) - {self.model.Fields.RefKey.index, self.model.Fields.Title.index})
+        self.request_list.resizeColumnToContents(self.model.Fields.RefKey.index)
+        self.request_list.resizeColumnToContents(self.model.Fields.Title.index)
 
         self.request_list.setRootIsDecorated(False)
         self.request_list.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
+        self.request_list.setAutoScroll(False)
 
         vbox.addWidget(self.request_list)
 
-    def refreshWidget(self):
-        self._model.refresh()
-        self.count_request.setText(str(self._model.rowCount()))
+        self.count_request.setText(str(self.table_proxy_model.rowCount()))
 
+    @Slot()
+    def updateCounter(self):
+        self.count_request.setText(f"{AppDatabase.countRequest()}")
 
 class FilterDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -202,9 +208,9 @@ class DocTab(BaseTab):
         self.doc_filter = TreeView(parent=self, border=False)
         self.doc_filter.setModel(self.doc_explorer_model.proxy_model)
         self.doc_filter.setRootIndex(self.doc_explorer_model.proxy_index)
-        self.doc_filter.setRootIsDecorated(True)
         self.doc_filter.hide_columns(range(1, self.doc_explorer_model.columnCount()))
         self.doc_filter.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
+        self.doc_filter.sortByColumn(0, Qt.SortOrder.AscendingOrder)
 
         action_reset_doc_explorer_filter = QtGui.QAction("Reset filter", self.doc_filter)
         action_reset_doc_explorer_filter.triggered.connect(self.reset_doc_explorer_filter)
@@ -213,19 +219,11 @@ class DocTab(BaseTab):
         # Tag filter tab
         self.tag_filter = QtWidgets.QListView(self)
 
-        # Request filter tab
-        self.request_filter_tab = RefKeyTab(self)
-        self.request_filter_tab.request_list.addAction(action_reset_doc_explorer_filter)
-        self.request_filter_tab.refreshWidget()
-        self.request_filter_tab.request_list.clicked.connect(self.onRequestFilterClicked)
-        self.request_filter_tab.request_list.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-
         # Summary tab
         self.summary_tab = SummaryTab(self.doctable_model)
         self.summary_tab.refreshWidget()
 
         self.left_pane.addTab(self.doc_filter, QtGui.QIcon(":node-tree"), "")
-        self.left_pane.addTab(self.request_filter_tab, QtGui.QIcon(":request"), "")
         self.left_pane.addTab(self.tag_filter, QtGui.QIcon(":tags"), "")
         self.left_pane.addTab(self.summary_tab, QtGui.QIcon(":percent-line"), "")
 
@@ -277,6 +275,12 @@ class DocTab(BaseTab):
         self.btn_filter.setToolTip("Filter")
         self.btn_filter.clicked.connect(self.setFilters)
         self.toolbar.insertWidget(self.action_separator, self.btn_filter)
+
+    def createRefKeyFilterPane(self, model):
+        self.request_filter_tab = RefKeyTab(model=model)
+        self.request_filter_tab.request_list.clicked.connect(self.onRequestFilterClicked)
+        self.request_filter_tab.request_list.sortByColumn(SignageTablelModel.Fields.RefKey.index, Qt.SortOrder.AscendingOrder)
+        self.left_pane.insertTab(1, self.request_filter_tab, QtGui.QIcon(":request"), "")
 
     @Slot()
     def setFilters(self):
@@ -370,8 +374,9 @@ class DocTab(BaseTab):
         self.table.updateAction()
 
     @Slot(QtCore.QModelIndex)
-    def onRequestFilterClicked(self, idx):
+    def onRequestFilterClicked(self, index: QtCore.QModelIndex):
         """Filter the Evidence table on Request Refkey clicked"""
+        idx = self.request_filter_tab.request_list.model().index(index.row(), SignageTablelModel.Fields.RefKey.index)
         refkey = self.request_filter_tab.request_list.model().data(idx, Qt.ItemDataRole.DisplayRole)
         self.doctable_proxy_model.setUserFilter(f"^{refkey}", [self.doctable_model.Fields.RefKey.index])
         self.doctable_proxy_model.invalidateFilter()
@@ -429,7 +434,3 @@ class DocTab(BaseTab):
             self.doctable_model.refresh()
             err = False
         return err
-
-    @Slot()
-    def onSignageModelChanged(self):
-        self.request_filter_tab.refreshWidget()
