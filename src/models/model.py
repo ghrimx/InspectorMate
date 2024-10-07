@@ -69,6 +69,7 @@ class ProxyModel(QSortFilterProxyModel):
         self.user_filter = QRegularExpression()
         self.permanent_columns = []
         self.user_columns = []
+        self.chained_filter = {}
 
     def setPermanentFilter(self, pattern: str, columns: list):
         self.permanent_filter = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption)
@@ -77,6 +78,9 @@ class ProxyModel(QSortFilterProxyModel):
     def setUserFilter(self, pattern: str, columns: list):
         self.user_filter = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption)
         self.user_columns = columns
+
+    def setChainedFilters(self, filters, columns):
+        ...
     
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         # Apply the permanent filter on the specified column
