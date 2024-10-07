@@ -130,7 +130,6 @@ def hex2image(img_str: str) -> tuple:
     
 def queryFileID(path: str) -> str:
     """Return the windows fileid from the filepath"""
-
     fileid = popen(fr'fsutil file queryfileid "{path}"').read()
     return fileid[11:].strip()
 

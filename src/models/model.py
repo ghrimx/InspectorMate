@@ -76,7 +76,7 @@ class ProxyModel(QSortFilterProxyModel):
         self.permanent_columns = columns
 
     def setUserFilter(self, pattern: str, columns: list):
-        self.user_filter = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption)
+        self.user_filter = pattern.lower()
         self.user_columns = columns
 
     def setChainedFilters(self, filters, columns):
@@ -93,8 +93,9 @@ class ProxyModel(QSortFilterProxyModel):
         # Apply the user filter on the specified columns
         for column in self.user_columns:
             index_user = self.sourceModel().index(source_row, column, source_parent)
-            data_user = str(self.sourceModel().data(index_user))
-            if self.user_filter.match(data_user).hasMatch():
+            data_user = str(self.sourceModel().data(index_user)).lower()
+            if self.user_filter in data_user:
                 return True
             
         return False
+    

@@ -190,7 +190,7 @@ class FilterDialog(QtWidgets.QDialog):
 
 
 class DocTab(BaseTab):
-    sig_open_document = Signal()
+    sig_open_document = Signal(QtCore.QModelIndex)
     sig_load_file = Signal()
 
     def __init__(self, model: DocTableModel):
@@ -303,9 +303,9 @@ class DocTab(BaseTab):
         self.doc_explorer_model = DocExplorerModel()
 
     def connect_signals(self):
-        self.table.selectionModel().selectionChanged.connect(self.handle_table_selection)
+        self.table.selectionModel().selectionChanged.connect(self.onRecordSelected)
         self.table.doubleClicked.connect(self.sig_open_document)
-        self.doc_filter.selectionModel().selectionChanged.connect(self.handle_doc_explorer_selection)
+        self.doc_filter.selectionModel().selectionChanged.connect(self.onFolderFilterClicked)
         self.search_tool.textChanged.connect(self.searchfor)
         self.doctable_model.layoutChanged.connect(self.doctable_proxy_model.layoutChanged)
         self.doctable_model.layoutChanged.connect(self.doctable_proxy_model.invalidateFilter)
@@ -334,8 +334,8 @@ class DocTab(BaseTab):
         self.doc_filter.setModel(self.doc_explorer_model.proxy_model)
         self.doc_filter.setRootIndex(self.doc_explorer_model.proxy_index)
 
-    @Slot()
-    def handle_table_selection(self):
+    @Slot(QtCore.QItemSelection, QtCore.QItemSelection)
+    def onRecordSelected(self, selected: QtCore.QItemSelection, deseleted: QtCore.QItemSelection):
         """Refresh dependent model and view when the selection change in the central widget"""
 
         if len(self.table.selectedRows()) == 1:
@@ -366,7 +366,7 @@ class DocTab(BaseTab):
                 info_widget.setMapperIndex(self.selected_index)
 
     @Slot()
-    def handle_doc_explorer_selection(self):
+    def onFolderFilterClicked(self):
         selected_index = self.doc_filter.selectionModel().currentIndex()
         folderpath = self.doc_explorer_model.get_path(selected_index)
         self.doctable_proxy_model.setUserFilter(folderpath.as_posix(), [self.doctable_model.Fields.Filepath.index])
@@ -378,7 +378,7 @@ class DocTab(BaseTab):
         """Filter the Evidence table on Request Refkey clicked"""
         idx = self.request_filter_tab.request_list.model().index(index.row(), SignageTablelModel.Fields.RefKey.index)
         refkey = self.request_filter_tab.request_list.model().data(idx, Qt.ItemDataRole.DisplayRole)
-        self.doctable_proxy_model.setUserFilter(f"^{refkey}", [self.doctable_model.Fields.RefKey.index])
+        self.doctable_proxy_model.setUserFilter(f"{refkey}", [self.doctable_model.Fields.RefKey.index])
         self.doctable_proxy_model.invalidateFilter()
 
     @Slot()

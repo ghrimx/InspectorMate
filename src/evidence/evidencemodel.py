@@ -180,7 +180,7 @@ class DocTableModel(BaseRelationalTableModel):
                 if inserted:
                     self.cache_files.add(file)
                 else:
-                    logger.error(f"Cannot insert: {file.as_posix()}")
+                    logger.error(f"Cannot insert: {file.as_posix()} - err: {self.lastError().text()}")
 
             self.endInsertRows()
             self.select()
@@ -194,11 +194,10 @@ class DocTableModel(BaseRelationalTableModel):
             Return:
                 evidence: dataclass object
         """
-        selected_row = selected_index.row()
-        id_idx = self.index(selected_row, self.Fields.ID.index)
-        doc_id = self.data(id_idx, Qt.ItemDataRole.DisplayRole)
+        id = self.index(selected_index.row(), DocTableModel.Fields.ID.index).data(Qt.ItemDataRole.DisplayRole)
 
-        doc = AppDatabase.queryDocumentByID(doc_id)
+        doc = AppDatabase.queryDocumentByID(id)
+
         return doc
 
     def updateStatus(self, rows: list[int], status: int):
