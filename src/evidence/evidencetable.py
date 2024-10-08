@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class DocTable(TreeView):
     sig_open_document = Signal()
+    sig_doc_status_update = Signal()
 
     def __init__(self, model: DocTableModel, proxy_model: ProxyModel):
         super().__init__()
@@ -185,7 +186,10 @@ class DocTable(TreeView):
 
         if status_int is not None:
             rows = self.selectedRows()
-            self._model.updateStatus(rows, status_int)
+            r = self._model.updateStatus(rows, status_int)
+
+            if r:
+                self.sig_doc_status_update.emit()
 
     @Slot()
     def setRefKey(self):

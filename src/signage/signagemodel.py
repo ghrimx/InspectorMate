@@ -263,7 +263,7 @@ class SignageTablelModel(BaseRelationalTableModel):
         ws = wb.active
         ws.title = "main"
 
-        headers = ["RefKey", "Title", "Owner", "Status", "Type"]
+        headers = ["RefKey", "Title", "Owner", "Type"]
         for column in range(len(headers)):
             ws.cell(row=1, column=column + 1, value=headers[column])
 
@@ -275,11 +275,10 @@ class SignageTablelModel(BaseRelationalTableModel):
                 values = [str(record.value(self.Fields.RefKey.index)),
                           record.value(self.Fields.Title.index),
                           record.value(self.Fields.Owner.index),
-                          record.value(self.Fields.Status.index),
                           record.value(self.Fields.Type.index)]
                 ws.append(values)
 
-        table = Table(displayName="Table1", ref=f"A1:E{record_count}")
+        table = Table(displayName="Table1", ref=f"A1:D{record_count}")
         style = TableStyleInfo(name="TableStyleMedium2",
                                showFirstColumn=False,
                                showLastColumn=False,
@@ -296,7 +295,6 @@ class SignageTablelModel(BaseRelationalTableModel):
             logger.error(f"Cannot save the file - Error:{e}")
             return e
 
-    @Slot()
     def deleteRows(self, indexes: list[QtCore.QModelIndex]) -> bool:
         """Delete a row from the model and refresh the model"""
 

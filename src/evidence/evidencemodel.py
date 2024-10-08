@@ -200,14 +200,16 @@ class DocTableModel(BaseRelationalTableModel):
 
         return doc
 
-    def updateStatus(self, rows: list[int], status: int):
+    def updateStatus(self, rows: list[int], status: int) -> bool:
         for row in rows:
-            res = self.setData(self.index(row, self.Fields.Status.index), status, Qt.ItemDataRole.EditRole)
+            r = self.setData(self.index(row, self.Fields.Status.index), status, Qt.ItemDataRole.EditRole)
 
-            if res:
+            if r:
                 self.submit()
 
         self.refresh()
+
+        return r
 
     def data(self, index: QtCore.QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.ForegroundRole:

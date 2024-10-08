@@ -38,8 +38,9 @@ class BaseRelationalTableModel(QSqlRelationalTableModel):
     
     def refresh(self):
         """Refresh the table view"""
-        self.select()
+        r = self.select()
         self.setFilter(f"workspace_id={AppDatabase.active_workspace.id}")
+        return r
 
     def apply_filter(self, field, value):
         """
