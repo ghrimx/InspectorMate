@@ -191,7 +191,7 @@ class SignageTab(BaseTab):
         self.right_pane.addTab(self.info_tab.note, "Note")
         self.splitter.addWidget(self.right_pane)
 
-        self.splitter.setSizes([150, 500, 100])
+        self.splitter.setSizes([0, 800, 100])
 
         # Remove the left pane and the button
         self.left_pane.hide()

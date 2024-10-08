@@ -256,11 +256,8 @@ class DocTab(BaseTab):
         self.splitter.setSizes([150, 500, 100])
 
         # Toolbar
-        self.btn_load_file = QtWidgets.QPushButton()
-        self.btn_load_file.setIcon(QtGui.QIcon(":folder_upload"))
-        self.btn_load_file.setToolTip("Upload from folder")
-        self.btn_load_file.clicked.connect(self.handle_load_file)
-        self.toolbar.insertWidget(self.action_separator, self.btn_load_file)
+        self.load_file = QtGui.QAction(QtGui.QIcon(":folder_upload"), "Load file", self, triggered=self.handle_load_file)
+        self.toolbar.insertAction(self.action_separator, self.load_file)
 
         self.btn_detect_refkey = QtWidgets.QPushButton()
         self.btn_detect_refkey.setIcon(QtGui.QIcon(":refkey"))

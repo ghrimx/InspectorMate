@@ -240,17 +240,14 @@ class DocTableModel(BaseRelationalTableModel):
         self.refresh()
 
     def findRefKeyFromPath(self, filepath: str, pattern: str = "") -> str:
-        # set of path segments
-        folder_segments = set(Path(AppDatabase.active_workspace.evidence_path).parents)
-        folder_segments.add(Path(AppDatabase.active_workspace.evidence_path))
-        file_segments = set(Path(filepath).parents)
-        file_segments.add(Path(filepath))
+        # Remove evidence folder path from file segments
+        segments = filepath.replace(AppDatabase.active_workspace.evidence_path, "")
 
         refkey = ""
         if pattern != "":
-            # find refKey only in segments up to the monitored folder
-            for item in [x for x in file_segments if x not in folder_segments]:
-                refkey = utils.find_match(item.name, pattern)
+            # find refKey only in segments up to the evidence folder
+            for item in segments.split('/'):
+                refkey = utils.find_match(item, pattern)
                 if refkey != "":
                     break
         
@@ -261,9 +258,8 @@ class DocTableModel(BaseRelationalTableModel):
 
         for row in rows:
             filepath = self.data(self.index(row, self.Fields.Filepath.index), Qt.ItemDataRole.DisplayRole)
-            fpath = Path(filepath)
 
-            refkey = self.findRefKeyFromPath(fpath, regex)
+            refkey = self.findRefKeyFromPath(filepath, regex)
 
             if refkey != "":
                 record = self.record(row)
