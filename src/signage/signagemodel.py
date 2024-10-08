@@ -33,6 +33,7 @@ class SignageTablelModel(BaseRelationalTableModel):
         Owner: DatabaseField
         Evidence: DatabaseField
         EvidenceEOL: DatabaseField
+        PublicNote: DatabaseField
 
     def __init__(self):
         super().__init__()
@@ -90,6 +91,7 @@ class SignageTablelModel(BaseRelationalTableModel):
         self.Fields.Link = DatabaseField('link', self.fieldIndex('link'), False)
         self.Fields.Evidence = DatabaseField('evidence', self.fieldIndex('evidence'), True)
         self.Fields.EvidenceEOL = DatabaseField('evidence_eol', self.fieldIndex('evidence_eol'), True)
+        self.Fields.PublicNote = DatabaseField('public_note', self.fieldIndex('public_note'), False)
 
     def querySignage(self, row) -> Signage:
         signage = Signage(note=self.index(row, self.Fields.Note.index).data(Qt.ItemDataRole.DisplayRole),

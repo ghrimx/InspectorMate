@@ -40,6 +40,8 @@ class SignageInfoWidget(QtWidgets.QWidget):
         self.owner_combobox = QtWidgets.QLineEdit()
 
         self.note = RichTextEditor.fromMapper(bar=False, parent=self)
+        self.public_note = RichTextEditor.fromMapper(bar=False, parent=self)
+        self.public_note.editor.setStyleSheet("border: 2px solid red;")
 
         formlayout.addRow('Title', self.title)
         formlayout.addRow('RefKey', self.ref_key)
@@ -59,6 +61,7 @@ class SignageInfoWidget(QtWidgets.QWidget):
         self.mapper.addMapping(self.type_combobox, self._model.Fields.Type.index)
         self.mapper.addMapping(self.owner_combobox, self._model.Fields.Owner.index)
         self.mapper.addMapping(self.note.editor, self._model.Fields.Note.index)
+        self.mapper.addMapping(self.public_note.editor, self._model.Fields.PublicNote.index)
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
 
     def index(self):
@@ -188,7 +191,8 @@ class SignageTab(BaseTab):
         # Right pane
         self.info_tab = SignageInfoWidget(self.table_model)
         self.right_pane.addTab(self.info_tab, "Info")
-        self.right_pane.addTab(self.info_tab.note, "Note")
+        self.right_pane.addTab(self.info_tab.note, QtGui.QIcon(':lock-2'), "Private Note")
+        self.right_pane.addTab(self.info_tab.public_note, QtGui.QIcon(':glasses-2'), "Public Note")
         self.splitter.addWidget(self.right_pane)
 
         self.splitter.setSizes([0, 800, 100])
@@ -216,6 +220,7 @@ class SignageTab(BaseTab):
                                               self.table_model.Fields.Status.index,
                                               self.table_model.Fields.Title.index,
                                               self.table_model.Fields.Note.index,
+                                              self.table_model.Fields.PublicNote.index,
                                               self.table_model.Fields.Owner.index])
 
         self.table_proxy_model.invalidateFilter()
