@@ -70,7 +70,9 @@ class ProxyModel(QSortFilterProxyModel):
         self.user_filter = QRegularExpression()
         self.permanent_columns = []
         self.user_columns = []
-        self.chained_filter = {}
+        self.status_filter = []
+        self.status_columns = []
+        # self.chained_filter = {}
 
     def setPermanentFilter(self, pattern: str, columns: list):
         self.permanent_filter = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption)
@@ -79,6 +81,12 @@ class ProxyModel(QSortFilterProxyModel):
     def setUserFilter(self, pattern: str, columns: list):
         self.user_filter = pattern.lower()
         self.user_columns = columns
+
+    def setSatusFilter(self, statuses: list, columns: list):
+        self.status_filter = statuses
+        self.status_columns = columns
+        print(self.status_filter)
+        print(self.status_columns)
 
     def setChainedFilters(self, filters, columns):
         ...
@@ -98,5 +106,12 @@ class ProxyModel(QSortFilterProxyModel):
             if self.user_filter in data_user:
                 return True
             
+        for column in self.status_columns:
+            index_status = self.sourceModel().index(source_row, column, source_parent)
+            data_status = str(self.sourceModel().data(index_status))
+            print(f"{data_status}")
+            if data_status in self.status_filter:
+                return True
+                        
         return False
     

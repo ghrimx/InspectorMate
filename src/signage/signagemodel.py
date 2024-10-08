@@ -2,6 +2,8 @@ import logging
 from xml.etree import ElementTree as ET
 from openpyxl import Workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.styles import numbers
+from html2text import html2text
 
 from qtpy import (Qt, QtCore, QtGui, Slot, QtSql)
 
@@ -260,12 +262,27 @@ class SignageTablelModel(BaseRelationalTableModel):
 
         return inserted
 
-    def export2Excel(self, signage_type: list, destination: str) -> Exception | None:
+    def export2Excel(self, signage_type: list, destination: str, public_note: bool = False) -> Exception | None:
         wb = Workbook()
         ws = wb.active
         ws.title = "main"
 
-        headers = ["RefKey", "Title", "Owner", "Type"]
+        if public_note:
+            headers = ["RefKey", "Title", "Owner", "Type", "Note"]
+            xrange = "A1:E"
+            model_fields = [SignageTablelModel.Fields.RefKey.index,
+                            SignageTablelModel.Fields.Title.index,
+                            SignageTablelModel.Fields.Owner.index,
+                            SignageTablelModel.Fields.Type.index,
+                            SignageTablelModel.Fields.PublicNote.index]
+        else:
+            headers = ["RefKey", "Title", "Owner", "Type"]
+            xrange = "A1:D"
+            model_fields = [SignageTablelModel.Fields.RefKey.index,
+                            SignageTablelModel.Fields.Title.index,
+                            SignageTablelModel.Fields.Owner.index,
+                            SignageTablelModel.Fields.Type.index]
+
         for column in range(len(headers)):
             ws.cell(row=1, column=column + 1, value=headers[column])
 
@@ -274,13 +291,14 @@ class SignageTablelModel(BaseRelationalTableModel):
             record = self.record(row)
             if record.value(self.Fields.Type.index) in signage_type:
                 record_count += 1
-                values = [str(record.value(self.Fields.RefKey.index)),
-                          record.value(self.Fields.Title.index),
-                          record.value(self.Fields.Owner.index),
-                          record.value(self.Fields.Type.index)]
+                values = list(map(record.value, model_fields))
+   
+                if public_note:
+                    values[-1] = html2text(values[-1])
+
                 ws.append(values)
 
-        table = Table(displayName="Table1", ref=f"A1:D{record_count}")
+        table = Table(displayName="Table1", ref=f"{xrange}{record_count}")
         style = TableStyleInfo(name="TableStyleMedium2",
                                showFirstColumn=False,
                                showLastColumn=False,
@@ -289,6 +307,7 @@ class SignageTablelModel(BaseRelationalTableModel):
         table.tableStyleInfo = style
 
         ws.column_dimensions["B"].width = 150.0
+        ws.column_dimensions["A"].number_format = numbers.FORMAT_TEXT
 
         try:
             ws.add_table(table)

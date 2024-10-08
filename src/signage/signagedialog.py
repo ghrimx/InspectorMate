@@ -215,6 +215,8 @@ class ExportDialog(QtWidgets.QDialog):
         self.signage_type.addItems(AppDatabase.cache_signage_type)
         self.signage_type.selectionChanged.connect(self.updateButtonState)
 
+        self.include_public_note = QtWidgets.QCheckBox("Export Public Note", self)
+
         buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
 
         self.buttonBox = QtWidgets.QDialogButtonBox(buttons)
@@ -224,6 +226,7 @@ class ExportDialog(QtWidgets.QDialog):
         form.addRow("Type", self.signage_type)
         form.addRow("Filename", filename_widget)
         form.addRow(self.destination_button, self.destination)
+        form.addRow("", self.include_public_note)
         form.addWidget(self.buttonBox)
 
         self.updateButtonState()
@@ -244,7 +247,9 @@ class ExportDialog(QtWidgets.QDialog):
             self.updateButtonState()
 
     def accept(self):
-        err = self._model.export2Excel(self.signage_type.currentData(), f"{self.destination.text()}/{self.filename.text()}.xlsx")
+        err = self._model.export2Excel(self.signage_type.currentData(),
+                                       f"{self.destination.text()}/{self.filename.text()}.xlsx",
+                                       self.include_public_note.isChecked())
 
         if isinstance(err, PermissionError):
             QtWidgets.QMessageBox.critical(None,

@@ -186,7 +186,8 @@ class FilterDialog(QtWidgets.QDialog):
         super().accept()
 
     def filters(self):
-        return '|'.join([f"({x})" for x in self.status_combobox.currentData()])
+        # return '|'.join([f"({x})" for x in self.status_combobox.currentData()])
+        return [x for x in self.status_combobox.currentData()]
 
 
 class DocTab(BaseTab):
@@ -259,17 +260,11 @@ class DocTab(BaseTab):
         self.load_file = QtGui.QAction(QtGui.QIcon(":folder_upload"), "Load file", self, triggered=self.handle_load_file)
         self.toolbar.insertAction(self.action_separator, self.load_file)
 
-        self.btn_detect_refkey = QtWidgets.QPushButton()
-        self.btn_detect_refkey.setIcon(QtGui.QIcon(":refkey"))
-        self.btn_detect_refkey.setToolTip("Detect refkey")
-        self.btn_detect_refkey.clicked.connect(lambda: self.doctable_model.updateRefKey(self.table.selectedRows()))
-        self.toolbar.insertWidget(self.action_separator, self.btn_detect_refkey)
+        self.detect_refkey = QtGui.QAction(QtGui.QIcon(":refkey"), "Detect refkey", self, triggered=self.table.autoRefKey)
+        self.toolbar.insertAction(self.action_separator, self.detect_refkey)
 
-        self.btn_filter = QtWidgets.QPushButton()
-        self.btn_filter.setIcon(QtGui.QIcon(":filter-line"))
-        self.btn_filter.setToolTip("Filter")
-        self.btn_filter.clicked.connect(self.setFilters)
-        self.toolbar.insertWidget(self.action_separator, self.btn_filter)
+        self.filter_popup = QtGui.QAction(QtGui.QIcon(":filter-line"), "Filter", self, triggered=self.setFilters)
+        self.toolbar.insertAction(self.action_separator, self.filter_popup)
 
     def createRefKeyFilterPane(self, model):
         self.request_filter_tab = RefKeyTab(model=model)
@@ -281,13 +276,13 @@ class DocTab(BaseTab):
     def setFilters(self):
         if self.filter_dialog is None:
             self.filter_dialog = FilterDialog(self)
-        res = self.filter_dialog.exec()
-
-        if res == 1:
-            self.applyFilters()
+            self.filter_dialog.accepted.connect(self.applyFilters)
+        
+        self.filter_dialog.exec()
 
     def applyFilters(self):
-        self.doctable_proxy_model.setUserFilter(self.filter_dialog.filters(), [self.doctable_model.Fields.Status.index])
+        print("filter dlg")
+        self.doctable_proxy_model.setSatusFilter(self.filter_dialog.filters(), [self.doctable_model.Fields.Status.index])
         self.doctable_proxy_model.invalidateFilter()
 
     def create_models(self, model: DocTableModel):
