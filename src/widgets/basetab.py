@@ -7,19 +7,21 @@ class BaseTab(QtWidgets.QWidget):
         super().__init__(parent=parent)
         self.createToolbar()
 
-        self.left_splitter_size = 150
-        self.central_splitter_size = 500
-        self.right_splitter_size = 100
+        self.left_pane_folded = False
+        self.right_pane_folded = False
         
         # Left pane
         self.left_pane = QtWidgets.QTabWidget(parent)
         self.left_pane.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
         self.left_pane.setMovable(False)
+
+        self.right_pane = QtWidgets.QTabWidget(parent)
+        self.right_pane.setMovable(False)
         
         # Splitter
         self.splitter = QtWidgets.QSplitter(Qt.Orientation.Horizontal)
         self.splitter.addWidget(self.left_pane)
-        self.splitter.setSizes([self.left_splitter_size, self.central_splitter_size, self.right_splitter_size])
+        self.splitter.addWidget(self.right_pane)
 
         self.vbox  = QtWidgets.QVBoxLayout(parent)
         self.vbox.addWidget(self.toolbar)
@@ -30,12 +32,8 @@ class BaseTab(QtWidgets.QWidget):
         self.toolbar = ToolBar(parent, icon_size=(24,24))
 
         # Fold Left Pane
-        self.btn_fold_left_pane = QtWidgets.QPushButton()
-        self.btn_fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
-        self.btn_fold_left_pane.setToolTip('Fold Pane')
-        self.btn_fold_left_pane.setCheckable(True)
-        self.btn_fold_left_pane.clicked.connect(self.onFoldLeftSidebarTriggered)
-        self.action_fold_left_sidebar = self.toolbar.addWidget(self.btn_fold_left_pane)
+        self.fold_left_pane = QtGui.QAction(QtGui.QIcon(':sidebar-fold-line'), "Fold left pane", self, triggered=self.onFoldLeftSidebarTriggered)
+        self.toolbar.addAction(self.fold_left_pane)
 
         # Search LineEdit
         self.search_tool = QtWidgets.QLineEdit(parent)
@@ -50,33 +48,27 @@ class BaseTab(QtWidgets.QWidget):
         self.action_separator = self.toolbar.add_spacer()
 
         # Fold Right Pane
-        self.btn_fold_right_pane = QtWidgets.QPushButton()
-        self.btn_fold_right_pane.setIcon(QtGui.QIcon(":sidebar-unfold-line"))
-        self.btn_fold_right_pane.setToolTip("Fold Pane")
-        self.btn_fold_right_pane.setCheckable(True)
-        self.btn_fold_right_pane.clicked.connect(self.onFoldRightSidebarTriggered)
-        self.action_fold_right_sidebar = self.toolbar.addWidget(self.btn_fold_right_pane)
+        self.fold_right_pane = QtGui.QAction(QtGui.QIcon(":sidebar-unfold-line"), "Fold right pane", self, triggered=self.onFoldRightSidebarTriggered)
+        self.toolbar.addAction(self.fold_right_pane)
 
     def onFoldLeftSidebarTriggered(self):
-        if self.btn_fold_left_pane.isChecked():
-            self.left_splitter_size = 0
-            self.btn_fold_left_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
-        else:
-            self.left_splitter_size = 150
-            self.btn_fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+        self.left_pane_folded = not self.left_pane_folded
 
-        self.splitter.setSizes([self.left_splitter_size, 500, self.right_splitter_size])
-    
+        if self.left_pane_folded:
+            self.left_pane.hide()
+            self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
+        else:
+            self.left_pane.show()
+            self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+
     def onFoldRightSidebarTriggered(self):
-        if self.btn_fold_right_pane.isChecked():
-            self.right_splitter_size = 0
-            self.btn_fold_right_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+        self.right_pane_folded = not self.right_pane_folded
+
+        if self.right_pane_folded:
+            self.right_pane.hide()
+            self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
         else:
-            self.right_splitter_size = 100
-            self.btn_fold_right_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
-
-        self.splitter.setSizes([self.left_splitter_size, 500, self.right_splitter_size])
-
+            self.right_pane.show()
+            self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
      
-
     

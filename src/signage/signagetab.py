@@ -186,7 +186,6 @@ class SignageTab(BaseTab):
         self.splitter.addWidget(self.table)
 
         # Right pane
-        self.right_pane = QtWidgets.QTabWidget(self)
         self.info_tab = SignageInfoWidget(self.table_model)
         self.right_pane.addTab(self.info_tab, "Info")
         self.right_pane.addTab(self.info_tab.note, "Note")
@@ -196,7 +195,7 @@ class SignageTab(BaseTab):
 
         # Remove the left pane and the button
         self.left_pane.hide()
-        self.toolbar.removeAction(self.action_fold_left_sidebar)
+        self.toolbar.removeAction(self.fold_left_pane)
 
     def refresh(self):
         pass

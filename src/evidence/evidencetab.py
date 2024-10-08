@@ -239,8 +239,6 @@ class DocTab(BaseTab):
         self.splitter.addWidget(self.table)
 
         # Right pane
-        self.right_pane = QtWidgets.QTabWidget(self)
-
         self.info_widget_dict = {}
         self.info_area = QtWidgets.QStackedLayout()
         self.info_placeholder = QtWidgets.QWidget()

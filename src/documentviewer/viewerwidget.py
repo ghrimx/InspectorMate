@@ -22,9 +22,9 @@ class ViewerWidget(QtWidgets.QWidget):
 
         self.createToolbar(parent)
 
-        self.left_splitter_size = 150
-        self.central_splitter_size = 500
-        self.right_splitter_size = 100
+        self.splitter_sizes = [100, 600, 100]
+        self.left_pane_folded = True
+        self.right_pane_folded = True
 
         # Splitter
         self.splitter = QtWidgets.QSplitter(Qt.Orientation.Horizontal)
@@ -56,7 +56,7 @@ class ViewerWidget(QtWidgets.QWidget):
 
         self.splitter.addWidget(self.right_pane)
 
-        self.splitter.setSizes([self.left_splitter_size, self.central_splitter_size, self.right_splitter_size])
+        self.splitter.setSizes(self.splitter_sizes)
         
         self.vbox  = QtWidgets.QVBoxLayout(self)
         self.vbox.addWidget(self._toolbar)
@@ -108,9 +108,7 @@ class ViewerWidget(QtWidgets.QWidget):
 
         # Fold Left Pane
         self.fold_left_pane = QtGui.QAction(QtGui.QIcon(':sidebar-fold-line'), "Fold left pane", self._toolbar)
-        self.fold_left_pane.setCheckable(True)
         self.fold_left_pane.triggered.connect(self.onFoldLeftSidebarTriggered)
-        self.fold_left_pane.setChecked(True)
         self._toolbar.addAction(self.fold_left_pane)
 
         # Separator
@@ -121,9 +119,7 @@ class ViewerWidget(QtWidgets.QWidget):
 
         # Fold Right Pane
         self.fold_right_pane = QtGui.QAction(QtGui.QIcon(":sidebar-unfold-line"), "Fold right pane", self._toolbar)
-        self.fold_right_pane.setCheckable(True)
         self.fold_right_pane.triggered.connect(self.onFoldRightSidebarTriggered)
-        self.fold_right_pane.setChecked(True)
         self._toolbar.addAction(self.fold_right_pane)
 
     def toolbar(self) -> ToolBar:
@@ -161,25 +157,25 @@ class ViewerWidget(QtWidgets.QWidget):
 
     @Slot()
     def onFoldLeftSidebarTriggered(self):
-        if self.fold_left_pane.isChecked():
-            self.left_splitter_size = 0
+        self.left_pane_folded = not self.left_pane_folded
+        if self.left_pane_folded:
+            self.splitter_sizes = self.splitter.sizes()
+            self.splitter.setSizes([0, self.splitter_sizes[1], self.splitter_sizes[2]])
             self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
         else:
-            self.left_splitter_size = 150
+            self.splitter.setSizes(self.splitter_sizes)
             self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
-
-        self.splitter.setSizes([self.left_splitter_size, 500, self.right_splitter_size])
     
     @Slot()
     def onFoldRightSidebarTriggered(self):
-        if self.fold_right_pane.isChecked():
-            self.right_splitter_size = 0
+        self.right_pane_folded = not self.right_pane_folded
+        if self.right_pane_folded:
+            self.splitter_sizes = self.splitter.sizes()
+            self.splitter.setSizes([self.splitter_sizes[0], self.splitter_sizes[1], 0])
             self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
         else:
-            self.right_splitter_size = 100
+            self.splitter.setSizes(self.splitter_sizes)
             self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
-
-        self.splitter.setSizes([self.left_splitter_size, 500, self.right_splitter_size])
 
     @Slot()
     def cite(self, citation):
