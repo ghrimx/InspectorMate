@@ -22,7 +22,6 @@ class ViewerWidget(QtWidgets.QWidget):
 
         self.createToolbar(parent)
 
-        self.splitter_sizes = [100, 600, 100]
         self.left_pane_folded = True
         self.right_pane_folded = True
 
@@ -56,7 +55,7 @@ class ViewerWidget(QtWidgets.QWidget):
 
         self.splitter.addWidget(self.right_pane)
 
-        self.splitter.setSizes(self.splitter_sizes)
+        self.splitter.setSizes([100, 600, 100])
         
         self.vbox  = QtWidgets.QVBoxLayout(self)
         self.vbox.addWidget(self._toolbar)
@@ -158,23 +157,23 @@ class ViewerWidget(QtWidgets.QWidget):
     @Slot()
     def onFoldLeftSidebarTriggered(self):
         self.left_pane_folded = not self.left_pane_folded
+
         if self.left_pane_folded:
-            self.splitter_sizes = self.splitter.sizes()
-            self.splitter.setSizes([0, self.splitter_sizes[1], self.splitter_sizes[2]])
+            self.left_pane.hide()
             self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
         else:
-            self.splitter.setSizes(self.splitter_sizes)
+            self.left_pane.show()
             self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
     
     @Slot()
     def onFoldRightSidebarTriggered(self):
         self.right_pane_folded = not self.right_pane_folded
+
         if self.right_pane_folded:
-            self.splitter_sizes = self.splitter.sizes()
-            self.splitter.setSizes([self.splitter_sizes[0], self.splitter_sizes[1], 0])
+            self.right_pane.hide()
             self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
         else:
-            self.splitter.setSizes(self.splitter_sizes)
+            self.right_pane.show()
             self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
 
     @Slot()
@@ -186,4 +185,9 @@ class ViewerWidget(QtWidgets.QWidget):
     def capture(self, citation):
         self.capturer = Capture(source=citation)
         self.capturer.show()
+
+    def showEvent(self, event: QtGui.QShowEvent):
+        self.onFoldLeftSidebarTriggered()
+        self.onFoldRightSidebarTriggered()
+        super().showEvent(event)
 
