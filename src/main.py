@@ -8,7 +8,7 @@ from db.database import AppDatabase
 
 from mainwindow import MainWindow
 
-from utilities.config import config
+from utilities import config as mconf
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +24,16 @@ def main() -> int:
     app: QtWidgets.QApplication = QtWidgets.QApplication(sys.argv)
     app.setOrganizationName("FAMHP")
     app.setOrganizationDomain("famhp.net")
-    app.setApplicationName(config.app_name)
+    app.setApplicationName(mconf.config.app_name)
     app.setStyle("Fusion")
     app.setWindowIcon(QtGui.QIcon(":mylogo"))
-    app.setApplicationVersion(config.app_version)
-    app_font = app.font()
-    app_font.setPointSizeF(10.0)
-    app.setFont(app_font)
+    app.setApplicationVersion(mconf.config.app_version)
+
+    app_fontsize = mconf.settings.value("app_fontsize")
+    if app_fontsize is not None:
+        app_font = app.font()
+        app_font.setPointSizeF(float(app_fontsize))
+        app.setFont(app_font)
 
     # Splashscreen
     pixmap = QtGui.QPixmap(":mylogo")
@@ -46,9 +49,9 @@ def main() -> int:
     app.processEvents()
 
     # Init logger
-    logging.config.fileConfig(config.config_path.as_posix(),
+    logging.config.fileConfig(mconf.config.config_path.as_posix(),
                               disable_existing_loggers=False,
-                              defaults={'logfilepath': config.log_path.as_posix()})
+                              defaults={'logfilepath': mconf.config.log_path.as_posix()})
 
     # Set Taskbar Icon
     try:
@@ -63,7 +66,7 @@ def main() -> int:
 
     # Connect to database
     db = AppDatabase()
-    db.connect(config.db_path.as_posix())
+    db.connect(mconf.config.db_path.as_posix())
     db.setup()
 
     # Initialize the main window

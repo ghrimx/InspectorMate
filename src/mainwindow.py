@@ -155,6 +155,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_menu.addAction(self.request_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.signage_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.doctab_dock_widget.toggleViewAction())
+        self.view_menu.addSeparator()
+
+        app_menu = QtWidgets.QMenu("Application FontSize", self.menubar)
+        app_menu.addAction(QtGui.QAction("Small", self, triggered=lambda: self.setAppFont(9.0)))
+        app_menu.addAction(QtGui.QAction("Medium", self, triggered=lambda: self.setAppFont(10.0)))
+        app_menu.addAction(QtGui.QAction("Large", self, triggered=lambda: self.setAppFont(11.0)))
+        app_menu.addAction(QtGui.QAction("Extra Large", self, triggered=lambda: self.setAppFont(13.0)))
+        self.view_menu.addMenu(app_menu)
 
         # Tools Menu
         self.tools_menu = self.menubar.addMenu("Tools")
@@ -187,6 +195,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def showAbout(self):
         about = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.NoIcon, "About InspectorMate", f"InspectorMate v{QtWidgets.QApplication.applicationVersion()}", QtWidgets.QMessageBox.StandardButton.Close, self)
         about.exec()
+
+    @Slot()
+    def setAppFont(self, fontsize: float):
+        font = QtGui.QFont()
+        font.setPointSizeF(fontsize)
+        QtWidgets.QApplication.setFont(font)
+        mconf.settings.setValue("app_fontsize", fontsize)
 
     @Slot()
     def addRemoveOwner(self):
