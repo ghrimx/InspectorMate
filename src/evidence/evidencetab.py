@@ -167,7 +167,7 @@ class RefKeyTab(QtWidgets.QWidget):
 
 class FilterDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        super().__init__(parent=parent)
+        super().__init__(parent)
 
         buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
 
@@ -188,7 +188,6 @@ class FilterDialog(QtWidgets.QDialog):
         super().accept()
 
     def filters(self):
-        # return '|'.join([f"({x})" for x in self.status_combobox.currentData()])
         return [x for x in self.status_combobox.currentData()]
 
 
@@ -196,14 +195,13 @@ class DocTab(BaseTab):
     sig_open_document = Signal(QtCore.QModelIndex)
     sig_load_file = Signal()
 
-    def __init__(self, model: DocTableModel):
+    def __init__(self, model: DocTableModel, parent=None):
+        super().__init__(parent)
         self.create_models(model=model)
         self.initUI()
         self.connect_signals()
 
     def initUI(self):
-        super().__init__()
-
         # Dialogs
         self.filter_dialog: FilterDialog = None
 
@@ -265,8 +263,8 @@ class DocTab(BaseTab):
         self.detect_refkey = QtGui.QAction(QtGui.QIcon(":refkey"), "Detect refkey", self, triggered=self.table.autoRefKey)
         self.toolbar.insertAction(self.action_separator, self.detect_refkey)
 
-        self.filter_popup = QtGui.QAction(QtGui.QIcon(":filter-line"), "Filter", self, triggered=self.setFilters)
-        self.toolbar.insertAction(self.action_separator, self.filter_popup)
+        self.filtering = QtGui.QAction(QtGui.QIcon(":filter-line"), "Filter", self, triggered=self.setFilters)
+        self.toolbar.insertAction(self.action_separator, self.filtering)
 
     def createRefKeyFilterPane(self, model):
         self.request_filter_tab = RefKeyTab(model=model)
@@ -279,7 +277,16 @@ class DocTab(BaseTab):
         if self.filter_dialog is None:
             self.filter_dialog = FilterDialog(self)
             self.filter_dialog.accepted.connect(self.applyFilters)
-        
+
+            # Move the dialog below the button
+            ph = self.toolbar.widgetForAction(self.filtering).geometry().height()
+            pw = self.toolbar.widgetForAction(self.filtering).geometry().width()
+            px = self.toolbar.widgetForAction(self.filtering).geometry().x()
+            py = self.toolbar.widgetForAction(self.filtering).geometry().y()
+            dw = self.filter_dialog.width()
+            dh = self.filter_dialog.height()   
+            self.filter_dialog.setGeometry(px + int(dw / 2), py + (ph * 2) + (dh * 2), dw, dh )
+
         self.filter_dialog.exec()
 
     def applyFilters(self):

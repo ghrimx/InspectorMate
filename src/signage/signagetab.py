@@ -78,10 +78,8 @@ class SignageInfoWidget(QtWidgets.QWidget):
 
 class FilterDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        super().__init__(parent=parent, flags=QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.Dialog)
-        self.setObjectName("SignageFilterDialog")
-        self.setStyleSheet(r"#SignageFilterDialog{border:1px solid black; border-radius: 0px;}")
-
+        super().__init__(parent)
+       
         buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
 
         self.buttonBox = QtWidgets.QDialogButtonBox(buttons)
@@ -133,7 +131,7 @@ class SignageTab(BaseTab):
     sig_signage_model_changed = Signal()
 
     def __init__(self, model: SignageTablelModel, signage_type: str, parent=None):
-        super().__init__(parent=parent)
+        super().__init__(parent)
         self.signage_type = signage_type
         self.table_model = model
         self.table_proxy_model = SignageProxyModel(self.table_model)
@@ -157,17 +155,11 @@ class SignageTab(BaseTab):
         self.filter_dialog: FilterDialog = None
 
         # Toolbar
-        self.btn_import_from_onenote = QtWidgets.QPushButton()
-        self.btn_import_from_onenote.setIcon(QtGui.QIcon(":onenote"))
-        self.btn_import_from_onenote.setToolTip("Import signage from OneNote")
-        self.btn_import_from_onenote.clicked.connect(self.import_from_onenote)
-        self.toolbar.insertWidget(self.action_separator, self.btn_import_from_onenote)
+        self.import_from_onenote = QtGui.QAction(QtGui.QIcon(":onenote"), "Import signage from OneNote", self, triggered=self.importFromOnenote)
+        self.toolbar.insertAction(self.action_separator, self.import_from_onenote)
 
-        self.btn_filter = QtWidgets.QPushButton(self)
-        self.btn_filter.setIcon(QtGui.QIcon(":filter-line"))
-        self.btn_filter.setToolTip("Filter")
-        self.btn_filter.clicked.connect(self.setFilters)
-        self.toolbar.insertWidget(self.action_separator, self.btn_filter)
+        self.filtering = QtGui.QAction(QtGui.QIcon(":filter-line"), "Filters", self, triggered=self.setFilters)
+        self.toolbar.insertAction(self.action_separator, self.filtering)
 
         # Left pane
 
@@ -217,7 +209,7 @@ class SignageTab(BaseTab):
         self.search_tool.textChanged.connect(self.searchfor)
 
     @Slot()
-    def import_from_onenote(self):
+    def importFromOnenote(self):
         self.table_model.fetch_onenote()
 
     @Slot()
@@ -245,18 +237,17 @@ class SignageTab(BaseTab):
     @Slot()
     def setFilters(self):
         if self.filter_dialog is None:
-            self.filter_dialog = FilterDialog(self.btn_filter)
-            
+            self.filter_dialog = FilterDialog(self)    
+            self.filter_dialog.accepted.connect(self.applyFilters)
+
             # Move the dialog below the button
-            ph = self.filter_dialog.parent().geometry().height()
-            pw = self.filter_dialog.parent().geometry().width()
-            px = self.filter_dialog.parent().geometry().x()
-            py = self.filter_dialog.parent().geometry().y()
+            ph = self.toolbar.widgetForAction(self.filtering).geometry().height()
+            pw = self.toolbar.widgetForAction(self.filtering).geometry().width()
+            px = self.toolbar.widgetForAction(self.filtering).geometry().x()
+            py = self.toolbar.widgetForAction(self.filtering).geometry().y()
             dw = self.filter_dialog.width()
             dh = self.filter_dialog.height()   
-            self.filter_dialog.setGeometry(px - int(pw / 2) + int(dw / 2), py + ph * 2 + dh * 2, dw, dh )
-            
-            self.filter_dialog.accepted.connect(self.applyFilters)
+            self.filter_dialog.setGeometry(px + int(dw / 2), py + (ph * 2) + (dh * 2), dw, dh )
         
         self.filter_dialog.exec()
 
