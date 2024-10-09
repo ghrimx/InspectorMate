@@ -60,8 +60,8 @@ class TxtViewer(ViewerWidget):
             logger.error(err)
             return
 
-        in_str = QtCore.QTextStream(file)
-        self._textreader.setPlainText(in_str.readAll())
+        text_stream = QtCore.QTextStream(file)
+        self._textreader.setPlainText(text_stream.readAll())
 
     def widget(self):
         return self._textreader
