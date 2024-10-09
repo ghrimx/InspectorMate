@@ -7,7 +7,7 @@ from html2text import html2text
 
 from qtpy import (Qt, QtCore, QtGui, Slot, QtSql)
 
-from models.model import (BaseRelationalTableModel, DatabaseField)
+from models.model import (BaseRelationalTableModel, ProxyModel, DatabaseField)
 
 from db.dbstructure import (Signage, SignageType)
 from db.database import AppDatabase
@@ -369,3 +369,47 @@ class SignageTablelModel(BaseRelationalTableModel):
                     self.insertSignage(signage)
 
         self.refresh()
+
+
+class SignageProxyModel(ProxyModel):
+    def __init__(self, model):
+        super().__init__(model)
+
+        self.setSourceModel(model)
+
+        self.owner_filter = []
+        self.evidence_filter = False
+        self.evidence_column = 0
+
+    def setOwnerFilter(self, owners: list, column: int):
+        self.owner_filter = owners
+        self.owner_column = column
+
+    def setEvidenceFilter(self, evidence_only: QtCore.Qt.CheckState, column: int):
+        self.evidence_filter = evidence_only
+        self.evidence_column = column
+
+    def filterAcceptsRow(self, source_row: int, source_parent: QtCore.QModelIndex) -> bool:
+        owner_filter = True
+        evidence_filter = True
+
+        # Owner filter
+        if len(self.owner_filter) > 0:
+            index_owner = self.sourceModel().index(source_row, self.owner_column, source_parent)
+            data_owner = self.sourceModel().data(index_owner)
+            if data_owner in self.owner_filter:
+                owner_filter = True
+            else:
+                owner_filter = False
+
+        # Evidence filter
+        index_evidence = self.sourceModel().index(source_row, self.evidence_column, source_parent)
+        data_evidence = self.sourceModel().data(index_evidence)
+        # with evidence only
+        if self.evidence_filter == QtCore.Qt.CheckState.Checked:
+            evidence_filter = bool(data_evidence)
+        # without evidence only
+        elif self.evidence_filter == QtCore.Qt.CheckState.Unchecked:
+            evidence_filter = not bool(data_evidence)
+            
+        return ProxyModel.filterAcceptsRow(self, source_row, source_parent) and owner_filter and evidence_filter

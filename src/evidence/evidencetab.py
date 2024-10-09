@@ -281,8 +281,7 @@ class DocTab(BaseTab):
         self.filter_dialog.exec()
 
     def applyFilters(self):
-        print("filter dlg")
-        self.doctable_proxy_model.setSatusFilter(self.filter_dialog.filters(), [self.doctable_model.Fields.Status.index])
+        self.doctable_proxy_model.setSatusFilter(self.filter_dialog.filters(), self.doctable_model.Fields.Status.index)
         self.doctable_proxy_model.invalidateFilter()
 
     def create_models(self, model: DocTableModel):

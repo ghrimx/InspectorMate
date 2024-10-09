@@ -72,7 +72,6 @@ class ProxyModel(QSortFilterProxyModel):
         self.user_columns = []
         self.status_filter = []
         self.status_columns = []
-        # self.chained_filter = {}
 
     def setPermanentFilter(self, pattern: str, columns: list):
         self.permanent_filter = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption)
@@ -82,36 +81,40 @@ class ProxyModel(QSortFilterProxyModel):
         self.user_filter = pattern.lower()
         self.user_columns = columns
 
-    def setSatusFilter(self, statuses: list, columns: list):
+    def setSatusFilter(self, statuses: list, column: int):
         self.status_filter = statuses
-        self.status_columns = columns
-        print(self.status_filter)
-        print(self.status_columns)
-
-    def setChainedFilters(self, filters, columns):
-        ...
+        self.status_column = column
     
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+        user_filter = True
+        status_filter = True
+
         # Apply the permanent filter on the specified column
         for col in self.permanent_columns:
             index_perm = self.sourceModel().index(source_row, col, source_parent)
             data_perm = str(self.sourceModel().data(index_perm))
             if not self.permanent_filter.match(data_perm).hasMatch():
                 return False
+            
+        if len(self.status_filter) > 0:
+            index_status = self.sourceModel().index(source_row, self.status_column, source_parent)
+            data_status = self.sourceModel().data(index_status)
+            if data_status in self.status_filter:
+                status_filter = True
+            else:
+                status_filter = False
 
         # Apply the user filter on the specified columns
         for column in self.user_columns:
             index_user = self.sourceModel().index(source_row, column, source_parent)
             data_user = str(self.sourceModel().data(index_user)).lower()
-            if self.user_filter in data_user:
-                return True
+
+            if self.user_filter not in data_user:
+                user_filter = False
+            else: 
+                user_filter = True
+                break
             
-        for column in self.status_columns:
-            index_status = self.sourceModel().index(source_row, column, source_parent)
-            data_status = str(self.sourceModel().data(index_status))
-            print(f"{data_status}")
-            if data_status in self.status_filter:
-                return True
-                        
-        return False
+        return user_filter and status_filter
+
     

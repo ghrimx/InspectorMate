@@ -2,7 +2,7 @@ import logging
 
 from qtpy import (QtWidgets, QtCore, QtSql, QtGui, Signal, Slot)
 
-from signage.signagemodel import SignageTablelModel
+from signage.signagemodel import SignageTablelModel, SignageProxyModel
 from signage.signagedialog import (CreateDialog, ExportDialog, ImportDialog)
 from signage.signagetable import SignageTable
 from models.model import ProxyModel
@@ -14,6 +14,8 @@ from widgets.basetab import BaseTab
 from widgets.richtexteditor import RichTextEditor
 from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.combobox import CheckableComboBox
+
+from utilities import config as mconf
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +78,9 @@ class SignageInfoWidget(QtWidgets.QWidget):
 
 class FilterDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, flags=QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.Dialog)
+        self.setObjectName("SignageFilterDialog")
+        self.setStyleSheet(r"#SignageFilterDialog{border:1px solid black; border-radius: 0px;}")
 
         buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
 
@@ -91,34 +95,38 @@ class FilterDialog(QtWidgets.QDialog):
         self.status_combobox.addItems(AppDatabase.cache_signage_status.keys())
         form.addRow("Status:", self.status_combobox)
 
-        # _owners: list = mconf.settings.value("owners", [], "QStringList")
-        # self.owner_combobox = CheckableComboBox()
-        # self.owner_combobox.addItems(_owners)
-        # form.addRow("Owner:", self.owner_combobox)
+        _owners: list = mconf.settings.value("owners", [], "QStringList")
+        self.owner_combobox = CheckableComboBox()
+        self.owner_combobox.addItems(_owners)
+        form.addRow("Owner:", self.owner_combobox)
 
-        self.document_received = QtWidgets.QCheckBox(self)
-        form.addRow("Doc received:", self.document_received)
+        self.document_received = QtWidgets.QCheckBox("all", self)
+        self.document_received.setCheckState(QtCore.Qt.CheckState.PartiallyChecked)
+        self.document_received.checkStateChanged.connect(self.updateEvidenceCheckbox)
+        form.addRow("Evidence:", self.document_received)
 
         form.addWidget(self.buttonBox)
+    
+    @Slot(QtCore.Qt.CheckState)
+    def updateEvidenceCheckbox(self, state):
+        if state == QtCore.Qt.CheckState.Unchecked:
+            self.document_received.setText("without only")
+        elif state == QtCore.Qt.CheckState.PartiallyChecked:
+            self.document_received.setText("all")
+        elif state == QtCore.Qt.CheckState.Checked:
+            self.document_received.setText("with only")
 
     def accept(self):
         super().accept()
 
-    def filters(self):
-        return '|'.join([f"({x})" for x in self.status_combobox.currentData()])
+    def statusFilter(self):
+        return [x for x in self.status_combobox.currentData()]       
+
+    def ownerFilter(self):
+        return [x for x in self.owner_combobox.currentData()]
     
-    def chainedFilters(self):
-        status_filter = '|'.join([f"({x})" for x in self.status_combobox.currentData()])
-        if self.document_received.isChecked():
-            doc_received_filter = "[1-9]"
-        else:
-            doc_received_filter = "[0-9]"
-
-        return status_filter, doc_received_filter
-        
-
-    # def ownerFilter(self):
-    #     return '|'.join([f"({x})" for x in self.owner_combobox.currentData()])
+    def evidenceFilter(self) -> QtCore.Qt.CheckState:
+        return self.document_received.checkState()
 
 
 class SignageTab(BaseTab):
@@ -128,7 +136,7 @@ class SignageTab(BaseTab):
         super().__init__(parent=parent)
         self.signage_type = signage_type
         self.table_model = model
-        self.table_proxy_model = ProxyModel(self.table_model)
+        self.table_proxy_model = SignageProxyModel(self.table_model)
 
         self.table_proxy_model.setPermanentFilter(self.signage_type, [self.table_model.Fields.Type.index])
         self.table_proxy_model.setUserFilter('', self.table_model.visible_fields())
@@ -155,7 +163,7 @@ class SignageTab(BaseTab):
         self.btn_import_from_onenote.clicked.connect(self.import_from_onenote)
         self.toolbar.insertWidget(self.action_separator, self.btn_import_from_onenote)
 
-        self.btn_filter = QtWidgets.QPushButton()
+        self.btn_filter = QtWidgets.QPushButton(self)
         self.btn_filter.setIcon(QtGui.QIcon(":filter-line"))
         self.btn_filter.setToolTip("Filter")
         self.btn_filter.clicked.connect(self.setFilters)
@@ -237,20 +245,25 @@ class SignageTab(BaseTab):
     @Slot()
     def setFilters(self):
         if self.filter_dialog is None:
-            self.filter_dialog = FilterDialog(self)
-        res = self.filter_dialog.exec()
-
-        if res == 1:
-            self.applyFilters()
+            self.filter_dialog = FilterDialog(self.btn_filter)
+            
+            # Move the dialog below the button
+            ph = self.filter_dialog.parent().geometry().height()
+            pw = self.filter_dialog.parent().geometry().width()
+            px = self.filter_dialog.parent().geometry().x()
+            py = self.filter_dialog.parent().geometry().y()
+            dw = self.filter_dialog.width()
+            dh = self.filter_dialog.height()   
+            self.filter_dialog.setGeometry(px - int(pw / 2) + int(dw / 2), py + ph * 2 + dh * 2, dw, dh )
+            
+            self.filter_dialog.accepted.connect(self.applyFilters)
+        
+        self.filter_dialog.exec()
 
     def applyFilters(self):
-        self.table_proxy_model.setUserFilter(self.filter_dialog.filters(), [self.table_model.Fields.Status.index])
-        # self.table_proxy_model.setUserFilter(self.filter_dialog.ownerFilter(), [self.table_model.Fields.Owner.index])
-        filters = self.filter_dialog.chainedFilters()
-        columns = [self.table_model.Fields.Status.index, self.table_model.Fields.Evidence.index]
-
-        self.table_proxy_model.setChainedFilters(filters, columns)
-
+        self.table_proxy_model.setSatusFilter(self.filter_dialog.statusFilter(), self.table_model.Fields.Status.index)
+        self.table_proxy_model.setOwnerFilter(self.filter_dialog.ownerFilter(), self.table_model.Fields.Owner.index)
+        self.table_proxy_model.setEvidenceFilter(self.filter_dialog.evidenceFilter(), self.table_model.Fields.Evidence.index)
         self.table_proxy_model.invalidateFilter()
 
     def exportSignage(self):
