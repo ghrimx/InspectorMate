@@ -112,10 +112,12 @@ class SummaryTab(QtWidgets.QWidget):
         form.addRow("Total evidence:", self.count_evidence)
 
         self.status_table = QtWidgets.QTableView(self)
+        self.status_table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.NoSelection)
+        self.status_table.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.status_table.verticalHeader().setVisible(False)
         self.status_table.horizontalHeader().setVisible(True)
         self.status_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.status_table.horizontalHeader().setStretchLastSection(True)
+        # self.status_table.horizontalHeader().setStretchLastSection(True)
         self.status_table.setModel(self._model)
         self._model.refresh()
 
