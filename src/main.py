@@ -27,7 +27,7 @@ def main() -> int:
     app.setApplicationName(config.app_name)
     app.setStyle("Fusion")
     app.setWindowIcon(QtGui.QIcon(":mylogo"))
-    app.setApplicationVersion(config.app_name)
+    app.setApplicationVersion(config.app_version)
     app_font = app.font()
     app_font.setPointSizeF(10.0)
     app.setFont(app_font)

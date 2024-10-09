@@ -23,7 +23,7 @@ class SignageTable(TreeView):
 
         self._model: SignageTablelModel = model
         self._proxy_model = proxy_model
-
+        self.context_menu = QtWidgets.QMenu(self)
         self.setModel(self._proxy_model)
 
         # Selection mode
@@ -71,13 +71,12 @@ class SignageTable(TreeView):
 
     def contextMenuEvent(self, event: QtGui.QMouseEvent):
         # Creating a menu object with the central widget as parent
-        menu = QtWidgets.QMenu(self)
-        menu.addMenu(self.status_menu)
-        menu.addMenu(self.owner_menu)
-        menu.addAction(self.action_delete_rows)
-        menu.addAction(self.action_openLink)
-        menu.addAction(self.action_resetfilter)
-        menu.exec(QtGui.QCursor().pos())
+        self.context_menu.addMenu(self.status_menu)
+        self.context_menu.addMenu(self.owner_menu)
+        self.context_menu.addAction(self.action_delete_rows)
+        self.context_menu.addAction(self.action_openLink)
+        self.context_menu.addAction(self.action_resetfilter)
+        self.context_menu.exec(QtGui.QCursor().pos())
 
     @Slot()
     def resetFilters(self):
