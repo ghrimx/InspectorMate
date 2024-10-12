@@ -361,19 +361,27 @@ class DocTab(BaseTab):
 
     @Slot()
     def onFolderFilterClicked(self):
-        selected_index = self.doc_filter.selectionModel().currentIndex()
-        folderpath = self.doc_explorer_model.get_path(selected_index)
-        self.doctable_proxy_model.setUserFilter(folderpath.as_posix(), [self.doctable_model.Fields.Filepath.index])
-        self.doctable_proxy_model.invalidateFilter()
-        self.table.updateAction()
+        try:
+            selected_index = self.doc_filter.selectionModel().currentIndex()
+        except Exception as e:
+            logger.error(e)
+        else:
+            folderpath = self.doc_explorer_model.get_path(selected_index)
+            self.doctable_proxy_model.setUserFilter(folderpath.as_posix(), [self.doctable_model.Fields.Filepath.index])
+            self.doctable_proxy_model.invalidateFilter()
+            self.table.updateAction()
 
     @Slot(QtCore.QModelIndex)
     def onRequestFilterClicked(self, index: QtCore.QModelIndex):
         """Filter the Evidence table on Request Refkey clicked"""
-        idx = self.request_filter_tab.table.model().index(index.row(), SignageTablelModel.Fields.RefKey.index)
-        refkey = self.request_filter_tab.table.model().data(idx, Qt.ItemDataRole.DisplayRole)
-        self.doctable_proxy_model.setUserFilter(f"{refkey}", [self.doctable_model.Fields.RefKey.index])
-        self.doctable_proxy_model.invalidateFilter()
+        try:
+            idx = self.request_filter_tab.table.model().index(index.row(), SignageTablelModel.Fields.RefKey.index)
+        except Exception as e:
+            logger.error(e)
+        else:
+            refkey = self.request_filter_tab.table.model().data(idx, Qt.ItemDataRole.DisplayRole)
+            self.doctable_proxy_model.setUserFilter(f"{refkey}", [self.doctable_model.Fields.RefKey.index])
+            self.doctable_proxy_model.invalidateFilter()
 
     @Slot()
     def reset_doc_explorer_filter(self):
