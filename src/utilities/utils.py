@@ -95,7 +95,7 @@ def mergeExcelFiles(files: list, drop_duplicate: str | bool = 'first', outfile: 
     if len(files) > 0:
         dfs = []
         for file in files:
-            dfs.append(pd.read_excel(file))
+            dfs.append(pd.read_excel(file, dtype={'RefKey': str}))
             
         df = pd.concat(dfs)
 
