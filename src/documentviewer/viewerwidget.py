@@ -183,7 +183,7 @@ class ViewerWidget(QtWidgets.QWidget):
 
     @Slot()
     def capture(self, citation):
-        self.capturer = Capture(source=citation)
+        self.capturer = Capture(source=citation, parent=self)
         self.capturer.show()
 
     def showEvent(self, event: QtGui.QShowEvent):

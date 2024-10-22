@@ -1,41 +1,39 @@
-import time
-
 from qtpy import (QtWidgets, Qt, QtGui, QtCore)
 from utilities import config as mconf
 
 class Capture(QtWidgets.QWidget):
-
-    def __init__(self, source: str = None, parent = None):
-        super().__init__(parent = parent)
-
-        self._cache_key = None
-        self._source = source
+    def __init__(self, source: str = None, parent=None):
+        super(Capture, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
+        self.setMouseTracking(True)
 
         self.global_final_origin = None
+        self._cache_key = None
+        self._source = source
         
-        self.setMouseTracking(True)
-        screen_geometry = QtWidgets.QApplication.primaryScreen().geometry()
+        screen = self.screen()
+        primary_screen = QtGui.QGuiApplication.primaryScreen()
 
-        for screen in QtWidgets.QApplication.screens():
-            screen_geometry = screen_geometry.united(screen.geometry())
-
-        self.setGeometry(0, 0, screen_geometry.width(), screen_geometry.height())
+        # Extend the widget area in multi monitors setup
+        self.setGeometry(primary_screen.geometry().x(),
+                         primary_screen.geometry().y(),
+                         screen.geometry().width() + primary_screen.geometry().width(),
+                         screen.geometry().height() + primary_screen.geometry().height())
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setWindowOpacity(0.15)
-
+        
         self.rubber_band = QtWidgets.QRubberBand(QtWidgets.QRubberBand.Shape.Rectangle, self)
         self.origin = QtCore.QPoint()
 
-        QtWidgets.QApplication.setOverrideCursor(Qt.CursorShape.CrossCursor)
-        screen = QtWidgets.QApplication.primaryScreen()
-        rect = screen.virtualGeometry()
+        self.setCursor(Qt.CursorShape.CrossCursor)
 
-        time.sleep(0.31)
-        self.pixmap = screen.grabWindow(0,
-                                        rect.x(),
-                                        rect.y(),
-                                        rect.width(),
-                                        rect.height())
+        # Delay the capture to ensure init
+        QtCore.QTimer.singleShot(500, self.garbwindow)
+    
+    def garbwindow(self):
+        screen = self.screen()
+        self.pixmap = screen.grabWindow(0)
 
     def mousePressEvent(self, event: QtGui.QMouseEvent | None) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -50,14 +48,33 @@ class Capture(QtWidgets.QWidget):
             self.rubber_band.setGeometry(QtCore.QRect(self.origin, event.pos()).normalized())
             self.global_final_origin = event.globalPosition().toPoint()
 
+    def cropArea(self, rect: QtCore.QRect) -> QtCore.QRect:
+        """Calculate the x,y of the crop area relative to the screen coordinate"""
+        x = rect.x()
+        y = rect.y()
+        
+        if self.screen().geometry().x() != 0:
+            x = abs(self.screen().geometry().x()) - abs(x)
+            x = abs(x)
+        
+        if self.screen().geometry().y() != 0:
+            y = abs(self.screen().geometry().y()) - abs(y)
+            y = abs(y)
+        
+        crop_area = QtCore.QRect(x, y, rect.width(), rect.height())
+
+        return crop_area
+
     def mouseReleaseEvent(self, event: QtGui.QMouseEvent | None) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self.rubber_band.hide()
 
             if self.global_final_origin is not None:
-                rect = QtCore.QRect(self.global_initial_origin, self.global_final_origin).normalized()
+                crop = QtCore.QRect(self.global_initial_origin, self.global_final_origin).normalized()
 
-                self.pixmap = self.pixmap.copy(rect)
+                corrected_crop = self.cropArea(crop)
+
+                self.pixmap = self.pixmap.copy(corrected_crop)
 
                 # set clipboard
                 clipboard = QtWidgets.QApplication.clipboard()
@@ -67,7 +84,7 @@ class Capture(QtWidgets.QWidget):
 
                 mconf.settings.setValue("capture", [self._cache_key, self._source])
 
-            QtWidgets.QApplication.restoreOverrideCursor()
+            self.setCursor(Qt.CursorShape.ArrowCursor)
             self.close()
 
     def capturekey(self) -> int:
