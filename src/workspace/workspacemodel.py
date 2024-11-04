@@ -18,6 +18,8 @@ class WorkspaceModel(BaseRelationalTableModel):
         OneNoteSection = DatabaseField
         CreationDate = DatabaseField
         ModificationDate = DatabaseField
+        Reference = DatabaseField
+        
 
     def __init__(self) -> None:
         super().__init__()
@@ -55,6 +57,7 @@ class WorkspaceModel(BaseRelationalTableModel):
         WorkspaceModel.Fields.OneNoteSection = DatabaseField("onenote_section", self.fieldIndex('onenote_section'), False)
         WorkspaceModel.Fields.CreationDate = DatabaseField("creation_date", self.fieldIndex('creation_date'), False)
         WorkspaceModel.Fields.ModificationDate = DatabaseField("modification_date", self.fieldIndex('modification_date'), False)
+        WorkspaceModel.Fields.Reference = DatabaseField("reference", self.fieldIndex('reference'), False)
 
     def insert(self, workspace: Workspace) -> bool:
         r = self.record()

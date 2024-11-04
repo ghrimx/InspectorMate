@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from qtpy import QtSql
 
+from utilities import config as mconf
 from db.dbstructure import (Workspace,
                             SignageType,
                             Document)
@@ -26,16 +27,33 @@ class AppDatabase(QtSql.QSqlDatabase):
     def __init__(self):
         super().__init__()
 
-    def connect(self, connection_name):
-        self.connection_name = connection_name
-        self: QtSql.QSqlDatabase = QtSql.QSqlDatabase.addDatabase("QSQLITE")
-        self.setDatabaseName(connection_name)
+    @classmethod
+    def databaseVersion(cls):
+        """
+            Get database version
+        """
 
-        if not self.open():
-            logger.error(f"Connection failed: {self.lastError().text()}")
-            raise ValueError(self.lastError().text())
+        query = QtSql.QSqlQuery()
+        query.exec("""SELECT value FROM metadata WHERE key = 'version' """)
+
+        if not query.exec():
+            logger.error(f"databaseVersion > execution failed: {query.lastError().text()}")
+        elif query.next():
+            mconf.config.db_version = query.value(0)
         else:
-            logger.info("Connected to the database")
+            logger.error(f"databaseVersion > No rows found with query : {query.lastQuery()}")
+
+    @classmethod
+    def connect(cls, connection_name):
+        cls: QtSql.QSqlDatabase = QtSql.QSqlDatabase.addDatabase("QSQLITE")
+        cls.setDatabaseName(connection_name)
+
+        if not cls.open():
+            logger.error(f"Connection failed: {cls.lastError().text()}")
+            raise ValueError(cls.lastError().text())
+        else:
+            AppDatabase.databaseVersion()
+            logger.info(f"Connected to the database v{mconf.config.db_version}: {connection_name}")
 
     @classmethod
     def setup(cls):

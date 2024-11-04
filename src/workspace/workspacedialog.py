@@ -135,6 +135,7 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
 
         self.workspace_id_lineedit = QtWidgets.QLineEdit()
         self.workspace_name_lineedit = QtWidgets.QLineEdit()
+        self.workspace_reference_lineedit = QtWidgets.QLineEdit()
 
         self.workspace_path_button = QtWidgets.QPushButton("Workspace")
         self.workspace_path_lineedit = QtWidgets.QLineEdit()
@@ -161,6 +162,7 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         self.activate_workspace.setChecked(True)
 
         form.addRow(QtWidgets.QLabel("Name"), self.workspace_name_lineedit)
+        form.addRow(QtWidgets.QLabel("Reference"), self.workspace_reference_lineedit)
         form.addRow(self.workspace_path_button, self.workspace_path_lineedit)
         form.addRow(self.evidence_path_button, self.evidence_path_lineedit)
         form.addRow(self.notebook_path_button, self.notebook_path_lineedit)
@@ -225,6 +227,7 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.ManualSubmit)
         self.mapper.addMapping(self.workspace_id_lineedit, self.model.Fields.ID.index)
         self.mapper.addMapping(self.workspace_name_lineedit, self.model.Fields.Name.index)
+        self.mapper.addMapping(self.workspace_reference_lineedit, self.model.Fields.Reference.index)
         self.mapper.addMapping(self.workspace_path_lineedit, self.model.Fields.Rootpath.index)
         self.mapper.addMapping(self.evidence_path_lineedit, self.model.Fields.EvidencePath.index)
         self.mapper.addMapping(self.notebook_path_lineedit, self.model.Fields.NotebookPath.index)
@@ -237,6 +240,7 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         workspace = Workspace()
         workspace.id = self.workspace_id_lineedit.text()
         workspace.name = self.workspace_name_lineedit.text()
+        workspace.reference = self.workspace_reference_lineedit.text()
         workspace.rootpath = self.workspace_path_lineedit.text()
         workspace.state = self.activate_workspace.isChecked()
         workspace.onenote_section = self.onenote_path_lineedit.text()

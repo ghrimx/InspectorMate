@@ -350,7 +350,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.workspace_manager is None:
             self.workspace_manager = WorkspaceManager()
             self.workspace_manager.sig_workspace_updated.connect(self.refreshWidgets)
-            self.workspace_manager.exec()
+            
+        self.workspace_manager.exec()
 
     @Slot()
     def refreshWidgets(self):

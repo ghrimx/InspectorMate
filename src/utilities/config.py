@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 class Config():
     organization_name: str = "FAMHP"
     app_name: str = "InspectorMate"
-    app_version: str = "2.0.2-alpha"
-    db_version: str = "2.0.0-alpha"
+    app_version: str = "2.0.3-alpha"
+    db_version: str = ""
     app_data_path: Path = Path(os.getenv('APPDATA')).joinpath(".inspectormate")
-    db_path: Path = Path(os.getenv('APPDATA')).joinpath(f".inspectormate/inspectormate_{db_version}.sqlite")
+    db_path: Path = Path(os.getenv('APPDATA')).joinpath(f".inspectormate/inspectormate.sqlite")
     log_path: Path = Path(os.getenv('APPDATA')).joinpath(".inspectormate/inspectormate.log")
     config_path: Path = Path(os.getenv('APPDATA')).joinpath(".inspectormate/logging.ini")
 

@@ -65,6 +65,7 @@ class Signage:
 class Workspace:
     id: int = 0
     name: str = ""
+    reference: str = ""
     rootpath: str = ""
     evidence_path: str = ""
     notebook_path: str = ""
