@@ -10,10 +10,10 @@ class WorkspaceTable(TableView):
         super().__init__()
 
         self.setModel(model)
+        self.horizontalHeader().setStretchLastSection(True)
 
         self.state_delegate = StateDelegate()
-        self.setItemDelegateForColumn(model.Fields.State.index,
-                                      self.state_delegate)
+        self.setItemDelegateForColumn(model.Fields.State.index, self.state_delegate)
 
 
 class StateDelegate(ReadOnlyDelegate):

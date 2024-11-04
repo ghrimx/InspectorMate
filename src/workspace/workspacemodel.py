@@ -51,13 +51,13 @@ class WorkspaceModel(BaseRelationalTableModel):
         WorkspaceModel.Fields.ID = DatabaseField("workspace_id", self.fieldIndex('workspace_id'), False)
         WorkspaceModel.Fields.Name = DatabaseField("name", self.fieldIndex('name'), True)
         WorkspaceModel.Fields.State = DatabaseField("state", self.fieldIndex('state'), True)
-        WorkspaceModel.Fields.Rootpath = DatabaseField("root", self.fieldIndex('root'), True)
+        WorkspaceModel.Fields.Rootpath = DatabaseField("root", self.fieldIndex('root'), False)
         WorkspaceModel.Fields.EvidencePath = DatabaseField("attachments_path", self.fieldIndex('attachments_path'), False)
         WorkspaceModel.Fields.NotebookPath = DatabaseField("notebook_path", self.fieldIndex('notebook_path'), False)
         WorkspaceModel.Fields.OneNoteSection = DatabaseField("onenote_section", self.fieldIndex('onenote_section'), False)
         WorkspaceModel.Fields.CreationDate = DatabaseField("creation_date", self.fieldIndex('creation_date'), False)
         WorkspaceModel.Fields.ModificationDate = DatabaseField("modification_date", self.fieldIndex('modification_date'), False)
-        WorkspaceModel.Fields.Reference = DatabaseField("reference", self.fieldIndex('reference'), False)
+        WorkspaceModel.Fields.Reference = DatabaseField("reference", self.fieldIndex('reference'), True)
 
     def insert(self, workspace: Workspace) -> bool:
         r = self.record()
