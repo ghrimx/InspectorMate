@@ -1,6 +1,9 @@
+import logging
 from qtpy import QtWidgets, QtCore, QtGui
-
 from db.database import AppDatabase
+
+logger = logging.getLogger(__name__)
+
 
 class TextEdit(QtWidgets.QTextEdit):
 
@@ -15,12 +18,7 @@ class TextEdit(QtWidgets.QTextEdit):
         self.setWindowTitle(QtCore.QFileInfo(self.filename).fileName())
     
     def closeEvent(self, event):
-        ans = QtWidgets.QMessageBox.question(self,
-                                             "RichTextEditor - Unsaved Changes",
-                                             f"Save unsaved changes in {self.filename}?",
-                                             QtWidgets.QMessageBox.StandardButton.Yes|QtWidgets.QMessageBox.StandardButton.No)
-
-        if (self.document().isModified() and ans == QtWidgets.QMessageBox.StandardButton.Yes):
+        if self.document().isModified():
             try:
                 self.save()
             except (IOError, OSError) as e:
@@ -35,14 +33,13 @@ class TextEdit(QtWidgets.QTextEdit):
         try:
             fh = QtCore.QFile(self.filename)
             if not fh.open(QtCore.QIODevice.OpenModeFlag.WriteOnly):
-                ...
-                # logger.error(IOError(fh.errorString()))
+                logger.error(IOError(fh.errorString()))
             stream = QtCore.QTextStream(fh)
             stream.setEncoding(QtCore.QStringConverter.Encoding.Utf8)
             stream << self.toHtml()
             fh.close()
         except EnvironmentError as e:
-            # logger.error(f"RichTextEditor -- Save Error:\nFailed to save {self.path}: {e}")
+            logger.error(f"RichTextEditor -- Save Error:\nFailed to save {self.filename}: {e}")
             QtWidgets.QMessageBox.warning(self, "RichTextEditor -- Save Error", f"Failed to save {self.filename}: {e}")
 
             self.document().setModified(False)
@@ -51,10 +48,10 @@ class TextEdit(QtWidgets.QTextEdit):
     def createNote(cls, filename: str = ""):
         if filename == "":
             filename = f"Untitled.html"
-            fname = QtWidgets.QFileDialog.getSaveFileName(parent=None, 
-                                                             caption="RichTextEditor -- Save File As",
-                                                             directory=f"{AppDatabase.active_workspace.notebook_path}/{filename}",
-                                                             filter="Text files (*.html *.*)")
+            fname = QtWidgets.QFileDialog.getSaveFileName(parent=None,
+                                                          caption="RichTextEditor -- Save File As",
+                                                          directory=f"{AppDatabase.active_workspace.notebook_path}/{filename}",
+                                                          filter="Text files (*.html *.*)")
         if fname[0] == "":
             return
         
@@ -66,12 +63,12 @@ class TextEdit(QtWidgets.QTextEdit):
         return cls(fname[0], text)
 
     @classmethod
-    def loadNote(cls, filename: str):
+    def load(cls, filename: str):
         fh = None
         try:
             fh = QtCore.QFile(filename)
             if not fh.open(QtCore.QIODevice.OpenModeFlag.ReadOnly):
-                # logger.error(f"RichTextEditor -- Open Error:\nFailed to open {path}: {IOError(fh.errorString())}")
+                logger.error(f"RichTextEditor -- Open Error:\nFailed to open {filename}: {IOError(fh.errorString())}")
                 QtWidgets.QMessageBox.warning(cls,
                                               "RichTextEditor -- Open Error",
                                               f"Failed to open {cls.filename}: {IOError(fh.errorString())}")
@@ -96,7 +93,7 @@ class Notepad(QtWidgets.QWidget):
         vbox = QtWidgets.QVBoxLayout(self)
         self.setLayout(vbox)
 
-        # Menubar
+        # Toolbar
         toolbar = QtWidgets.QToolBar(self)
         vbox.addWidget(toolbar)
 
@@ -125,11 +122,27 @@ class Notepad(QtWidgets.QWidget):
         
         vbox.addWidget(self.mdi)
 
-    def addNote(self):
-        textedit = TextEdit.createNote("")
+    def loadfile(self, filename):
+        textedit = TextEdit.load(filename)
         if textedit is not None:
             subwindow = self.mdi.addSubWindow(textedit)
             subwindow.show()
+
+    def addNote(self):
+        filename = f"Untitled.html"
+        fname = QtWidgets.QFileDialog.getSaveFileName(parent=None,
+                                                          caption="RichTextEditor -- Save File As",
+                                                          directory=f"{AppDatabase.active_workspace.notebook_path}/{filename}",
+                                                          filter="Text files (*.html *.*)")
+        if fname[0] == "":
+            return
+        
+        with open(fname[0], "w") as f:
+            text = ""
+            f.write(text)
+            f.close()
+
+        self.loadfile(fname[0])
 
     def editNote(self):
         fname = QtWidgets.QFileDialog.getOpenFileName(parent=None,
@@ -140,11 +153,13 @@ class Notepad(QtWidgets.QWidget):
         if fname[0] == "":
             return
 
-        textedit = TextEdit.loadNote(fname[0])
-
-        if textedit is not None:
-            subwindow = self.mdi.addSubWindow(textedit)
-            subwindow.show()
+        for subwindow in self.mdi.subWindowList():
+            textedit: TextEdit = subwindow.widget()
+            if textedit.filename == fname[0]:
+                self.mdi.setActiveSubWindow(subwindow)
+                break
+        else:
+            self.loadfile(fname[0])
 
     def setTabbedView(self):
         self.mdi.setViewMode(QtWidgets.QMdiArea.ViewMode.TabbedView)
