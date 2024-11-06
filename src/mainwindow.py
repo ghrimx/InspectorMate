@@ -193,7 +193,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.signage_model.rowsRemoved.connect(self.doctab.request_filter_tab.updateCounter)
 
     def showAbout(self):
-        about = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.NoIcon, "About InspectorMate", f"InspectorMate v{QtWidgets.QApplication.applicationVersion()}", QtWidgets.QMessageBox.StandardButton.Close, self)
+        about = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.NoIcon,
+                                      "About InspectorMate",
+                                      f"InspectorMate v{QtWidgets.QApplication.applicationVersion()}\nDatabase v{mconf.config.db_version}", QtWidgets.QMessageBox.StandardButton.Close, self)
         about.exec()
 
     @Slot()
