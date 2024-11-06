@@ -102,7 +102,7 @@ class WorkspaceManager(QtWidgets.QDialog):
             self.sig_workspace_updated.emit()
 
     @Slot()
-    def deleteWorkspace(self):
+    def deleteWorkspace(self): 
         row = self.workspace_table.selectionModel().currentIndex().row()
         res = self._model.deleteRow(row)
         if res:
