@@ -62,6 +62,7 @@ class WorkspaceModel(BaseRelationalTableModel):
     def insert(self, workspace: Workspace) -> bool:
         r = self.record()
         r.setValue('name', workspace.name)
+        r.setValue('reference', workspace.reference)
         r.setValue('root', workspace.rootpath)
         r.setValue('state', workspace.state)
         r.setValue('attachments_path', workspace.evidence_path)

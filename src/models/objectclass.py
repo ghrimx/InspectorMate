@@ -13,6 +13,7 @@ class User:
 class Workspace:
     id: int = 0
     name: str = ""
+    reference: str = ""
     rootpath: str = ""
     evidence_path: str = ""
     notebook_path: str = ""
@@ -47,6 +48,7 @@ class Signage:
     type: str | int = ""
     owner: str = ""
     note: str = ""
+    public_note: str = ""
     workspace_id: str = ""
     uid: str = ""
     link: str = ""
