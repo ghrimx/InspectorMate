@@ -86,7 +86,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.signage_dock_widget.setMinimumSize(200, 150)
         self.signage_area = self.dock_manager.addDockWidgetTabToArea(self.signage_dock_widget, self.request_area)
         
-        # Notebook widget
+        # Notbook widget
         self.notepad_tab = Notepad(self)
         self.notepad_dock_widget = QtAds.CDockWidget("Notebook")
         self.notepad_dock_widget.setWidget(self.notepad_tab)
@@ -166,6 +166,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_menu.addAction(self.request_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.signage_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.doctab_dock_widget.toggleViewAction())
+        self.view_menu.addAction(self.notepad_dock_widget.toggleViewAction())
         self.view_menu.addSeparator()
 
         app_menu = QtWidgets.QMenu("Application FontSize", self.menubar)
