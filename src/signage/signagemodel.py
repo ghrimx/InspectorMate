@@ -97,6 +97,7 @@ class SignageTablelModel(BaseRelationalTableModel):
 
     def querySignage(self, row) -> Signage:
         signage = Signage(note=self.index(row, self.Fields.Note.index).data(Qt.ItemDataRole.DisplayRole),
+                          public_note=self.index(row, self.Fields.PublicNote.index).data(Qt.ItemDataRole.DisplayRole),
                           status_id=self.index(row, self.Fields.Status.index).data(Qt.ItemDataRole.DisplayRole),
                           owner=self.index(row, self.Fields.Owner.index).data(Qt.ItemDataRole.DisplayRole),
                           type_id=self.index(row, self.Fields.Type.index).data(Qt.ItemDataRole.DisplayRole),
@@ -205,6 +206,7 @@ class SignageTablelModel(BaseRelationalTableModel):
         record.setValue(self.Fields.Status.index, signage.status_id)
         record.setValue(self.Fields.Type.index, signage.type_id)
         record.setValue(self.Fields.Note.index, signage.note)
+        record.setValue(self.Fields.PublicNote.index, signage.public_note)
         record.setValue(self.Fields.Workspace.index, signage.workspace_id)
         record.setValue(self.Fields.Owner.index, signage.owner)
 
@@ -294,7 +296,8 @@ class SignageTablelModel(BaseRelationalTableModel):
                 values = list(map(record.value, model_fields))
    
                 if public_note:
-                    values[-1] = html2text(values[-1])
+                    if values[-1] is not None:
+                        values[-1] = html2text(values[-1])
 
                 ws.append(values)
 

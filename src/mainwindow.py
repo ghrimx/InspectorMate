@@ -15,6 +15,8 @@ from onenote.onenotepickerdlg import OnenotePickerDialog
 from documentviewer.viewerfactory import ViewerFactory
 from documentviewer.viewerwidget import ViewerWidget
 
+from notebook.notepad import Notepad
+
 from widgets.filesystem import FileSystem
 from widgets.richtexteditor import RichTextEditor
 from widgets.filedialog import (MergeExcelDialog, UnzipDialog)
@@ -83,6 +85,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.signage_dock_widget.resize(250, 150)
         self.signage_dock_widget.setMinimumSize(200, 150)
         self.signage_area = self.dock_manager.addDockWidgetTabToArea(self.signage_dock_widget, self.request_area)
+        
+        # Notebook widget
+        self.notepad_tab = Notepad(self)
+        self.notepad_dock_widget = QtAds.CDockWidget("Notebook")
+        self.notepad_dock_widget.setWidget(self.notepad_tab)
+        self.notepad_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
+        self.notepad_dock_widget.resize(250, 150)
+        self.notepad_dock_widget.setMinimumSize(200, 150)
+        self.notepad_area = self.dock_manager.addDockWidgetTabToArea(self.notepad_dock_widget, self.request_area)
 
         # Document widget
         self.doctab = DocTab(model=self.document_model)

@@ -49,6 +49,7 @@ class Document:
 @dataclass
 class Signage:
     note: str = ""
+    public_note: str = ""
     status_id: str | int = ""
     owner: str = ""
     type_id: str | int = ""
