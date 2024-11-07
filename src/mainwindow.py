@@ -374,6 +374,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer.set_root_path(AppDatabase.active_workspace.rootpath)
         self.notebook_explorer.set_root_path(AppDatabase.active_workspace.notebook_path)
         self.set_window_title(AppDatabase.active_workspace.name)
+        self.notepad_tab.close_all()
 
     @Slot()
     def open_onenote_picker(self):
@@ -402,6 +403,7 @@ class MainWindow(QtWidgets.QMainWindow):
             err = self.request_tab.close()
             err = self.signage_tab.close()
             err = self.doctab.close()
+            self.notepad_tab.close_all()
 
             if not err:
                 AppDatabase.close()
