@@ -1,7 +1,7 @@
 import logging
 import enum
 from functools import partial
-from base64 import (b64decode, b64encode)
+from datetime import datetime
 
 from qtpy import QtWidgets, QtCore, QtGui, Slot
 
@@ -13,6 +13,30 @@ from utilities import config as mconf
 logger = logging.getLogger(__name__)
 
 
+FONT_SIZES = [7, 8, 9, 10, 11, 12, 13, 14, 18, 24, 36, 48, 64, 72, 96, 144, 288]
+
+
+class ListStyle(enum.Enum):
+    LIST1 = 1
+    LIST2 = 2
+
+
+class HeadingStyle(enum.Enum):
+    P = 0
+    H1 = 1
+    H2 = 2
+    H3 = 3
+    H4 = 4
+    H5 = 5
+    H6 = 6
+
+
+class LineSpacing(enum.Enum):
+    NORMAL = 100
+    NORMAL_HALF = 150
+    DOUBLE = 200
+
+
 class TextEdit(QtWidgets.QTextEdit):
 
     def __init__(self, filename=str, text=str, parent=None):
@@ -21,6 +45,12 @@ class TextEdit(QtWidgets.QTextEdit):
         self.filename: str = filename
         base_url = QtCore.QUrl(f"file:///{AppDatabase.active_workspace.notebook_path}/")
         self.document().setBaseUrl(base_url)
+
+        # Initialize default font size.
+        font = QtGui.QFont("Segoe UI", 12)
+        font.setStyleHint(QtGui.QFont.StyleHint.SansSerif)
+        self.setFont(font)
+        self.setFontPointSize(12)
 
         self.setHtml(text)
 
@@ -161,6 +191,14 @@ class TextEdit(QtWidgets.QTextEdit):
         self._cursor.mergeCharFormat(fmt)
         self.mergeCurrentCharFormat(fmt)
 
+    def merge_format_on_line_or_selection(self, fmt: QtGui.QTextCharFormat):
+        if not self._cursor.hasSelection():
+            self._cursor.select(QtGui.QTextCursor.SelectionType.LineUnderCursor)
+
+        self._cursor.mergeCharFormat(fmt)
+        self.mergeCurrentCharFormat(fmt)
+        self._cursor.clearSelection()
+
     @classmethod
     def load(cls, filename: str):
         fh = None
@@ -220,6 +258,35 @@ class TextEdit(QtWidgets.QTextEdit):
         style = False if cursor.charFormat().fontStrikeOut() else True
         fmt.setFontStrikeOut(style)
         self.merge_format_on_word_or_selection(fmt)
+
+    @Slot()
+    def insertDate(self):
+        today = datetime.now().strftime("%d-%m-%Y")
+        self._cursor.insertText(today)
+    
+    @Slot()
+    def insertTime(self):
+        now = datetime.now().strftime("%H:%M:%S")
+        self._cursor.insertText(now)
+
+    @Slot()
+    def textStyle(self, style):
+        cursor = self._cursor
+
+        cursor.beginEditBlock()
+
+        block_fmt = cursor.blockFormat()
+
+        if isinstance(style, HeadingStyle):
+            block_fmt.setObjectIndex(-1)
+            block_fmt.setHeadingLevel(style.value)
+            cursor.setBlockFormat(block_fmt)
+            fmt = QtGui.QTextCharFormat()
+            fmt.setFontWeight(QtGui.QFont.Weight.Bold if style.value > 0 else QtGui.QFont.Weight.Normal)
+            fmt.setProperty(QtGui.QTextFormat.Property.FontSizeAdjustment, 4 - style.value if style.value > 0 else 0)
+            self.merge_format_on_line_or_selection(fmt)
+
+        cursor.endEditBlock()
     
 
 class Notepad(QtWidgets.QWidget):
@@ -265,10 +332,22 @@ class Notepad(QtWidgets.QWidget):
         self.action_closeall = QtGui.QAction("Close &All", self, statusTip="Close all the windows", triggered=self.close_all)
 
         # Text actions
-        self.action_bold = QtGui.QAction(QtGui.QIcon(':bold'), "Bold (Ctrl+B)", self, checkable=True)
-        self.action_italic =  QtGui.QAction(QtGui.QIcon(':italic'), "Italic (Ctrl+I)", self, checkable=True)
-        self.action_underline = QtGui.QAction(QtGui.QIcon(':underline'), "Underline (Ctrl+U)", self, checkable=True)
-        self.action_strikeout = QtGui.QAction(QtGui.QIcon(':strikeout'), "StrikeOut (Ctrl+-)", self, checkable=True)
+        self.action_bold = QtGui.QAction(QtGui.QIcon(':bold'), "Bold (Ctrl+B)", self, triggered=self.textBold ,checkable=True)
+        self.action_italic =  QtGui.QAction(QtGui.QIcon(':italic'), "Italic (Ctrl+I)", self, triggered=self.textItalic, checkable=True)
+        self.action_underline = QtGui.QAction(QtGui.QIcon(':underline'), "Underline (Ctrl+U)", self, triggered=self.textUnderline, checkable=True)
+        self.action_strikeout = QtGui.QAction(QtGui.QIcon(':strikeout'), "StrikeOut (Ctrl+-)", self, triggered=self.textStrikeout, checkable=True)
+
+        # Date/Time
+        self.action_date = QtGui.QAction(QtGui.QIcon(":calendar-line"), "Date (Ctrl+Alt+D)", self, triggered=self.insertDate)
+        self.action_time = QtGui.QAction(QtGui.QIcon(":time-line"), " Time (Ctrl+Alt+T)", self, triggered=self.insertTime)
+
+        # Headings
+        self.action_paragraph = QtGui.QAction(QtGui.QIcon(":paragraph"), "Paragraph", self, triggered = lambda:self.textStyle(HeadingStyle.P))
+        self.action_h1 = QtGui.QAction(QtGui.QIcon(":h-1"), "Heading 1", self, triggered = lambda:self.textStyle(HeadingStyle.H1))
+        self.action_h2 = QtGui.QAction(QtGui.QIcon(":h-2"), "Heading 2", self, triggered = lambda:self.textStyle(HeadingStyle.H2))
+        self.action_h3 = QtGui.QAction(QtGui.QIcon(":h-3"), "Heading 3", self, triggered = lambda:self.textStyle(HeadingStyle.H3))
+        self.action_h4 = QtGui.QAction(QtGui.QIcon(":h-4"), "Heading 4", self, triggered = lambda:self.textStyle(HeadingStyle.H4))
+
 
     def createToolbar(self):
         self.toolbar = QtWidgets.QToolBar(self)
@@ -313,6 +392,36 @@ class Notepad(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_underline)
         self.toolbar.addAction(self.action_strikeout)
 
+        self.toolbar.addSeparator()
+        
+        # DateTime menu
+        self.datetime_menu = QtWidgets.QMenu(self)
+        self.datetime_menu.addAction(self.action_date)
+        self.datetime_menu.addAction(self.action_time)
+        self.datetime_toolbutton = QtWidgets.QToolButton(self)
+        self.datetime_toolbutton.setIcon(QtGui.QIcon(":calendar-schedule-line"))
+        self.datetime_toolbutton.setToolTip("Insert date/time")
+        self.datetime_toolbutton.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)       
+        self.datetime_toolbutton.setMenu(self.datetime_menu)
+
+        self.toolbar.addWidget(self.datetime_toolbutton)
+
+        # Headings menu
+        self.heading_toolbutton = QtWidgets.QToolButton(self)
+        self.heading_toolbutton.setText("Headings")
+        self.heading_toolbutton.setIcon(QtGui.QIcon(":heading"))
+        self.heading_toolbutton.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
+
+        self.heading_menu = QtWidgets.QMenu(self)
+        self.heading_menu.addAction(self.action_paragraph)
+        self.heading_menu.addAction(self.action_h1)
+        self.heading_menu.addAction(self.action_h2)
+        self.heading_menu.addAction(self.action_h3)
+        self.heading_menu.addAction(self.action_h4)
+        self.heading_toolbutton.setMenu(self.heading_menu)
+
+        self.toolbar.addWidget(self.heading_toolbutton)
+
     @Slot()
     def update_window_menu(self):
         self.window_menu.clear()
@@ -356,7 +465,7 @@ class Notepad(QtWidgets.QWidget):
 
     def close_all(self):
         err = self.saveAll()
-        
+
         if err:
             return
 
@@ -389,14 +498,49 @@ class Notepad(QtWidgets.QWidget):
     def loadfile(self, filename):
         textedit = TextEdit.load(filename)
         if textedit is not None:
-            # Connect action
-            self.action_bold.triggered.connect(textedit.textBold)
-            self.action_italic.triggered.connect(textedit.textItalic)
-            self.action_strikeout.triggered.connect(textedit.textStrikeout)
-            self.action_underline.triggered.connect(textedit.textUnderline)
-
             subwindow = self.mdi.addSubWindow(textedit)
             subwindow.show()
+    
+    def active_mdi_child(self) -> TextEdit:
+        active_sub_window = self.mdi.activeSubWindow()
+        if active_sub_window:
+            return active_sub_window.widget()
+        return None
+
+    @Slot()
+    def textBold(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().textBold()
+    
+    @Slot()
+    def textItalic(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().textItalic()
+
+    @Slot()
+    def textStrikeout(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().textStrikeout()
+
+    @Slot()
+    def textUnderline(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().textUnderline()
+
+    @Slot()
+    def insertDate(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().insertDate()
+
+    @Slot()
+    def insertTime(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().insertTime()
+
+    @Slot()
+    def textStyle(self, style):
+        if self.active_mdi_child():
+            self.active_mdi_child().textStyle(style)
 
     @Slot()
     def loadFiles(self):
