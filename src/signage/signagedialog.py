@@ -59,6 +59,8 @@ class CreateDialog(QtWidgets.QDialog):
         self.signage_title_lineedit.setPlaceholderText("Enter text...")
         self.signage_title_lineedit.setMinimumWidth(500)
 
+        self.signage_link_hiddenField = "InspectorMate:///Global"
+
         form.addRow("Type:", self.signage_type_combobox)
         form.addRow("Owner:", owner_widget)
         form.addRow("Prefix:", self.signage_prefix_lineedit)
@@ -103,18 +105,17 @@ class CreateDialog(QtWidgets.QDialog):
         self.setRefKey(refKey)
 
     def saveSignage(self):
-        self.new_signage = Signage("",
-                                   1,
-                                   self.owner_combobox.currentText(),
-                                   self.signage_type_combobox.currentIndex() + 1,
-                                   self.signage_refkey_lineedit.text(),
-                                   self.signage_title_lineedit.toPlainText(),
-                                   "",
-                                   "",
-                                   "",
-                                   "",
-                                   AppDatabase.active_workspace.id,
-                                   "")
+        self.new_signage = Signage(note="",
+                                   public_note="",
+                                   status_id=1,
+                                   owner=self.owner_combobox.currentText(),
+                                   type_id=self.signage_type_combobox.currentIndex() + 1,
+                                   refKey=self.signage_refkey_lineedit.text(),
+                                   title=self.signage_title_lineedit.toPlainText(),
+                                   creation_datetime="",
+                                   modification_datetime="",
+                                   link=self.signage_link_hiddenField,
+                                   workspace_id=AppDatabase.active_workspace.id)
 
         res = self._model.insertSignage(self.new_signage)
 

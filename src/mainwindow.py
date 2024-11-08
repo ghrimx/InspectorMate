@@ -15,7 +15,7 @@ from onenote.onenotepickerdlg import OnenotePickerDialog
 from documentviewer.viewerfactory import ViewerFactory
 from documentviewer.viewerwidget import ViewerWidget
 
-from notebook.notepad import Notepad
+from notebook.notepad import Notepad, TextEdit
 
 from widgets.filesystem import FileSystem
 from widgets.richtexteditor import RichTextEditor
@@ -94,6 +94,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notepad_dock_widget.resize(250, 150)
         self.notepad_dock_widget.setMinimumSize(200, 150)
         self.notepad_area = self.dock_manager.addDockWidgetTabToArea(self.notepad_dock_widget, self.request_area)
+        self.notepad_tab.sigInsertRequest.connect(self.createSignageFromNotePad)
 
         # Document widget
         self.doctab = DocTab(model=self.document_model)
@@ -269,6 +270,25 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.note_tabs[file_info.absoluteFilePath()].toggleView(True)
             else:
                 utils.open_file(file_info.absoluteFilePath())
+
+    @Slot(TextEdit)
+    def createSignageFromNotePad(self, caller: TextEdit):     
+        title = caller.textCursor().selectedText()
+        val = self.signage_tab.createSignage(title, f"InspectorMate:///Notepad:{caller.userFriendlyFilename()}")
+
+        if val == 1:
+            signage = self.signage_tab.create_dialog.getNewSignage()
+
+            icon = None
+            signage_type: SignageType
+            for signage_type in AppDatabase.cache_signage_type.values():
+                if signage_type.type_id == signage.type_id:
+                    icon = signage_type.icon
+
+            if icon != "":
+                caller.textCursor().insertHtml(f'<p><img alt="" src="data:image/png;base64,{icon}"/> {signage.refKey} {signage.title}</p>')
+            else:
+                caller.textCursor().insertText(f'{signage.refKey} {signage.title}')
 
     def createSignageFromNote(self, caller: RichTextEditor):
 

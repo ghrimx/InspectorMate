@@ -209,6 +209,7 @@ class SignageTablelModel(BaseRelationalTableModel):
         record.setValue(self.Fields.PublicNote.index, signage.public_note)
         record.setValue(self.Fields.Workspace.index, signage.workspace_id)
         record.setValue(self.Fields.Owner.index, signage.owner)
+        record.setValue(self.Fields.Link.index, signage.link)
 
         return record
 

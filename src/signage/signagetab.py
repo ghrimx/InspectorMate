@@ -45,11 +45,15 @@ class SignageInfoWidget(QtWidgets.QWidget):
         self.public_note = RichTextEditor.fromMapper(bar=False, parent=self)
         self.public_note.editor.setStyleSheet("border: 2px solid red;")
 
+        self.link_label = QtWidgets.QLineEdit()
+        self.link_label.setReadOnly(True)
+
         formlayout.addRow('Title', self.title)
         formlayout.addRow('RefKey', self.ref_key)
         formlayout.addRow('Status', self.signage_status)
         formlayout.addRow('Type', self.type_combobox)
         formlayout.addRow('Owner', self.owner_combobox)
+        formlayout.addRow('Link', self.link_label)
 
         spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         formlayout.addItem(spacer)
@@ -64,6 +68,7 @@ class SignageInfoWidget(QtWidgets.QWidget):
         self.mapper.addMapping(self.owner_combobox, self._model.Fields.Owner.index)
         self.mapper.addMapping(self.note.editor, self._model.Fields.Note.index)
         self.mapper.addMapping(self.public_note.editor, self._model.Fields.PublicNote.index)
+        self.mapper.addMapping(self.link_label, self._model.Fields.Link.index)
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
 
     def index(self):
@@ -263,13 +268,14 @@ class SignageTab(BaseTab):
 
         self.export_dialog.exec()
 
-    def createSignage(self, text=""):
+    def createSignage(self, title="", link=""):
         if self.create_dialog is None:
             self.create_dialog = CreateDialog(model=self.table_model, parent=None)
-        self.create_dialog.signage_title_lineedit.setText(text)
+        self.create_dialog.signage_title_lineedit.setText(title)
         self.create_dialog.signage_title_lineedit.setFocus()
         self.create_dialog.signage_type_combobox.setCurrentIndex(0)
         self.create_dialog.update_refKey_fields()
+        self.create_dialog.signage_link_hiddenField = link
         res = self.create_dialog.exec()
         return res
 

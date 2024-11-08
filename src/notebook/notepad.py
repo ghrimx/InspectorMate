@@ -3,7 +3,7 @@ import enum
 from functools import partial
 from datetime import datetime
 
-from qtpy import QtWidgets, QtCore, QtGui, Slot
+from qtpy import QtWidgets, QtCore, QtGui, Slot, Signal
 
 from db.database import AppDatabase
 from utilities.config import settings
@@ -260,6 +260,14 @@ class TextEdit(QtWidgets.QTextEdit):
         self.merge_format_on_word_or_selection(fmt)
 
     @Slot()
+    def textSize(self, p):
+        font_size = float(p)
+        if font_size > 0:
+            fmt = QtGui.QTextCharFormat()
+            fmt.setFontPointSize(font_size)
+            self.merge_format_on_word_or_selection(fmt)
+
+    @Slot()
     def insertDate(self):
         today = datetime.now().strftime("%d-%m-%Y")
         self._cursor.insertText(today)
@@ -270,7 +278,7 @@ class TextEdit(QtWidgets.QTextEdit):
         self._cursor.insertText(now)
 
     @Slot()
-    def textStyle(self, style):
+    def textHeading(self, style):
         cursor = self._cursor
 
         cursor.beginEditBlock()
@@ -288,8 +296,179 @@ class TextEdit(QtWidgets.QTextEdit):
 
         cursor.endEditBlock()
     
+    @Slot()
+    def textHighlight(self):
+        color = QtWidgets.QColorDialog.getColor(self.textColor(), self)
+        if not color.isValid():
+            return
+
+        fmt = QtGui.QTextCharFormat()
+        fmt.setBackground(color)
+        self.merge_format_on_word_or_selection(fmt)
+
+        self.setFocus()
+
+    @Slot()
+    def quickHighlight(self):
+        cursor = self._cursor
+        color = QtGui.QColor("#ffcccc")
+
+        cursor.beginEditBlock()
+
+        if self.currentCharFormat().background().color() == QtGui.QColor("#ffcccc"):
+            fmt = QtGui.QTextCharFormat()
+            fmt.setBackground(QtCore.Qt.GlobalColor.transparent)
+            self.merge_format_on_line_or_selection(fmt)
+        else:
+            fmt = QtGui.QTextCharFormat()
+            fmt.setBackground(color)
+            self.merge_format_on_line_or_selection(fmt)
+
+        cursor.endEditBlock()
+
+    @Slot()
+    def bulletList(self):
+        cursor = self._cursor
+        marker = QtGui.QTextBlockFormat.MarkerType.NoMarker
+
+        if cursor.currentList():
+            style = cursor.currentList().format().style()
+        else:
+            style = QtGui.QTextListFormat.Style.ListDisc
+
+        cursor.beginEditBlock()
+        block_fmt = cursor.blockFormat()
+
+        block_fmt.setMarker(marker)
+        cursor.setBlockFormat(block_fmt)
+        list_fmt = QtGui.QTextListFormat()
+        if cursor.currentList():
+            list_fmt = cursor.currentList().format()
+        else:
+            list_fmt.setIndent(block_fmt.indent() + 1)
+            block_fmt.setIndent(0)
+            cursor.setBlockFormat(block_fmt)
+        list_fmt.setStyle(style)
+        cursor.createList(list_fmt)
+
+        cursor.endEditBlock()
+
+    @Slot()
+    def setLineSpacing(self, spacing: LineSpacing):
+        cursor = self._cursor
+
+        if not cursor.hasSelection():
+            cursor.select(QtGui.QTextCursor.SelectionType.BlockUnderCursor)
+
+        block_fmt = cursor.blockFormat()
+        block_char_fmt = cursor.blockCharFormat()
+
+        cursor.beginEditBlock()
+        block_fmt.setLineHeight(spacing.value, QtGui.QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+
+        cursor.mergeBlockCharFormat(block_char_fmt)
+        cursor.mergeBlockFormat(block_fmt)
+        cursor.endEditBlock()
+    
+    @Slot()
+    def clearFormatting(self):
+        cursor = self._cursor
+
+        default_format = QtGui.QTextCharFormat()
+        block_format = QtGui.QTextBlockFormat()
+
+        cursor.beginEditBlock()
+
+        if not cursor.hasSelection():
+            cursor.select(QtGui.QTextCursor.SelectionType.WordUnderCursor)
+            cursor_frame = cursor.currentFrame()
+
+            if cursor_frame.parentFrame() is not None:
+                cursor.select(QtGui.QTextCursor.SelectionType.BlockUnderCursor)
+                cursor.setBlockFormat(block_format)
+                start = cursor.selectionStart()
+                selected_text = cursor.selectedText()
+                cursor.removeSelectedText()
+                cursor.setPosition(start, QtGui.QTextCursor.MoveMode.MoveAnchor)
+                cursor.insertText(selected_text, QtGui.QTextCharFormat())
+
+        cursor.setCharFormat(default_format)
+        cursor.setBlockFormat(block_format)
+        cursor.endEditBlock()
+        cursor.clearSelection()
+
+    @Slot()
+    def insertBlockquote(self):
+        cursor = self._cursor
+
+        if not cursor.hasSelection():
+            cursor.select(QtGui.QTextCursor.SelectionType.BlockUnderCursor)
+
+        cursor.beginEditBlock()
+ 
+        frame_fmt = cursor.currentFrame().frameFormat()
+        frame_fmt.setBorderStyle(QtGui.QTextFrameFormat.BorderStyle.BorderStyle_None)
+        frame_fmt.setLeftMargin(40)
+        frame_fmt.setRightMargin(40)
+        frame_fmt.setPadding(10)
+        frame_fmt.setBackground(QtGui.QColor("#e6f2ff"))
+
+        cursor.insertFrame(frame_fmt)
+ 
+        cursor.endEditBlock()
+
+    @Slot()
+    def addHorizontalLine(self):
+        cursor = self._cursor
+
+        # Save the cursor position and selection
+        start = cursor.selectionStart()
+        end = cursor.selectionEnd()
+
+        if not cursor.hasSelection():
+            # Select the current line if no text is selected
+            cursor.select(QtGui.QTextCursor.SelectionType.LineUnderCursor)
+
+        selected_text = cursor.selectedText()
+
+        # Wrap the selected text in blockquote tags
+        hr = r'<hr style="width=2px;">'
+
+        if selected_text == "":
+            formatted_text = hr
+        else:
+            formatted_text = f'<p>{selected_text}</p>{hr}'
+
+        cursor.beginEditBlock()
+        cursor.removeSelectedText()
+        cursor.insertHtml(formatted_text)
+        cursor.endEditBlock()
+
+        # Restore the cursor position
+        cursor.setPosition(start, QtGui.QTextCursor.MoveMode.MoveAnchor)
+        cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+        self.setFocus()
+        self.setTextCursor(cursor)
+
+    @Slot()
+    def text_color(self):
+        color = QtWidgets.QColorDialog.getColor(self.textColor(), self)
+        if not color.isValid():
+            return
+
+        fmt = QtGui.QTextCharFormat()
+        fmt.setForeground(color)
+        self.merge_format_on_word_or_selection(fmt)
+        self.color_changed(color)
+
+    def color_changed(self, c):
+        pix = QtGui.QPixmap(16, 16)
+        pix.fill(c)
+        # self.color_action.setIcon(QtGui.QIcon(pix))
 
 class Notepad(QtWidgets.QWidget):
+
+    sigInsertRequest = Signal(TextEdit)
 
     class LayoutStrategy(enum.Enum):
         Cascade = 0
@@ -311,6 +490,7 @@ class Notepad(QtWidgets.QWidget):
         
         self.createActions()
         self.createToolbar()
+        self.createShortcuts()
         
         vbox.addWidget(self.toolbar)
         vbox.addWidget(self.mdi)
@@ -339,19 +519,46 @@ class Notepad(QtWidgets.QWidget):
 
         # Date/Time
         self.action_date = QtGui.QAction(QtGui.QIcon(":calendar-line"), "Date (Ctrl+Alt+D)", self, triggered=self.insertDate)
-        self.action_time = QtGui.QAction(QtGui.QIcon(":time-line"), " Time (Ctrl+Alt+T)", self, triggered=self.insertTime)
+        self.action_time = QtGui.QAction(QtGui.QIcon(":time-line"), "Time (Ctrl+Alt+T)", self, triggered=self.insertTime)
 
         # Headings
-        self.action_paragraph = QtGui.QAction(QtGui.QIcon(":paragraph"), "Paragraph", self, triggered = lambda:self.textStyle(HeadingStyle.P))
-        self.action_h1 = QtGui.QAction(QtGui.QIcon(":h-1"), "Heading 1", self, triggered = lambda:self.textStyle(HeadingStyle.H1))
-        self.action_h2 = QtGui.QAction(QtGui.QIcon(":h-2"), "Heading 2", self, triggered = lambda:self.textStyle(HeadingStyle.H2))
-        self.action_h3 = QtGui.QAction(QtGui.QIcon(":h-3"), "Heading 3", self, triggered = lambda:self.textStyle(HeadingStyle.H3))
-        self.action_h4 = QtGui.QAction(QtGui.QIcon(":h-4"), "Heading 4", self, triggered = lambda:self.textStyle(HeadingStyle.H4))
+        self.action_paragraph = QtGui.QAction(QtGui.QIcon(":paragraph"), "Paragraph", self, triggered = lambda:self.textHeading(HeadingStyle.P))
+        self.action_h1 = QtGui.QAction(QtGui.QIcon(":h-1"), "Heading 1", self, triggered = lambda:self.textHeading(HeadingStyle.H1))
+        self.action_h2 = QtGui.QAction(QtGui.QIcon(":h-2"), "Heading 2", self, triggered = lambda:self.textHeading(HeadingStyle.H2))
+        self.action_h3 = QtGui.QAction(QtGui.QIcon(":h-3"), "Heading 3", self, triggered = lambda:self.textHeading(HeadingStyle.H3))
+        self.action_h4 = QtGui.QAction(QtGui.QIcon(":h-4"), "Heading 4", self, triggered = lambda:self.textHeading(HeadingStyle.H4))
+
+        # Highlight
+        self.action_highlight = QtGui.QAction(QtGui.QIcon(":mark_pen"), "Highlight (Ctrl+Alt+H)", self, triggered= self.textHighlight)
+
+        # Quoteblock
+        self.action_blockquote = QtGui.QAction(QtGui.QIcon(':double-quotes'), "Block quote", self, triggered=self.insertBlockquote)       
+
+        # Horizontal line
+        self.action_horizontal_line = QtGui.QAction(QtGui.QIcon(':horizontal-line'), "Horizontal line (Ctrl+Alt+L)", self, triggered=self.addHorizontalLine)
+
+        # Clear formatting
+        self.action_clear_formatting = QtGui.QAction(QtGui.QIcon(':format-clear'), "Clear formatting (Ctrl+Shift+N)", self, triggered=self.clearFormatting)
+
+        pix = QtGui.QPixmap(16, 16)
+        pix.fill(QtCore.Qt.GlobalColor.black)
+        self.action_color = QtGui.QAction(QtGui.QIcon(pix),"Color Text", self, triggered=self.textColor)
+
+        # Bullet List
+        self.action_bullet = QtGui.QAction(QtGui.QIcon(":list-unordered"), "Bullet list (ctrl+;)", self, triggered=self.bulletList)
+
+        # Line Spacing
+        self.action_line_spacing_normal = QtGui.QAction("1.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL))
+        self.action_line_spacing_1_5 = QtGui.QAction("1.5", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL_HALF))
+        self.action_line_spacing_double = QtGui.QAction("2.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.DOUBLE))
+
+        self.action_help = QtGui.QAction(QtGui.QIcon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
 
 
     def createToolbar(self):
         self.toolbar = QtWidgets.QToolBar(self)
 
+        # View menu
         viewmenu_toolbutton = QtWidgets.QToolButton(self)
         viewmenu_toolbutton.setIcon(QtGui.QIcon(':eye-line'))
         viewmenu_toolbutton.setText("Views")
@@ -370,10 +577,7 @@ class Notepad(QtWidgets.QWidget):
         viewmenu.addAction(self.action_setTabbedView)
         viewmenu_toolbutton.setMenu(viewmenu)
         
-        self.toolbar.addAction(self.action_addnote)
-        self.toolbar.addAction(self.action_editnote)
-        self.toolbar.addWidget(viewmenu_toolbutton)
-
+        # Window selection menu
         self.window_menu = QtWidgets.QMenu("Window", self)
 
         self.windowmenu_toolbutton = QtWidgets.QToolButton(self)
@@ -382,17 +586,6 @@ class Notepad(QtWidgets.QWidget):
         self.windowmenu_toolbutton.setMenu(self.window_menu)
         self.update_window_menu()
         self.window_menu.aboutToShow.connect(self.update_window_menu)
-        self.toolbar.addWidget(self.windowmenu_toolbutton)
-
-        self.toolbar.addSeparator()
-
-        # Text actions
-        self.toolbar.addAction(self.action_bold)
-        self.toolbar.addAction(self.action_italic)
-        self.toolbar.addAction(self.action_underline)
-        self.toolbar.addAction(self.action_strikeout)
-
-        self.toolbar.addSeparator()
         
         # DateTime menu
         self.datetime_menu = QtWidgets.QMenu(self)
@@ -403,8 +596,6 @@ class Notepad(QtWidgets.QWidget):
         self.datetime_toolbutton.setToolTip("Insert date/time")
         self.datetime_toolbutton.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)       
         self.datetime_toolbutton.setMenu(self.datetime_menu)
-
-        self.toolbar.addWidget(self.datetime_toolbutton)
 
         # Headings menu
         self.heading_toolbutton = QtWidgets.QToolButton(self)
@@ -420,7 +611,64 @@ class Notepad(QtWidgets.QWidget):
         self.heading_menu.addAction(self.action_h4)
         self.heading_toolbutton.setMenu(self.heading_menu)
 
+        # Line Spacing
+        self.line_spacing_toolbutton = QtGui.QAction(self)
+        self.line_spacing_toolbutton.setText("Line Spacing")
+        self.line_spacing_toolbutton.setToolTip("Line Spacing")
+        self.line_spacing_toolbutton.setIcon(QtGui.QIcon(":line-height"))
+
+        self.line_spacing_menu = QtWidgets.QMenu("Line spacing", self)
+        self.line_spacing_menu.addAction(self.action_line_spacing_normal)
+        self.line_spacing_menu.addAction(self.action_line_spacing_1_5)
+        self.line_spacing_menu.addAction(self.action_line_spacing_double)
+        self.line_spacing_toolbutton.setMenu(self.line_spacing_menu)
+        
+        # Add to Toolbar
+        self.toolbar.addAction(self.action_addnote)
+        self.toolbar.addAction(self.action_editnote)
+        self.toolbar.addWidget(viewmenu_toolbutton)
+        self.toolbar.addWidget(self.windowmenu_toolbutton)
+        self.toolbar.addSeparator()
+        self.toolbar.addAction(self.action_bold)
+        self.toolbar.addAction(self.action_italic)
+        self.toolbar.addAction(self.action_underline)
+        self.toolbar.addAction(self.action_strikeout)
+        self.toolbar.addAction(self.action_clear_formatting)
         self.toolbar.addWidget(self.heading_toolbutton)
+        self.toolbar.addAction(self.action_highlight)
+        self.toolbar.addAction(self.action_color)
+        self.toolbar.addAction(self.line_spacing_toolbutton)
+        self.toolbar.addSeparator()
+        self.toolbar.addWidget(self.datetime_toolbutton)
+        self.toolbar.addAction(self.action_horizontal_line)
+        self.toolbar.addAction(self.action_blockquote)
+        self.toolbar.addAction(self.action_bullet)
+
+        spacer = QtWidgets.QWidget(self)
+        spacer.setContentsMargins(0,0,0,0)
+        spacer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.action_spacer = self.toolbar.addWidget(spacer)
+
+        self.toolbar.addAction(self.action_help)
+    
+    def createShortcuts(self):
+        self.shortcut_quick_highlight = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+H"), self, self.quickHighlight, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_date = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+D"), self, self.insertDate, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_time = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+T"), self, self.insertTime, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_h1 = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+1"), self, lambda:self.textHeading(HeadingStyle.H1), ambiguousMember=lambda:self.textHeading(HeadingStyle.H1), context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_h2 = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+2"), self, lambda:self.textHeading(HeadingStyle.H2), ambiguousMember=lambda:self.textHeading(HeadingStyle.H2),context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_h3 = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+3"), self, lambda:self.textHeading(HeadingStyle.H3), ambiguousMember=lambda:self.textHeading(HeadingStyle.H3),context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_h4 = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+4"), self, lambda:self.textHeading(HeadingStyle.H4), ambiguousMember=lambda:self.textHeading(HeadingStyle.H4),context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_P = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+P"), self, lambda:self.textHeading(HeadingStyle.P), ambiguousMember=lambda:self.textHeading(HeadingStyle.P), context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_request = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+R"), self, self.insertRequest, ambiguousMember=self.insertRequest, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_clearformatting = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+N"), self, self.clearFormatting, ambiguousMember=self.clearFormatting, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_blockquote = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+B"), self, self.insertBlockquote, ambiguousMember=self.insertBlockquote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_blod = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+B"), self, self.textBold, ambiguousMember=self.textBold, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_italic = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+I"), self, self.textItalic, ambiguousMember=self.textItalic, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_strikeout = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+-"), self, self.textStrikeout, ambiguousMember=self.textStrikeout, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_underline = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+U"), self, self.textUnderline, ambiguousMember=self.textUnderline, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_insertLine = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+L"), self, self.addHorizontalLine, ambiguousMember=self.addHorizontalLine, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_bulletList = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+;"), self, self.bulletList, ambiguousMember=self.bulletList, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
     @Slot()
     def update_window_menu(self):
@@ -498,6 +746,7 @@ class Notepad(QtWidgets.QWidget):
     def loadfile(self, filename):
         textedit = TextEdit.load(filename)
         if textedit is not None:
+            textedit.currentCharFormatChanged.connect(self.updateToolbarState)
             subwindow = self.mdi.addSubWindow(textedit)
             subwindow.show()
     
@@ -506,6 +755,19 @@ class Notepad(QtWidgets.QWidget):
         if active_sub_window:
             return active_sub_window.widget()
         return None
+    
+    @Slot(QtGui.QTextCharFormat)
+    def updateToolbarState(self, fmt: QtGui.QTextCharFormat):
+        font = fmt.font()
+        self.action_bold.setChecked(font.bold())
+        self.action_italic.setChecked(font.italic())
+        self.action_underline.setChecked(font.underline())
+        self.action_strikeout.setChecked(font.strikeOut())
+        
+        color = fmt.foreground().color()
+        pix = QtGui.QPixmap(16, 16)
+        pix.fill(color)
+        self.action_color.setIcon(QtGui.QIcon(pix))
 
     @Slot()
     def textBold(self):
@@ -538,9 +800,84 @@ class Notepad(QtWidgets.QWidget):
             self.active_mdi_child().insertTime()
 
     @Slot()
-    def textStyle(self, style):
+    def textHeading(self, style):
         if self.active_mdi_child():
-            self.active_mdi_child().textStyle(style)
+            self.active_mdi_child().textHeading(style)
+
+    @Slot()
+    def textHighlight(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().textHighlight()
+    
+    @Slot()
+    def quickHighlight(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().quickHighlight()
+
+    @Slot()
+    def insertBlockquote(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().insertBlockquote()
+
+    @Slot()
+    def addHorizontalLine(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().addHorizontalLine()
+    
+    @Slot()
+    def clearFormatting(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().clearFormatting()
+    
+    @Slot()
+    def textColor(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().text_color()
+
+    @Slot()
+    def bulletList(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().bulletList()
+
+    @Slot()
+    def setLineSpacing(self, spacing):
+        if self.active_mdi_child():
+            self.active_mdi_child().setLineSpacing(spacing)
+
+    @Slot()
+    def helpClicked(self):
+        dlg = QtWidgets.QDialog(parent=self.toolbar)
+        dlg.setWindowTitle("Help")
+
+        form = QtWidgets.QFormLayout()
+        dlg.setLayout(form)
+
+        form.addRow("Insert Request:", QtWidgets.QLabel("Ctrl+Alt+R"))
+        form.addRow("Select all text:", QtWidgets.QLabel("Ctrl+A"))
+        form.addRow("Undo:", QtWidgets.QLabel("Ctrl+Z"))
+        form.addRow("Redo:", QtWidgets.QLabel("Ctrl+Y"))
+        form.addRow("Bold:", QtWidgets.QLabel("Ctrl+B"))
+        form.addRow("Italic:", QtWidgets.QLabel("Ctrl+I"))
+        form.addRow("Underline:", QtWidgets.QLabel("Ctrl+U"))
+        form.addRow("Strikethrough:", QtWidgets.QLabel("Ctrl+-"))
+        form.addRow("Insert Date:", QtWidgets.QLabel("Ctrl+Alt+D"))
+        form.addRow("Insert Time:", QtWidgets.QLabel("Ctrl+Alt+T"))
+        form.addRow("Insert Blockquote:", QtWidgets.QLabel("Ctrl+Alt+B"))
+        form.addRow("Insert Horizontal line:", QtWidgets.QLabel("Ctrl+Alt+L"))
+        form.addRow("Highlight in red:", QtWidgets.QLabel("Ctrl+Alt+H"))
+        form.addRow("Clear Formatting:", QtWidgets.QLabel("Ctrl+Shift+N"))
+        form.addRow("Heading 1:", QtWidgets.QLabel("Ctrl+Alt+1"))
+        form.addRow("Heading 2:", QtWidgets.QLabel("Ctrl+Alt+2"))
+        form.addRow("Heading 3:", QtWidgets.QLabel("Ctrl+Alt+3"))
+        form.addRow("Heading 4:", QtWidgets.QLabel("Ctrl+Alt+4"))
+        form.addRow("Paragraph:", QtWidgets.QLabel("Ctrl+Alt+P"))
+        form.addRow("Insert Bullet list:", QtWidgets.QLabel("Ctrl+;"))
+
+        dlg.exec()
+
+    @Slot()
+    def insertRequest(self):
+        self.sigInsertRequest.emit(self.active_mdi_child())
 
     @Slot()
     def loadFiles(self):
