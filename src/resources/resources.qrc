@@ -63,6 +63,7 @@
     <file alias="folder-2-line">icons/remix/folder-2-line.svg</file>
     <file alias="file-edit-line">icons/remix/file-edit-line.svg</file>
     <file alias="window-2-line">icons/remix/window-2-line.svg</file>
+    <file alias="signpost-line">icons/remix/signpost-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>

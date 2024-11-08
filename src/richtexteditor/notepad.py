@@ -499,8 +499,8 @@ class Notepad(QtWidgets.QWidget):
         self.loadSettings()
 
     def createActions(self):
-        self.action_addnote = QtGui.QAction(QtGui.QIcon(':file_add'), "add note", self, triggered=self.addNote)
-        self.action_editnote = QtGui.QAction(QtGui.QIcon(':file-edit-line'), "edit note", self, triggered=self.editNote)
+        self.action_addnote = QtGui.QAction(QtGui.QIcon(':file_add'), "Add note (Ctrl+N)", self, triggered=self.addNote)
+        self.action_editnote = QtGui.QAction(QtGui.QIcon(':file-edit-line'), "Edit note (Ctrl+E)", self, triggered=self.editNote)
 
         self.action_minimizeAll = QtGui.QAction(QtGui.QIcon(':folder-2-line'), "Minimize", self, triggered=self.minimizeAll)
         self.action_showNormalAll = QtGui.QAction(QtGui.QIcon(':folder-2-line'), "Normal", self, triggered=self.showNormalAll)
@@ -532,7 +532,7 @@ class Notepad(QtWidgets.QWidget):
         self.action_highlight = QtGui.QAction(QtGui.QIcon(":mark_pen"), "Highlight (Ctrl+Alt+H)", self, triggered= self.textHighlight)
 
         # Quoteblock
-        self.action_blockquote = QtGui.QAction(QtGui.QIcon(':double-quotes'), "Block quote", self, triggered=self.insertBlockquote)       
+        self.action_blockquote = QtGui.QAction(QtGui.QIcon(':double-quotes'), "Block quote (Ctrl+Alt+B)", self, triggered=self.insertBlockquote)       
 
         # Horizontal line
         self.action_horizontal_line = QtGui.QAction(QtGui.QIcon(':horizontal-line'), "Horizontal line (Ctrl+Alt+L)", self, triggered=self.addHorizontalLine)
@@ -545,12 +545,14 @@ class Notepad(QtWidgets.QWidget):
         self.action_color = QtGui.QAction(QtGui.QIcon(pix),"Color Text", self, triggered=self.textColor)
 
         # Bullet List
-        self.action_bullet = QtGui.QAction(QtGui.QIcon(":list-unordered"), "Bullet list (ctrl+;)", self, triggered=self.bulletList)
+        self.action_bullet = QtGui.QAction(QtGui.QIcon(":list-unordered"), "Bullet list (Ctrl+;)", self, triggered=self.bulletList)
 
         # Line Spacing
         self.action_line_spacing_normal = QtGui.QAction("1.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL))
         self.action_line_spacing_1_5 = QtGui.QAction("1.5", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL_HALF))
         self.action_line_spacing_double = QtGui.QAction("2.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.DOUBLE))
+
+        self.action_insertRequest = QtGui.QAction(QtGui.QIcon(':signpost-line'), "Insert Signage", self, triggered=self.insertRequest)
 
         self.action_help = QtGui.QAction(QtGui.QIcon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
 
@@ -643,6 +645,8 @@ class Notepad(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_horizontal_line)
         self.toolbar.addAction(self.action_blockquote)
         self.toolbar.addAction(self.action_bullet)
+        self.toolbar.addSeparator()
+        self.toolbar.addAction(self.action_insertRequest)
 
         spacer = QtWidgets.QWidget(self)
         spacer.setContentsMargins(0,0,0,0)
@@ -652,6 +656,8 @@ class Notepad(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_help)
     
     def createShortcuts(self):
+        self.shortcut_add_note = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+N"), self, self.addNote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_edit_note = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+E"), self, self.editNote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_quick_highlight = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+H"), self, self.quickHighlight, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_date = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+D"), self, self.insertDate, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_time = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+T"), self, self.insertTime, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -852,6 +858,8 @@ class Notepad(QtWidgets.QWidget):
         form = QtWidgets.QFormLayout()
         dlg.setLayout(form)
 
+        form.addRow("Add Note:", QtWidgets.QLabel("Ctrl+N"))
+        form.addRow("Edit Note:", QtWidgets.QLabel("Ctrl+E"))
         form.addRow("Insert Request:", QtWidgets.QLabel("Ctrl+Alt+R"))
         form.addRow("Select all text:", QtWidgets.QLabel("Ctrl+A"))
         form.addRow("Undo:", QtWidgets.QLabel("Ctrl+Z"))
