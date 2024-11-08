@@ -15,7 +15,7 @@ from onenote.onenotepickerdlg import OnenotePickerDialog
 from documentviewer.viewerfactory import ViewerFactory
 from documentviewer.viewerwidget import ViewerWidget
 
-from notebook.notepad import Notepad, TextEdit
+from richtexteditor.notepad import (Notepad, TextEdit)
 
 from widgets.filesystem import FileSystem
 from widgets.richtexteditor import RichTextEditor

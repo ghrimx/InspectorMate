@@ -3,7 +3,7 @@ import enum
 from functools import partial
 from datetime import datetime
 
-from qtpy import QtWidgets, QtCore, QtGui, Slot, Signal
+from qtpy import (QtWidgets, QtCore, QtGui, Slot, Signal)
 
 from db.database import AppDatabase
 from utilities.config import settings
@@ -70,8 +70,8 @@ class TextEdit(QtWidgets.QTextEdit):
         self._cursor: QtGui.QTextCursor = self.textCursor()
 
     def connectSignals(self):
-        # self.currentCharFormatChanged.connect(self.current_char_format_changed)
         self.cursorPositionChanged.connect(self.cursor_position_changed)
+        self.textChanged.connect(self.save)
     
     def canInsertFromMimeData(self, source: QtCore.QMimeData):
         if source.hasImage():
@@ -730,11 +730,11 @@ class Notepad(QtWidgets.QWidget):
         settings.setValue("NotebookCurrentFiles", files)
 
         # Save layout strategy
-        settings.setValue("NotebookLayoutStrategy", self.layout_strategy)
+        settings.setValue("LayoutStrategy", self.layout_strategy)
     
     def loadSettings(self):
         # Restore layout strategy
-        layout_strategy = settings.value("NotebookLayoutStrategy", self.layout_strategy)
+        layout_strategy = settings.value("LayoutStrategy", self.layout_strategy)
 
         if layout_strategy == self.LayoutStrategy.Cascade:
             self.setCascadeView()
