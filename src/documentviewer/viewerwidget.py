@@ -22,8 +22,8 @@ class ViewerWidget(QtWidgets.QWidget):
 
         self.createToolbar(parent)
 
-        self.left_pane_folded = True
-        self.right_pane_folded = True
+        self.left_pane_folded = False
+        self.right_pane_folded = False
 
         # Splitter
         self.splitter = QtWidgets.QSplitter(Qt.Orientation.Horizontal)
@@ -187,7 +187,5 @@ class ViewerWidget(QtWidgets.QWidget):
         self.capturer.show()
 
     def showEvent(self, event: QtGui.QShowEvent):
-        self.onFoldLeftSidebarTriggered()
-        self.onFoldRightSidebarTriggered()
         super().showEvent(event)
 
