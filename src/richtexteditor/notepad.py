@@ -37,6 +37,17 @@ class LineSpacing(enum.Enum):
     DOUBLE = 200
 
 
+class TableMimeType:
+    def __init__(self):
+        self._headers = []
+        self._rows = []
+
+    def convertBiff12(self, biff: str):
+        data_list = [biff.split('\n') for x in biff.split('\t')]
+        html_table = '<table>\n' + '\n'.join(['  <tr>' + ''.join(f'<td>{item}</td>' for item in row) + '</tr>' for row in data_list]) + '\n</table>'
+
+
+
 class TextEdit(QtWidgets.QTextEdit):
 
     def __init__(self, filename=str, text=str, parent=None):
@@ -62,6 +73,14 @@ class TextEdit(QtWidgets.QTextEdit):
         self.setObjectName(self.userFriendlyFilename())
 
         self.connectSignals()
+    
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
+        """Supplemented the standard context menu"""
+        menu = self.createStandardContextMenu()
+        menu.addSeparator()
+        self.action_paste_table = QtGui.QAction(QtGui.QIcon(), "Paste as Table", self, triggered=self.pasteTable)
+        menu.addAction(self.action_paste_table)
+        menu.exec(event.globalPos())
 
     def userFriendlyFilename(self):
         return QtCore.QFileInfo(self.filename).fileName()
@@ -72,6 +91,30 @@ class TextEdit(QtWidgets.QTextEdit):
     def connectSignals(self):
         self.cursorPositionChanged.connect(self.cursor_position_changed)
         self.textChanged.connect(self.save)
+
+    def convertBiff12(self, biff: str) -> list:
+        """Convert a string to nested list"""
+        table_content = [x.split('\t') for x in biff.split('\n')]
+        return table_content
+    
+    def pasteTable(self):
+        """Insert table from Clipboard"""
+        cursor = self.textCursor()
+        source = QtWidgets.QApplication.clipboard().text()
+        table_content = self.convertBiff12(source)
+        if table_content != "":
+            table_fmt = QtGui.QTextTableFormat()
+            table_fmt.setCellPadding(3.0)
+            table_fmt.setCellSpacing(0) # Avoid double border
+            table_fmt.setBorder(0.5)
+            table_fmt.setBorderStyle(QtGui.QTextFrameFormat.BorderStyle.BorderStyle_Solid)
+            table_fmt.setBorderBrush(QtCore.Qt.GlobalColor.black)
+            cursor.insertTable(len(table_content) - 1, len(table_content[0]), table_fmt)
+
+            for row in table_content:
+                for value in row:
+                    cursor.insertText(value)
+                    cursor.movePosition(QtGui.QTextCursor.MoveOperation.NextCell)
     
     def canInsertFromMimeData(self, source: QtCore.QMimeData):
         if source.hasImage():
@@ -115,7 +158,6 @@ class TextEdit(QtWidgets.QTextEdit):
             # insert image with relative path for web browser
             cursor.insertImage(QtGui.QImage(image), img_url.toString())
 
-
             # insert image as base64 string
             # img = QtGui.QImage(image)
             # buffer = QtCore.QBuffer()
@@ -141,7 +183,6 @@ class TextEdit(QtWidgets.QTextEdit):
                     fmt.setForeground(QtGui.QColor(85, 0, 255))
                     cursor.mergeCharFormat(fmt)
                     self.mergeCurrentCharFormat(fmt)
-
         elif source.hasText():
             hyperlink = QtCore.QUrl(source.text())
             if not hyperlink.isRelative():
