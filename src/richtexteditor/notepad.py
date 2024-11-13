@@ -597,7 +597,6 @@ class Notepad(QtWidgets.QWidget):
 
         self.action_help = QtGui.QAction(QtGui.QIcon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
 
-
     def createToolbar(self):
         self.toolbar = QtWidgets.QToolBar(self)
 
