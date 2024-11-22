@@ -188,6 +188,12 @@ If you are reporting a bug, please include:
 * Any details about your local setup that might be helpful in troubleshooting.
 * Detailed steps to reproduce the bug.
 
+### Debugging
+
+Run the executable from windows command line
+
+`Inspectormate.exe -V > sdout.txt 2>&1`
+
 ### Implement Features
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request (see [Get Started](#get-started)). You can also simply open an issue with the tag "enhancement".
