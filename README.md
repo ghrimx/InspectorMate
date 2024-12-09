@@ -71,6 +71,8 @@ InspectorMate is a Windows desktop application designed to streamline the workfl
 
 Document requests, referred to as "requests," are organized within a dedicated tab for streamlined access and handling.
 
+*"RefKey"* serves as the unique identifier for a "Signage". It consists of an optional prefix (letters [a-Z]), a 3-digit number (e.g., 003), and an optional suffix (letters [a-Z]). To link a "Signage" to a document (e.g., evidence), the document's name must begin with the RefKey (e.g., 001 Training records of Walter White.pdf).
+
 A *"workspace"* is a dedicated folder where all files and folders related to an inspection are systematically organized. When setting up a workspace, two primary folders are created: “Evidence” and “Notebook.” The “Evidence” folder serves as the repository for documents received in response to requests, from which the app will generate references. The “Notebook” folder is designated for note files, which have the “.phv” extension. Additionally, the “Notebook” folder contains a “.image” subfolder that stores all images copy-pasted into note files.
 
 ### Create Workspace
