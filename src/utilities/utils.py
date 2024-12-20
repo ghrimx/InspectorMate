@@ -64,8 +64,18 @@ def open_file(filepath: Path|str) -> None:
         q.setText(msg)
         q.exec()
 
-def increment_refKey(current_refKey:str) -> str:
-    """Increment a string id"""
+def increment_refKey(refKey: str|int) -> str:
+    """
+        Increment a string id
+        
+        Return a string with suffix numeric part incremented
+    """
+
+    current_refKey = str(refKey).strip()
+
+    if current_refKey[-1].isalpha():
+        return current_refKey
+
     for char in current_refKey:
         if char.isnumeric():
             n = int(current_refKey[current_refKey.index(char):])
@@ -95,7 +105,7 @@ def mergeExcelFiles(files: list, drop_duplicate: str | bool = 'first', outfile: 
     if len(files) > 0:
         dfs = []
         for file in files:
-            dfs.append(pd.read_excel(file, dtype={'RefKey': str}))
+            dfs.append(pd.read_excel(file, dtype={'RefKey': str, 'Evidence': str}))
             
         df = pd.concat(dfs)
 

@@ -1,4 +1,5 @@
 import logging
+import html2text
 
 from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot)
 
@@ -106,8 +107,8 @@ class SignageTable(TreeView):
         self.evidence_delegate = EvidenceColumnDelegate(self)
         self.setItemDelegateForColumn(self._model.Fields.Evidence.index, self.evidence_delegate)
 
-        self.note_delegate = NoteColumnDelegate(self)
-        self.setItemDelegateForColumn(self._model.Fields.Note.index, self.note_delegate)
+        # self.note_delegate = NoteColumnDelegate(self)
+        # self.setItemDelegateForColumn(self._model.Fields.Note.index, self.note_delegate)
 
         self.title_delegate = TitleDelegate(self._proxy_model, self)
         self.setItemDelegateForColumn(self._model.Fields.Title.index, self.title_delegate)
@@ -117,6 +118,9 @@ class SignageTable(TreeView):
 
         self.progress_delegate = ProgressBarDelegate(self._proxy_model, self)
         self.setItemDelegateForColumn(self._model.Fields.EvidenceEOL.index, self.progress_delegate)
+
+        self.note_icon_delegate = NoteIconDelegate(self)
+        self.setItemDelegate(self.note_icon_delegate)
 
     def updateAction(self):
         if len(self.selectedRows()) == 1:
@@ -181,3 +185,37 @@ class SignageTable(TreeView):
         selected_row = self._proxy_model.mapToSource(self.selectionModel().currentIndex()).row()
         link = self._model.getLink(selected_row)
         QtGui.QDesktopServices.openUrl(QtCore.QUrl(link, QtCore.QUrl.ParsingMode.TolerantMode))
+
+class NoteIconDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, parent: SignageTable = None):
+        super().__init__(parent)
+
+    def initStyleOption(self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex) -> None:
+        super().initStyleOption(option, index)
+
+        if index.column() == self.parent().model().sourceModel().Fields.Note.index:
+            # print(index.data(Qt.ItemDataRole.DisplayRole))
+            privrate_note = index.data(Qt.ItemDataRole.DisplayRole)
+            public_note = self.parent().model().sourceModel().data(self.parent().model().sourceModel().index(index.row(), self.parent().model().sourceModel().Fields.PublicNote.index), Qt.ItemDataRole.DisplayRole)
+
+            public_note_raw: str = html2text.html2text(public_note)
+            privrate_note_raw: str = html2text.html2text(privrate_note)
+            if public_note_raw.strip() != "" and privrate_note_raw.strip() != "":
+                option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
+                option.icon = QtGui.QIcon(':file-text-line')
+                option.text = "P"
+                option.displayAlignment = Qt.AlignmentFlag.AlignHCenter
+                option.decorationAlignment = Qt.AlignmentFlag.AlignHCenter
+            elif public_note_raw.strip() == "" and privrate_note_raw.strip() != "":
+                option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
+                option.text = "P"
+                option.displayAlignment = Qt.AlignmentFlag.AlignHCenter
+                option.decorationAlignment = Qt.AlignmentFlag.AlignHCenter
+            elif public_note_raw.strip() != "" and privrate_note_raw.strip() == "":
+                option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
+                option.icon = QtGui.QIcon(':file-text-line')
+                option.text = ""
+                option.displayAlignment = Qt.AlignmentFlag.AlignHCenter
+                option.decorationAlignment = Qt.AlignmentFlag.AlignHCenter
+            else:
+                option.text = ""   

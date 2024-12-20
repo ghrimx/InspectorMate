@@ -65,6 +65,7 @@
     <file alias="window-2-line">icons/remix/window-2-line.svg</file>
     <file alias="signpost-line">icons/remix/signpost-line.svg</file>
     <file alias="text-block">icons/remix/text-block.svg</file>
+    <file alias="file-text-line">icons/remix/file-text-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>
@@ -72,5 +73,6 @@
     <file alias="request">icons/custom/request_rotate.svg</file>
     <file alias="capture_area">icons/custom/capture_area.svg</file>
     <file alias="onenote">icons/custom/onenote-ico.svg</file>
+    <file alias="public_n_private_note">icons/custom/public_n_private_note.svg</file>
 </qresource>
 </RCC>

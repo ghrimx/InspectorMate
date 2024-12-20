@@ -56,6 +56,7 @@ class CreateDialog(QtWidgets.QDialog):
         owner_widget_layout.setContentsMargins(0, 0, 0, 0)
 
         self.signage_title_lineedit = FitContentTextEdit()
+        self.signage_title_lineedit.setAcceptRichText(False)
         self.signage_title_lineedit.setPlaceholderText("Enter text...")
         self.signage_title_lineedit.setMinimumWidth(500)
 
@@ -309,5 +310,5 @@ class ImportDialog(QtWidgets.QDialog):
             self.buttonBox.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setEnabled(False)
 
     def accept(self):
-        self._model.importFromFiles(self._files, self.update_checkbox.isChecked())
+        self._model.importFromExcels(self._files, self.update_checkbox.isChecked())
         super().accept()

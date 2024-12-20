@@ -1,5 +1,4 @@
 from src.utilities import utils
-import fitz
 from pathlib import Path
 
 def test_image2hex():
@@ -9,7 +8,11 @@ def test_image2hex():
     print(img_str)
     assert err == None
 
+def test_increment_refKey():
+    refkeys = [12, 'vtd012', '12', '012', '012a', 'vtd012a', 'abc12', ' 12', 'abc12  ']
 
+    for refkey in refkeys:
+        print(utils.increment_refKey(refkey))
 
 def test_queryFileID():
     fpath = r"C:\Users\debru\Documents\xyz pharma\Evidence\pre-inspection request\010\unassigned_file.xlsx"

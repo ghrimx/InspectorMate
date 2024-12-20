@@ -286,7 +286,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     icon = signage_type.icon
 
             if icon != "":
-                caller.textCursor().insertHtml(f'<p><img alt="" src="data:image/png;base64,{icon}"/> {signage.refKey} {signage.title}</p>')
+                caller.textCursor().insertHtml(f'<p style="color:blue;"><img alt="" src="data:image/png;base64,{icon}"/> {signage.refKey} {signage.title}</p>')
             else:
                 caller.textCursor().insertText(f'{signage.refKey} {signage.title}')
 

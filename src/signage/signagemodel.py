@@ -1,8 +1,11 @@
 import logging
 from xml.etree import ElementTree as ET
+
 from openpyxl import Workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
-from openpyxl.styles import numbers
+from openpyxl.styles import numbers, PatternFill, Font, Alignment
+from openpyxl.formatting.rule import CellIsRule
+
 from html2text import html2text
 
 from qtpy import (Qt, QtCore, QtGui, Slot, QtSql)
@@ -39,6 +42,7 @@ class SignageTablelModel(BaseRelationalTableModel):
 
     def __init__(self):
         super().__init__()
+        self.setEditStrategy(QtSql.QSqlTableModel.EditStrategy.OnFieldChange)
         self.status_color_cache = {}
         self.onenote: OneNote = None
 
@@ -258,7 +262,7 @@ class SignageTablelModel(BaseRelationalTableModel):
         if inserted == True:
             self.refresh()
         else:
-            err = self.database().lastError().text()
+            err = self.lastError().text()
             logger.error(f"Cannot insert: {signage} - Error: {err}")
 
         # self.submitAll()
@@ -271,20 +275,22 @@ class SignageTablelModel(BaseRelationalTableModel):
         ws.title = "main"
 
         if public_note:
-            headers = ["RefKey", "Title", "Owner", "Type", "Note"]
+            headers = ["RefKey", "Title", "Owner", "Type", "Evidence", "Note"]
+            xrange = "A1:F"
+            model_fields = [SignageTablelModel.Fields.RefKey.index,
+                            SignageTablelModel.Fields.Title.index,
+                            SignageTablelModel.Fields.Owner.index,
+                            SignageTablelModel.Fields.Type.index,
+                            SignageTablelModel.Fields.Evidence.index,
+                            SignageTablelModel.Fields.PublicNote.index]
+        else:
+            headers = ["RefKey", "Title", "Owner", "Type", "Evidence"]
             xrange = "A1:E"
             model_fields = [SignageTablelModel.Fields.RefKey.index,
                             SignageTablelModel.Fields.Title.index,
                             SignageTablelModel.Fields.Owner.index,
                             SignageTablelModel.Fields.Type.index,
-                            SignageTablelModel.Fields.PublicNote.index]
-        else:
-            headers = ["RefKey", "Title", "Owner", "Type"]
-            xrange = "A1:D"
-            model_fields = [SignageTablelModel.Fields.RefKey.index,
-                            SignageTablelModel.Fields.Title.index,
-                            SignageTablelModel.Fields.Owner.index,
-                            SignageTablelModel.Fields.Type.index]
+                            SignageTablelModel.Fields.Evidence.index]
 
         for column in range(len(headers)):
             ws.cell(row=1, column=column + 1, value=headers[column])
@@ -313,6 +319,14 @@ class SignageTablelModel(BaseRelationalTableModel):
         ws.column_dimensions["B"].width = 150.0
         ws.column_dimensions["A"].number_format = numbers.FORMAT_TEXT
 
+        # Conditional formatting
+        red_text = Font(color="9C0006")
+        red_fill = PatternFill(bgColor="FFC7CE")
+        ws.conditional_formatting.add(f"E2:E{record_count}", CellIsRule(operator='equal', formula=['0'], stopIfTrue=False, font=red_text, fill=red_fill))
+
+        for cell in ws['E':'E']:
+            cell.alignment = Alignment(horizontal="center")
+
         try:
             ws.add_table(table)
             wb.save(destination)
@@ -333,7 +347,7 @@ class SignageTablelModel(BaseRelationalTableModel):
         self.refresh()
 
 
-    def importFromFiles(self, files: list, update: bool = True):
+    def importFromExcels(self, files: list, update: bool = True):
         df = utils.mergeExcelFiles(files, drop_duplicate="first", outfile="")
         df.fillna('', inplace=True)
         df.sort_values(by=['RefKey'], inplace=True)
@@ -357,18 +371,12 @@ class SignageTablelModel(BaseRelationalTableModel):
                 if df_refkey != "":
                     signage_type: SignageType = AppDatabase.cache_signage_type.get(df_type)
 
-                    signage = Signage("",
-                                      1,
-                                      df_row["Owner"],
-                                      signage_type.type_id,
-                                      df_refkey,
-                                      df_row["Title"],
-                                      "",
-                                      "",
-                                      "",
-                                      0,
-                                      AppDatabase.active_workspace.id,
-                                      "")
+                    signage = Signage(status_id=1,
+                                      owner=df_row["Owner"],
+                                      type_id=signage_type.type_id,
+                                      refKey=df_refkey,
+                                      title=df_row["Title"],
+                                      workspace_id=AppDatabase.active_workspace.id)
 
                     self.insertSignage(signage)
 

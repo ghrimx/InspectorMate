@@ -34,6 +34,7 @@ class SignageInfoWidget(QtWidgets.QWidget):
         self.signage_status.setReadOnly(True)
 
         self.title = FitContentTextEdit(False)
+        self.title.setAcceptRichText(False)
         self.ref_key = QtWidgets.QLineEdit()
         self.type_combobox = QtWidgets.QComboBox()
         self.type_model = model.relationModel(model.Fields.Type.index)
@@ -268,7 +269,7 @@ class SignageTab(BaseTab):
 
         self.export_dialog.exec()
 
-    def createSignage(self, title="", link=""):
+    def createSignage(self, title="", link="InspectorMate:///Global"):
         if self.create_dialog is None:
             self.create_dialog = CreateDialog(model=self.table_model, parent=None)
         self.create_dialog.signage_title_lineedit.setText(title)

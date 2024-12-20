@@ -91,6 +91,7 @@ class DocTableModel(BaseRelationalTableModel):
 
     def __init__(self):
         super().__init__()
+        self.setEditStrategy(QtSql.QSqlTableModel.EditStrategy.OnFieldChange)
         self.cache_files: set = set()
         self.status_color_cache = {}
 
@@ -163,7 +164,7 @@ class DocTableModel(BaseRelationalTableModel):
 
                 fileid = utils.queryFileID(file.as_posix())
 
-                r:QtSql.QSqlRecord = self.record()
+                r: QtSql.QSqlRecord = self.record()
                 r.setValue(self.Fields.Display.index, 1)
                 r.setValue(self.Fields.RefKey.index, refkey)
                 r.setValue(self.Fields.Filename.index, file.name)
