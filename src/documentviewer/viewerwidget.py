@@ -1,5 +1,5 @@
 import logging
-from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot)
+from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot, Signal)
 from PyQt6.QtSql import QSqlRelationalDelegate
 
 from evidence.evidencemodel import DocTableModel
@@ -15,6 +15,7 @@ from utilities import config as mconf
 logger = logging.getLogger(__name__)
 
 class ViewerWidget(QtWidgets.QWidget):
+
     def __init__(self, model, parent=None):
         super().__init__(parent)
         self._document: Document = None
@@ -64,6 +65,7 @@ class ViewerWidget(QtWidgets.QWidget):
         
         self.onFoldLeftSidebarTriggered()
         self.onFoldRightSidebarTriggered()
+
 
     @classmethod
     def viewerName(cls):
@@ -188,4 +190,5 @@ class ViewerWidget(QtWidgets.QWidget):
 
     def showEvent(self, event: QtGui.QShowEvent):
         super().showEvent(event)
+
 

@@ -330,12 +330,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if self.viewer is not None:
                 doc_dock_widget = QtAds.CDockWidget(doc.title[:15])
+                doc_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetDeleteOnClose, True)
                 doc_dock_widget.closed.connect(self.doctab_dock_widget.setAsCurrentTab) #  Activate Evidence tab after closing a document viewer
                 doc_dock_widget.setWidget(self.viewer)
                 self.dock_manager.addDockWidgetTabToArea(doc_dock_widget, self.request_area)
                 self.doc_tabs[doc.id] = doc_dock_widget
+                doc_dock_widget.closed.connect(lambda: self.onViewerClosed(doc_dock_widget.widget().document().id))
             else:
                 utils.open_file(doc.filepath)
+    
+    @Slot()
+    def onViewerClosed(self, id: int):
+        self.doc_tabs.pop(id)
 
     @Slot()
     def handle_load_file(self):

@@ -213,6 +213,7 @@ class SignageTab(BaseTab):
     def connectSignals(self):
         self.table.selectionModel().currentRowChanged.connect(self.onCurrentRowChanged)
         self.search_tool.textChanged.connect(self.searchfor)
+        
 
     @Slot()
     def importFromOnenote(self):
