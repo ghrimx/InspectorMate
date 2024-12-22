@@ -38,6 +38,7 @@ class LoadDocWorker(QtCore.QRunnable):
         self.model = model
         self.signals = WorkerSignals()
     
+    @Slot()
     def run(self):
         try:
             self.model.insertDocument()
