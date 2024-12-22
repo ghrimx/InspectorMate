@@ -235,17 +235,9 @@ class DocTab(BaseTab):
         self.splitter.addWidget(self.table)
 
         # Right pane
-        self.info_widget_dict = {}
-        self.info_area = QtWidgets.QStackedLayout()
-        self.info_placeholder = QtWidgets.QWidget()
-        self.info_placeholder.setLayout(self.info_area)
-        self.right_pane.addTab(self.info_placeholder, "Info")
-
-        self.note_widget_dict = {}
-        self.note_area = QtWidgets.QStackedLayout()
-        self.note_placeholder = QtWidgets.QWidget()
-        self.note_placeholder.setLayout(self.note_area)
-        self.right_pane.addTab(self.note_placeholder, "Note")
+        self.doc_info_tab = DocInfoWidget(self.doctable_model, QtCore.QModelIndex(), None)
+        self.right_pane.addTab(self.doc_info_tab, "Info")
+        self.right_pane.addTab(self.doc_info_tab.note, "Note")
 
         self.splitter.addWidget(self.right_pane)
 
@@ -296,7 +288,7 @@ class DocTab(BaseTab):
         self.doc_explorer_model = DocExplorerModel()
 
     def connect_signals(self):
-        self.table.selectionModel().selectionChanged.connect(self.onRecordSelected)
+        self.table.selectionModel().selectionChanged.connect(self.onRowSelected)
         self.table.doubleClicked.connect(self.sig_open_document)
         self.doc_filter.selectionModel().selectionChanged.connect(self.onFolderFilterClicked)
         self.search_tool.textChanged.connect(self.searchfor)
@@ -329,35 +321,10 @@ class DocTab(BaseTab):
         self.doc_filter.setRootIndex(self.doc_explorer_model.proxy_index)
 
     @Slot(QtCore.QItemSelection, QtCore.QItemSelection)
-    def onRecordSelected(self, selected: QtCore.QItemSelection, deseleted: QtCore.QItemSelection):
-        """Refresh dependent model and view when the selection change in the central widget"""
-
+    def onRowSelected(self, selected: QtCore.QItemSelection, deseleted: QtCore.QItemSelection):
         if len(self.table.selectedRows()) == 1:
             self.selected_index = self.doctable_proxy_model.mapToSource(self.table.selectionModel().currentIndex())
-
-            doc: Document = self.table.document()
-
-            if doc is not None:
-                info_stack_widget_index = self.info_widget_dict.get(doc.id)
-                if info_stack_widget_index is None:
-                    info_widget = DocInfoWidget(self.doctable_model, self.selected_index, doc)
-                    info_stack_widget_index = self.info_area.addWidget(info_widget)
-                    self.info_widget_dict[doc.id] = info_stack_widget_index
-
-                self.info_area.setCurrentIndex(info_stack_widget_index)
-
-                note_stack_widget_index = self.note_widget_dict.get(doc.id)
-                if note_stack_widget_index is None:
-                    note_widget = info_widget.note
-                    note_stack_widget_index = self.note_area.addWidget(note_widget)
-                    self.note_widget_dict[doc.id] = note_stack_widget_index
-                    self.right_pane.currentChanged.connect(info_widget.submitMapper)
-                    info_widget.refKey.textChanged.connect(info_widget.submitMapper)
-
-                self.note_area.setCurrentIndex(note_stack_widget_index)
-
-                info_widget: DocInfoWidget = self.info_area.currentWidget()
-                info_widget.setMapperIndex(self.selected_index)
+            self.doc_info_tab.setMapperIndex(self.selected_index)
 
     @Slot()
     def onFolderFilterClicked(self):

@@ -97,6 +97,12 @@ class TextEdit(QtWidgets.QTextEdit):
         table_content = [x.split('\t') for x in biff.split('\n')]
         return table_content
     
+    def setTitle(self, title: str):
+        cursor = self.textCursor()
+        cursor.setPosition(0)
+        cursor.insertText(title)
+        self.textHeading(HeadingStyle.H1)
+    
     def pasteTable(self):
         """Insert table from Clipboard"""
         cursor = self.textCursor()
@@ -789,12 +795,15 @@ class Notepad(QtWidgets.QWidget):
         elif layout_strategy == self.LayoutStrategy.Tabbed:
             self.setTabbedView()
 
-    def loadfile(self, filename):
+    def loadfile(self, filename, title: str = ""):
         textedit = TextEdit.load(filename)
         if textedit is not None:
             textedit.currentCharFormatChanged.connect(self.updateToolbarState)
             subwindow = self.mdi.addSubWindow(textedit)
             subwindow.show()
+
+        if title != "":
+            textedit.setTitle(QtCore.QFileInfo(title).baseName())
     
     def active_mdi_child(self) -> TextEdit:
         active_sub_window = self.mdi.activeSubWindow()
@@ -952,9 +961,9 @@ class Notepad(QtWidgets.QWidget):
     def addNote(self):
         filename = f"Untitled.html"
         fname = QtWidgets.QFileDialog.getSaveFileName(parent=None,
-                                                          caption="RichTextEditor -- Save File As",
-                                                          directory=f"{AppDatabase.active_workspace.notebook_path}/{filename}",
-                                                          filter="Text files (*.html *.*)")
+                                                      caption="RichTextEditor -- Save File As",
+                                                      directory=f"{AppDatabase.active_workspace.notebook_path}/{filename}",
+                                                      filter="Text files (*.html *.*)")
         if fname[0] == "":
             return
         
@@ -963,7 +972,7 @@ class Notepad(QtWidgets.QWidget):
             f.write(text)
             f.close()
 
-        self.loadfile(fname[0])
+        self.loadfile(fname[0], fname[0])
 
     def editNote(self):
         fname = QtWidgets.QFileDialog.getOpenFileName(parent=None,
