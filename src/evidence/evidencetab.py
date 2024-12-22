@@ -24,16 +24,27 @@ from widgets.waitingspinner import WaitingSpinner
 logger = logging.getLogger(__name__)
 
 
-class LoadDocThread(QtCore.QThread):
-    sig_load_ended = Signal()
+class WorkerSignals(QtCore.QObject):
+    finished = Signal()
+    error = Signal(object)
+    result = Signal(object)
+    progress = Signal(int)
 
-    def __init__(self, model: DocTableModel, parent: QtCore.QObject | None = None):
-        super().__init__(parent)
-        self._model = model
 
+class LoadDocWorker(QtCore.QRunnable):
+    
+    def __init__(self, model: DocTableModel):
+        super().__init__()
+        self.model = model
+        self.signals = WorkerSignals()
+    
     def run(self):
-        self._model.insertDocument()
-        self.sig_load_ended.emit()
+        try:
+            self.model.insertDocument()
+        except Exception as e:
+            self.signals.error.emit(e)
+        finally:
+            self.signals.finished.emit()
 
 
 class DocInfoWidget(QtWidgets.QWidget):
@@ -195,6 +206,8 @@ class DocTab(BaseTab):
         self.create_models(model=model)
         self.initUI()
         self.connect_signals()
+
+        self.threadpool = QtCore.QThreadPool()
 
     def initUI(self):
         # Dialogs
@@ -377,17 +390,16 @@ class DocTab(BaseTab):
         self.docloadspinner = WaitingSpinner(self, True, True, Qt.WindowModality.WindowModal)
         self.docloadspinner.start()
 
-        self.loaddoc_thread = LoadDocThread(self.doctable_model, parent=None)
+        worker = LoadDocWorker(self.doctable_model)
 
-        self.loaddoc_thread.sig_load_ended.connect(self.handleLoadEnded)
-        self.loaddoc_thread.start()
+        worker.signals.finished.connect(self.handleLoadEnded)
+        self.threadpool.start(worker)
 
     def close(self) -> bool:
         err = self.submitMapper()
         return err
 
     def handleLoadEnded(self):
-        self.loaddoc_thread.quit()
         self.docloadspinner.stop()
         self.sig_load_file.emit()
         self.summary_tab.refreshWidget()

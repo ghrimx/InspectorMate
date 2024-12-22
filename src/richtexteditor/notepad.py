@@ -38,6 +38,7 @@ class LineSpacing(enum.Enum):
 
 
 class TableMimeType:
+    # TODO
     def __init__(self):
         self._headers = []
         self._rows = []
