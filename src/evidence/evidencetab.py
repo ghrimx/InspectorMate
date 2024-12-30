@@ -394,7 +394,7 @@ class DocTab(BaseTab):
         worker = LoadDocWorker(self.doctable_model)
 
         worker.signals.finished.connect(self.handleLoadEnded)
-        self.threadpool.start(worker)
+        self.threadpool.tryStart(worker)
 
     def close(self) -> bool:
         err = self.submitMapper()
