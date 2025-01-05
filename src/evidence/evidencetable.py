@@ -109,6 +109,7 @@ class DocTable(TreeView):
         return self._model
 
     def document(self) -> Document:
+        """Return the dataclass of the document currently selected"""
         selected_model_index: QtCore.QModelIndex = self._proxy_model.mapToSource(self.selectionModel().currentIndex())
         return self._model.document(selected_model_index)
 

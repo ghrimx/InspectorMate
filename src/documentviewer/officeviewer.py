@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from qtpy import (QtCore, Signal)
+from qtpy import (QtCore, QtWidgets, Signal, Slot)
 
 from documentviewer.pdfviewer import PdfViewer
 from db.dbstructure import Document
@@ -44,27 +44,22 @@ class OfficeViewer(PdfViewer):
     def document(self):
         return self._document
 
-    def loadDocument(self):
+    @Slot()
+    def handleConversionStarted(self):
         self.waitingspinner = WaitingSpinner(self, True, False)
         self.waitingspinner.start()
-        self.converter = ConverterThread(self._document.filepath)
-        self.converter.sig_conversion_ended.connect(self.handleConverterResult)
-        self.converter.start()
 
-    def handleConverterResult(self):
-        self.converter.quit()
+    @Slot(object)
+    def handleConversionEnded(self, r: object):
         self.waitingspinner.stop()
 
-        converted_pdf = self.converter.pdf()
-
-        if not isinstance(converted_pdf, Exception):
-            self.pdfdocument.load(str(converted_pdf))
-            self.pdfView.setDocument(self.pdfdocument)
-            self.page_count.setText(f" of {self.pdfdocument.pageCount()}")
+        if isinstance(r, Exception):
+            logger.error(f"Error converting doc: {r}")
+            QtWidgets.QMessageBox.critical(self, "Document convertion -- Failed", f"{r}")
         else:
-            logger.error(f"Error converting doc: {converted_pdf}")
+            self._document.filepath = str(r)
+            self.loadDocument()
 
     def initViewer(self, doc: Document, model_index: QtCore.QModelIndex):
         self._document = doc
-
         super().initViewer(doc, model_index)

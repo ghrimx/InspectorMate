@@ -24,7 +24,7 @@ from widgets.waitingspinner import WaitingSpinner
 logger = logging.getLogger(__name__)
 
 
-class WorkerSignals(QtCore.QObject):
+class LoadWorkerSignals(QtCore.QObject):
     finished = Signal()
     error = Signal(object)
     result = Signal(object)
@@ -36,7 +36,7 @@ class LoadDocWorker(QtCore.QRunnable):
     def __init__(self, model: DocTableModel):
         super().__init__()
         self.model = model
-        self.signals = WorkerSignals()
+        self.signals = LoadWorkerSignals()
     
     @Slot()
     def run(self):

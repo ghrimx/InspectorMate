@@ -341,6 +341,7 @@ class MainWindow(QtWidgets.QMainWindow):
     
     @Slot()
     def onViewerClosed(self, id: int):
+        """Remove the document viewer from the dict when tab is closed"""
         self.doc_tabs.pop(id)
 
     @Slot()
