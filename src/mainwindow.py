@@ -271,7 +271,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 utils.open_file(file_info.absoluteFilePath())
 
     @Slot(TextEdit)
-    def createSignageFromNotePad(self, caller: TextEdit):     
+    def createSignageFromNotePad(self, caller: TextEdit):
+        """Create a signage from Notepad/Notebook"""
         title = caller.textCursor().selectedText()
         val = self.signage_tab.createSignage(title, f"InspectorMate:///Notepad:{caller.userFriendlyFilename()}")
 
@@ -285,12 +286,21 @@ class MainWindow(QtWidgets.QMainWindow):
                     icon = signage_type.icon
 
             if icon != "":
-                caller.textCursor().insertHtml(f'<p style="color:blue;"><img alt="" src="data:image/png;base64,{icon}"/> {signage.refKey} {signage.title}</p>')
+                img = QtGui.QTextImageFormat()
+                img.setName(f"data:image/png;base64,{icon}")
+                img.setAnchor(True)
+                img.setAnchorHref("to signage tab")
+                img.setAnchorNames([f"signage_type={signage.type_id}; id={signage.signage_id}"])
+                caller.textCursor().insertImage(img)
+                fmt = QtGui.QTextCharFormat()
+                fmt.setForeground((QtCore.Qt.GlobalColor.blue))
+                caller.textCursor().insertText(f" {signage.refKey} {signage.title}", fmt)
+                # caller.textCursor().insertHtml(f'<p style="color:blue;"><img alt="" src="data:image/png;base64,{icon}"/> {signage.refKey} {signage.title}</p>')
             else:
                 caller.textCursor().insertText(f'{signage.refKey} {signage.title}')
 
     def createSignageFromNote(self, caller: RichTextEditor):
-
+        """Create signage from note editor"""
         title = caller.editor.textCursor().selectedText()
 
         val = self.signage_tab.createSignage(title)
