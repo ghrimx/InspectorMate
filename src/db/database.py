@@ -307,8 +307,25 @@ class AppDatabase(QtSql.QSqlDatabase):
         query.exec()
 
         if not query.exec():
-            logger.error(f"reviewProgress > Query execution failed: {query.lastError().text()}")
+            logger.error(f"reviewProgress: Query execution failed: {query.lastError().text()}")
         else:
             while query.next():
                 review_progress[query.value(0)] = {"progress": int(query.value(1)), "count": query.value(2), "closed": query.value(3)}
             return review_progress
+    
+    @classmethod
+    def signageLastInsertedId(cls) -> (int | None):
+        query = QtSql.QSqlQuery()
+        query.prepare("""SELECT max(signage.signage_id)
+                        FROM signage
+                        WHERE signage.workspace_id = :workspace_id""")
+        query.bindValue(":workspace_id", cls.active_workspace.id)
+
+        query.exec()
+
+        if not query.exec():
+            logger.error(f"signageLastInsertedId: Query execution failed - ERROR: {query.lastError().text()}")
+        elif query.next():
+            return query.value(0)
+        else:
+            logger.error(f"signageLastInsertedId: No rows found with query - QUERY: {query.lastQuery()}")

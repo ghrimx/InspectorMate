@@ -6,6 +6,8 @@ from datetime import datetime
 from qtpy import (QtWidgets, QtCore, QtGui, Slot, Signal)
 
 from db.database import AppDatabase
+from db.dbstructure import Signage, SignageType
+
 from utilities.config import settings
 from utilities.utils import (hexuuid, createFolder, queryFileID)
 from utilities import config as mconf
@@ -516,7 +518,7 @@ class TextEdit(QtWidgets.QTextEdit):
 
 class Notepad(QtWidgets.QWidget):
 
-    sigInsertRequest = Signal(TextEdit)
+    sigCreateRequest = Signal(tuple)
 
     class LayoutStrategy(enum.Enum):
         Cascade = 0
@@ -600,7 +602,7 @@ class Notepad(QtWidgets.QWidget):
         self.action_line_spacing_1_5 = QtGui.QAction("1.5", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL_HALF))
         self.action_line_spacing_double = QtGui.QAction("2.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.DOUBLE))
 
-        self.action_insertRequest = QtGui.QAction(QtGui.QIcon(':signpost-line'), "Insert Signage", self, triggered=self.insertRequest)
+        self.action_insertSignage = QtGui.QAction(QtGui.QIcon(':signpost-line'), "Insert Signage", self, triggered=self.insertSignage)
 
         self.action_help = QtGui.QAction(QtGui.QIcon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
 
@@ -693,7 +695,7 @@ class Notepad(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_blockquote)
         self.toolbar.addAction(self.action_bullet)
         self.toolbar.addSeparator()
-        self.toolbar.addAction(self.action_insertRequest)
+        self.toolbar.addAction(self.action_insertSignage)
 
         spacer = QtWidgets.QWidget(self)
         spacer.setContentsMargins(0,0,0,0)
@@ -713,7 +715,7 @@ class Notepad(QtWidgets.QWidget):
         self.shortcut_h3 = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+3"), self, lambda:self.textHeading(HeadingStyle.H3), ambiguousMember=lambda:self.textHeading(HeadingStyle.H3),context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_h4 = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+4"), self, lambda:self.textHeading(HeadingStyle.H4), ambiguousMember=lambda:self.textHeading(HeadingStyle.H4),context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_P = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+P"), self, lambda:self.textHeading(HeadingStyle.P), ambiguousMember=lambda:self.textHeading(HeadingStyle.P), context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self.shortcut_request = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+R"), self, self.insertRequest, ambiguousMember=self.insertRequest, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_request = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+R"), self, self.createSignage, ambiguousMember=self.createSignage, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_clearformatting = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+N"), self, self.clearFormatting, ambiguousMember=self.clearFormatting, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_blockquote = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+B"), self, self.insertBlockquote, ambiguousMember=self.insertBlockquote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_blod = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+B"), self, self.textBold, ambiguousMember=self.textBold, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -934,8 +936,29 @@ class Notepad(QtWidgets.QWidget):
         dlg.exec()
 
     @Slot()
-    def insertRequest(self):
-        self.sigInsertRequest.emit(self.active_mdi_child())
+    def createSignage(self):
+        self.sigCreateRequest.emit((self.active_mdi_child().textCursor().selectedText(), f"InspectorMate:///Notepad:{self.active_mdi_child().userFriendlyFilename()}"))
+
+    def insertSignage(self, signage: Signage):
+        icon = None
+        signage_type: SignageType
+        for signage_type in AppDatabase.cache_signage_type.values():
+            if signage_type.type_id == signage.type_id:
+                icon = signage_type.icon
+
+        fmt = QtGui.QTextCharFormat()
+        fmt.setAnchor(True)
+        fmt.setAnchorHref("AnchorHref")
+        fmt.setAnchorNames([f"signage_type={signage.type_id}; id={signage.signage_id}"])
+        fmt.setForeground((QtCore.Qt.GlobalColor.blue))
+        fmt.setFontUnderline(True)
+        if icon != "":
+            img = QtGui.QTextImageFormat()
+            img.setName(f"data:image/png;base64,{icon}")
+            self.active_mdi_child().textCursor().insertImage(img)
+            self.active_mdi_child().textCursor().insertText(f" {signage.refKey} {signage.title}", fmt)
+        else:
+            self.active_mdi_child().textCursor().insertText(f'{signage.refKey} {signage.title}', fmt)
 
     @Slot()
     def loadFiles(self):

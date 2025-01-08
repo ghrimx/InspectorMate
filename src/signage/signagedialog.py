@@ -123,6 +123,9 @@ class CreateDialog(QtWidgets.QDialog):
         if res is not True:
             dlg = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Critical, "Error saving signage", f"Signage: {self.new_signage}", QtWidgets.QMessageBox.StandardButton.Ok, self)
             dlg.exec()
+        else:
+            self.new_signage.signage_id = AppDatabase.signageLastInsertedId()
+        
 
     def getNewSignage(self):
         return self.new_signage

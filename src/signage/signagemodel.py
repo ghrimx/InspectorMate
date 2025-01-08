@@ -261,11 +261,10 @@ class SignageTablelModel(BaseRelationalTableModel):
 
         if inserted == True:
             self.refresh()
+            self.submitAll()
         else:
             err = self.lastError().text()
             logger.error(f"Cannot insert: {signage} - Error: {err}")
-
-        # self.submitAll()
 
         return inserted
 
