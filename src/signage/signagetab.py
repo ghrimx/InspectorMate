@@ -81,6 +81,20 @@ class SignageInfoWidget(QtWidgets.QWidget):
     def submitMapper(self):
         self.mapper.submit()
 
+    def update_mapped_widgets(self):
+        if self._model.rowCount():
+            self.mapper.toFirst()
+        else:
+            self.mapper.setCurrentIndex(-1)
+            for section in range(self._model.columnCount()):
+                widget: QtWidgets.QWidget = self.mapper.mappedWidgetAt(section)
+                if not widget:
+                    pass
+                elif isinstance(widget, QtWidgets.QComboBox):
+                    widget.setCurrentIndex(-1)
+                else:
+                    widget.clear()
+
 
 class FilterDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -208,12 +222,11 @@ class SignageTab(BaseTab):
         self.toolbar.removeAction(self.fold_left_pane)
 
     def refresh(self):
-        pass
+        self.info_tab.update_mapped_widgets()
 
     def connectSignals(self):
         self.table.selectionModel().currentRowChanged.connect(self.onCurrentRowChanged)
         self.search_tool.textChanged.connect(self.searchfor)
-        
 
     @Slot()
     def importFromOnenote(self):

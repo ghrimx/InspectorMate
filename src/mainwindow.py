@@ -398,6 +398,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def refreshWidgets(self):
         self.doctab.refresh()
         self.signage_model.refresh()
+        self.signage_tab.refresh()
+        self.request_tab.refresh()
         self.workspace_explorer.set_root_path(AppDatabase.active_workspace.rootpath)
         self.notebook_explorer.set_root_path(AppDatabase.active_workspace.notebook_path)
         self.set_window_title(AppDatabase.active_workspace.name)

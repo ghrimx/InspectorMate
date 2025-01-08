@@ -1,9 +1,13 @@
+import logging
+
 from datetime import datetime
 from qtpy import QtCore
 
 from db.database import AppDatabase
 from models.objectclass import (Workspace, DatabaseField)
 from models.model import BaseRelationalTableModel
+
+logger = logging.getLogger(__name__)
 
 
 class WorkspaceModel(BaseRelationalTableModel):
@@ -59,7 +63,7 @@ class WorkspaceModel(BaseRelationalTableModel):
         WorkspaceModel.Fields.ModificationDate = DatabaseField("modification_date", self.fieldIndex('modification_date'), False)
         WorkspaceModel.Fields.Reference = DatabaseField("reference", self.fieldIndex('reference'), True)
 
-    def insert(self, workspace: Workspace) -> bool:
+    def insert(self, workspace: Workspace) -> tuple[bool,str]:
         r = self.record()
         r.setValue('name', workspace.name)
         r.setValue('reference', workspace.reference)
@@ -71,8 +75,16 @@ class WorkspaceModel(BaseRelationalTableModel):
         r.setValue('creation_date', datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
         r.setValue('modification_date', datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
         res = self.insertRecord(-1, r)
+
         if res:
+            err = ""
+            logger.info(f"Successfully created {workspace}")
             self.refresh()
+        else:
+            err = f"Error saving {workspace} -- Error: {self.lastError().text()}"
+            logger.error(err)
+        
+        return res, err
 
     def refresh(self):
         AppDatabase.setActiveWorkspace()

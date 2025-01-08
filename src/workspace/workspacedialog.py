@@ -1,3 +1,5 @@
+import logging
+
 from qtpy import (QtCore, QtWidgets, QtGui, Signal, Slot)
 from PyQt6.QtSql import QSqlRelationalDelegate
 
@@ -9,6 +11,8 @@ from workspace.workspacetable import WorkspaceTable
 from db.database import AppDatabase
 
 from utilities.utils import createFolder
+
+logger = logging.getLogger(__name__)
 
 
 class WorkspaceManager(QtWidgets.QDialog):
@@ -105,10 +109,14 @@ class WorkspaceManager(QtWidgets.QDialog):
     def deleteWorkspace(self): 
         row = self.workspace_table.selectionModel().currentIndex().row()
         res = self._model.deleteRow(row)
+
         if res:
             self._model.refresh()
             self.adjust_size()
             self.sig_workspace_updated.emit()
+            logger.info(f"Workspace successfully deleted")
+        else:
+            logger.error(f"Workspace cannot be deleted -- Error: {self._model.lastError().text()}")
 
 
 class WorkspaceEditDialog(QtWidgets.QDialog):
@@ -194,7 +202,6 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
             if self.onenote_manager.exec() == QtWidgets.QDialog.DialogCode.Accepted:
                 self.onenote_path_lineedit.setText(self.onenote_manager.oeSection())
         else:
-
             QtWidgets.QMessageBox.critical(self,
                                            "Error",
                                            "",
@@ -259,7 +266,11 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         createFolder(f"{workspace.notebook_path}/.images")
 
         if self.mapper.currentIndex() < 0:
-            self.model.insert(workspace)
+            res, err = self.model.insert(workspace)
+
+            if not res:
+                QtWidgets.QMessageBox.critical(self, "Workspace creation failed", err)
+
         else:
             self.mapper.submit()
             self.model.refresh()

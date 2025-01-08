@@ -108,6 +108,20 @@ class DocInfoWidget(QtWidgets.QWidget):
     def document(self):
         return self._document
 
+    def update_mapped_widgets(self):
+        if self._model.rowCount():
+            self.mapper.toFirst()
+        else:
+            self.mapper.setCurrentIndex(-1)
+            for section in range(self._model.columnCount()):
+                widget: QtWidgets.QWidget = self.mapper.mappedWidgetAt(section)
+                if not widget:
+                    pass
+                elif isinstance(widget, QtWidgets.QComboBox):
+                    widget.setCurrentIndex(-1)
+                else:
+                    widget.clear()
+
 
 class SummaryTab(QtWidgets.QWidget):
     def __init__(self, evidence_model: DocTableModel, parent=None):
@@ -330,6 +344,7 @@ class DocTab(BaseTab):
     @Slot()
     def refresh(self):
         self.doctable_model.refresh()
+        self.doc_info_tab.update_mapped_widgets()
         self.doc_explorer_model.refresh()
         self.doc_filter.setModel(self.doc_explorer_model.proxy_model)
         self.doc_filter.setRootIndex(self.doc_explorer_model.proxy_index)
