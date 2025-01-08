@@ -201,7 +201,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer.doubleClicked.connect(lambda: self.OnFilesystemDoubleClicked(self.workspace_explorer))
         self.notebook_explorer.doubleClicked.connect(lambda: self.OnFilesystemDoubleClicked(self.notebook_explorer))
         self.document_model.dataChanged.connect(self.signage_model.refresh)
-
         self.signage_model.rowsInserted.connect(self.doctab.request_filter_tab.updateCounter)
         self.signage_model.rowsRemoved.connect(self.doctab.request_filter_tab.updateCounter)
 
@@ -404,6 +403,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notebook_explorer.set_root_path(AppDatabase.active_workspace.notebook_path)
         self.set_window_title(AppDatabase.active_workspace.name)
         self.notepad_tab.close_all()
+
+        # Close all viewer tabs
+        dockwidget: QtAds.CDockWidget
+        for dockwidget in self.doc_tabs.copy().values():
+            dockwidget.closeDockWidget()
 
     @Slot()
     def open_onenote_picker(self):
