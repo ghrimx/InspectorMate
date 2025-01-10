@@ -307,6 +307,9 @@ class SignageTablelModel(BaseRelationalTableModel):
 
                 ws.append(values)
 
+        if record_count == 1:
+            record_count = 2
+
         table = Table(displayName="Table1", ref=f"{xrange}{record_count}")
         style = TableStyleInfo(name="TableStyleMedium2",
                                showFirstColumn=False,
@@ -348,12 +351,12 @@ class SignageTablelModel(BaseRelationalTableModel):
 
     def importFromExcels(self, files: list, update: bool = True):
         df = utils.mergeExcelFiles(files, drop_duplicate="first", outfile="")
-        df.fillna('', inplace=True)
+        # df.fillna(' ', method='ffill', inplace=True)
         df.sort_values(by=['RefKey'], inplace=True)
 
         self.sort(self.Fields.RefKey.index, Qt.SortOrder.AscendingOrder)
         for index, df_row in df.iterrows():
-            df_refkey = str(df_row["RefKey"])
+            df_refkey = f'{df_row["RefKey"]:>{'0'}{3}}' # format rekey with leading '0'
             df_type = df_row["Type"]
 
             for row in range(self.rowCount()):
@@ -370,14 +373,20 @@ class SignageTablelModel(BaseRelationalTableModel):
                 if df_refkey != "":
                     signage_type: SignageType = AppDatabase.cache_signage_type.get(df_type)
 
-                    signage = Signage(status_id=1,
-                                      owner=df_row["Owner"],
-                                      type_id=signage_type.type_id,
-                                      refKey=df_refkey,
-                                      title=df_row["Title"],
-                                      workspace_id=AppDatabase.active_workspace.id)
+                    if signage_type is None:
+                        signage_type = AppDatabase.cache_signage_type.get('Request') # apply "Request" as default type to avoid fail import
 
-                    self.insertSignage(signage)
+                    try:
+                        signage = Signage(status_id=1,
+                                          owner=df_row["Owner"],
+                                          type_id=signage_type.type_id,
+                                          refKey=df_refkey,
+                                          title=df_row["Title"],
+                                          workspace_id=AppDatabase.active_workspace.id)
+                        self.insertSignage(signage)
+                    except Exception as e:
+                        logger.error(f"importFromExcels > Error importing Signage: refkey={df_refkey} -- Error: {e}")
+
 
         self.refresh()
 

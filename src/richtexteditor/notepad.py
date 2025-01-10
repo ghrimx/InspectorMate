@@ -602,7 +602,7 @@ class Notepad(QtWidgets.QWidget):
         self.action_line_spacing_1_5 = QtGui.QAction("1.5", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL_HALF))
         self.action_line_spacing_double = QtGui.QAction("2.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.DOUBLE))
 
-        self.action_insertSignage = QtGui.QAction(QtGui.QIcon(':signpost-line'), "Insert Signage", self, triggered=self.insertSignage)
+        self.action_insertSignage = QtGui.QAction(QtGui.QIcon(':signpost-line'), "Insert Signage", self, triggered=self.createSignage)
 
         self.action_help = QtGui.QAction(QtGui.QIcon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
 
@@ -715,7 +715,7 @@ class Notepad(QtWidgets.QWidget):
         self.shortcut_h3 = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+3"), self, lambda:self.textHeading(HeadingStyle.H3), ambiguousMember=lambda:self.textHeading(HeadingStyle.H3),context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_h4 = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+4"), self, lambda:self.textHeading(HeadingStyle.H4), ambiguousMember=lambda:self.textHeading(HeadingStyle.H4),context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_P = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+P"), self, lambda:self.textHeading(HeadingStyle.P), ambiguousMember=lambda:self.textHeading(HeadingStyle.P), context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self.shortcut_request = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+R"), self, self.createSignage, ambiguousMember=self.createSignage, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_signage = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+R"), self, self.createSignage, ambiguousMember=self.createSignage, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_clearformatting = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+N"), self, self.clearFormatting, ambiguousMember=self.clearFormatting, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_blockquote = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+B"), self, self.insertBlockquote, ambiguousMember=self.insertBlockquote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_blod = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+B"), self, self.textBold, ambiguousMember=self.textBold, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -912,7 +912,7 @@ class Notepad(QtWidgets.QWidget):
 
         form.addRow("Add Note:", QtWidgets.QLabel("Ctrl+N"))
         form.addRow("Edit Note:", QtWidgets.QLabel("Ctrl+E"))
-        form.addRow("Insert Request:", QtWidgets.QLabel("Ctrl+Alt+R"))
+        form.addRow("Insert Signage:", QtWidgets.QLabel("Ctrl+Alt+R"))
         form.addRow("Select all text:", QtWidgets.QLabel("Ctrl+A"))
         form.addRow("Undo:", QtWidgets.QLabel("Ctrl+Z"))
         form.addRow("Redo:", QtWidgets.QLabel("Ctrl+Y"))
