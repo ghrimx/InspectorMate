@@ -116,7 +116,8 @@ class RichTextEditor(QtWidgets.QWidget):
         MapperMode = 2
 
     def __init__(self, path: str = None, text: str = None, saveMode = 1, uid: str = None,  bar: bool = True, parent = None):
-        super().__init__(parent=parent)
+        super(RichTextEditor, self).__init__(parent=parent)
+        self._parent = parent
         self._saveMode: RichTextEditor.SaveMode = saveMode
         self.path = path
         self.uid = uid

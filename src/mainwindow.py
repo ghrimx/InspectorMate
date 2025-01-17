@@ -281,11 +281,14 @@ class MainWindow(QtWidgets.QMainWindow):
             signage = self.signage_tab.create_dialog.getNewSignage()
             self.notepad_tab.insertSignage(signage)           
 
+    @Slot(object)
     def createSignageFromNote(self, caller: RichTextEditor):
         """Create signage from note editor"""
         title = caller.editor.textCursor().selectedText()
 
-        val = self.signage_tab.createSignage(title)
+        citation = caller._parent.citation()
+
+        val = self.signage_tab.createSignage(title, citation)
 
         if val == 1:
             signage = self.signage_tab.create_dialog.getNewSignage()
@@ -327,6 +330,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.dock_manager.addDockWidgetTabToArea(doc_dock_widget, self.request_area)
                 self.doc_tabs[doc.id] = doc_dock_widget
                 doc_dock_widget.closed.connect(lambda: self.onViewerClosed(doc_dock_widget.widget().document().id))
+                self.viewer.note_tab.sig_create_request.connect(self.createSignageFromNote)
             else:
                 utils.open_file(doc.filepath)
     

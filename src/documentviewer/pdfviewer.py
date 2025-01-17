@@ -131,7 +131,7 @@ class PdfViewWithLinks(QtPdfWidgets.QPdfView):
 
 class PdfViewer(ViewerWidget):
     def __init__(self, model, parent):
-        super().__init__(model, parent=parent)
+        super(PdfViewer, self).__init__(model, parent=parent)
         self.pdfView = None
         self.pdfdocument = None
         self.searchmodel = None

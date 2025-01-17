@@ -66,6 +66,7 @@
     <file alias="signpost-line">icons/remix/signpost-line.svg</file>
     <file alias="text-block">icons/remix/text-block.svg</file>
     <file alias="file-text-line">icons/remix/file-text-line.svg</file>
+    <file alias="question-mark">icons/remix/question-mark.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>

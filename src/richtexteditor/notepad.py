@@ -61,10 +61,10 @@ class TextEdit(QtWidgets.QTextEdit):
         self.document().setBaseUrl(base_url)
 
         # Initialize default font size.
-        font = QtGui.QFont("Segoe UI", 12)
-        font.setStyleHint(QtGui.QFont.StyleHint.SansSerif)
-        self.setFont(font)
-        self.setFontPointSize(12)
+        # font = QtGui.QFont("Segoe UI", 12)
+        # font.setStyleHint(QtGui.QFont.StyleHint.SansSerif)
+        # self.setFont(font)
+        # # self.setFontPointSize(12)
 
         self.setHtml(text)
 
@@ -101,6 +101,7 @@ class TextEdit(QtWidgets.QTextEdit):
         return table_content
     
     def setTitle(self, title: str):
+        self.setDocumentTitle(title)
         cursor = self.textCursor()
         cursor.setPosition(0)
         cursor.insertText(title)
@@ -806,7 +807,7 @@ class Notepad(QtWidgets.QWidget):
             subwindow.show()
 
         if title != "":
-            textedit.setTitle(QtCore.QFileInfo(title).baseName())
+            textedit.setTitle(QtCore.QFileInfo(title).completeBaseName())
     
     def active_mdi_child(self) -> TextEdit:
         active_sub_window = self.mdi.activeSubWindow()
