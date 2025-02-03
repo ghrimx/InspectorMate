@@ -77,6 +77,8 @@
     <file alias="sort-number-asc">icons/remix/sort-number-asc.svg</file>
     <file alias="quill-pen-fill">icons/remix/quill-pen-fill.svg</file>
     <file alias="quill-pen-fill-red">icons/remix/quill-pen-fill-red.svg</file>
+    <file alias="collapse-vertical-line">icons/remix/collapse-vertical-line.svg</file>
+    <file alias="expand-vertical-line">icons/remix/expand-vertical-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>
