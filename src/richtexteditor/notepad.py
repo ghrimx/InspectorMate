@@ -456,15 +456,13 @@ class TextEdit(QtWidgets.QTextEdit):
             cursor.select(QtGui.QTextCursor.SelectionType.BlockUnderCursor)
 
         cursor.beginEditBlock()
- 
-        frame_fmt = cursor.currentFrame().frameFormat()
-        frame_fmt.setBorderStyle(QtGui.QTextFrameFormat.BorderStyle.BorderStyle_None)
-        frame_fmt.setLeftMargin(40)
-        frame_fmt.setRightMargin(40)
-        frame_fmt.setPadding(10)
-        frame_fmt.setBackground(QtGui.QColor("#e6f2ff"))
 
-        cursor.insertFrame(frame_fmt)
+        tablefmt = QtGui.QTextTableFormat()
+        tablefmt.setCellPadding(5.0)
+        tablefmt.setBackground(QtGui.QColor("#e6f2ff"))
+        tablefmt.setBorderStyle(QtGui.QTextFrameFormat.BorderStyle.BorderStyle_None)
+ 
+        cursor.insertTable(1, 1, tablefmt)
  
         cursor.endEditBlock()
 

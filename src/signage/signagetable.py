@@ -194,9 +194,8 @@ class NoteIconDelegate(QtWidgets.QStyledItemDelegate):
         super().initStyleOption(option, index)
 
         if index.column() == self.parent().model().sourceModel().Fields.Note.index:
-            # print(index.data(Qt.ItemDataRole.DisplayRole))
             privrate_note = index.data(Qt.ItemDataRole.DisplayRole)
-            public_note = self.parent().model().sourceModel().data(self.parent().model().sourceModel().index(index.row(), self.parent().model().sourceModel().Fields.PublicNote.index), Qt.ItemDataRole.DisplayRole)
+            public_note = self.parent().model().data(self.parent().model().index(index.row(), self.parent().model().sourceModel().Fields.PublicNote.index), Qt.ItemDataRole.DisplayRole)
 
             public_note_raw: str = html2text.html2text(public_note)
             privrate_note_raw: str = html2text.html2text(privrate_note)
