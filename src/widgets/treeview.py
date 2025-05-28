@@ -2,13 +2,12 @@ import typing
 from qtpy import (QtCore, QtWidgets)
 
 class TreeView(QtWidgets.QTreeView):
+    """Read-Only Custom QTreeView"""
     def __init__(self, parent=None, sorting_enabled: bool = True, hide_header: bool = False, border: bool = True) -> None:
         super().__init__(parent)
         self.setSortingEnabled(sorting_enabled)
         self.setHeaderHidden(hide_header)
         self.set_border(border)
-        self.setAlternatingRowColors(True)
-        self.setStyleSheet("alternate-background-color: aliceblue;")
         self.setMinimumWidth(150)
         self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Make ReadOnly
 

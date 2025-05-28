@@ -79,6 +79,17 @@
     <file alias="quill-pen-fill-red">icons/remix/quill-pen-fill-red.svg</file>
     <file alias="collapse-vertical-line">icons/remix/collapse-vertical-line.svg</file>
     <file alias="expand-vertical-line">icons/remix/expand-vertical-line.svg</file>
+    <file alias="reset-left-fill">icons/remix/reset-left-fill.svg</file>
+    <file alias="settings-3-line">icons/remix/settings-3-line.svg</file>
+    <file alias="loop-right-line">icons/remix/loop-right-line.svg</file>
+    <file alias="information-2-line">icons/remix/information-2-line.svg</file>
+    <file alias="import-line">icons/remix/import-line.svg</file>
+    <file alias="archive-2-line">icons/remix/archive-2-line.svg</file>
+    <file alias="inbox-archive-line">icons/remix/inbox-archive-line.svg</file>
+    <file alias="archive-stack-line">icons/remix/archive-stack-line.svg</file>
+    <file alias="task-line">icons/remix/task-line.svg</file>
+    <file alias="list-check-3">icons/remix/list-check-3.svg</file>
+    <file alias="file-4-line">icons/remix/file-4-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>

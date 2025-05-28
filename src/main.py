@@ -1,13 +1,10 @@
 import sys
 import logging
 import logging.config
-
+from uuid import uuid4
 from qtpy import (QtWidgets, QtGui, Qt)
-
-from db.database import AppDatabase
-
+from database.database import AppDatabase
 from mainwindow import MainWindow
-
 from utilities import config as mconf
 
 logger = logging.getLogger(__name__)
@@ -19,15 +16,19 @@ def main() -> int:
     Returns:
         int: The exit status code.
     """
-
     # Initialize the App
     app: QtWidgets.QApplication = QtWidgets.QApplication(sys.argv)
     app.setOrganizationName("FAMHP")
     app.setOrganizationDomain("famhp.net")
     app.setApplicationName(mconf.config.app_name)
-    app.setStyle("Fusion")
+    app.setStyle("Fusion") 
     app.setWindowIcon(QtGui.QIcon(":mylogo"))
     app.setApplicationVersion(mconf.config.app_version)
+
+    if (mconf.settings.value("InstanceId") is None 
+        or mconf.settings.value("InstanceId") == ""):
+        mconf.settings.setValue("InstanceId", str(uuid4()))
+
 
     app_fontsize = mconf.settings.value("app_fontsize")
     if app_fontsize is not None:
@@ -64,6 +65,8 @@ def main() -> int:
 
     splash.showMessage("Connecting to the database ...")
 
+    logger.info(f"Starting InspectorMate...")
+
     # Connect to database
     db = AppDatabase()
     db.connect(mconf.config.db_path.as_posix())
@@ -79,7 +82,6 @@ def main() -> int:
     mainwindow.loadSettings()
 
     return sys.exit(app.exec())
-
 
 if __name__ == '__main__':
     sys.exit(main())

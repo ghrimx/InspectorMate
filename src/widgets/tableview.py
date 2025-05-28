@@ -4,7 +4,6 @@ from delegates.delegate import ReadOnlyDelegate
 class TableView(QtWidgets.QTableView):
     def __init__(self):
         super().__init__()
-
         self.setSortingEnabled(True)
 
     def hide_columns(self, columns:list[int]):

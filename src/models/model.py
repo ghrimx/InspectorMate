@@ -1,14 +1,13 @@
-from pathlib import Path
 from dataclasses import dataclass
 
-from qtpy import QtCore
-from PyQt6.QtCore import (QObject, Qt, 
-                          QModelIndex,
+from qtpy import QtCore, QtGui
+
+from PyQt6.QtCore import (QModelIndex,
                           QSortFilterProxyModel,
                           QRegularExpression)
 from PyQt6.QtSql import QSqlRelationalTableModel
 
-from db.database import AppDatabase
+from database.database import AppDatabase
 
 @dataclass
 class DatabaseField:
@@ -39,7 +38,7 @@ class BaseRelationalTableModel(QSqlRelationalTableModel):
     def refresh(self):
         """Refresh the table view"""
         r = self.select()
-        self.setFilter(f"workspace_id={AppDatabase.active_workspace.id}")
+        self.setFilter(f"workspace_id={AppDatabase.activeWorkspace().id}")
         return r
 
     def apply_filter(self, field, value):
@@ -50,7 +49,7 @@ class BaseRelationalTableModel(QSqlRelationalTableModel):
                 field: database field
                 value: value of the WHERE clause
         """
-        self.setFilter(f"{field} LIKE '{value}%' AND workspace_id='{AppDatabase.active_workspace.id}'")
+        self.setFilter(f"{field} LIKE '{value}%' AND workspace_id='{AppDatabase.activeWorkspace().id}'")
 
     def deleteRow(self, row: int) -> bool:
         res = self.removeRow(row)
@@ -58,6 +57,7 @@ class BaseRelationalTableModel(QSqlRelationalTableModel):
             self.submitAll()
 
         return res
+
 
 class ProxyModel(QSortFilterProxyModel):
 
@@ -71,7 +71,7 @@ class ProxyModel(QSortFilterProxyModel):
         self.permanent_columns = []
         self.user_columns = []
         self.status_filter = []
-        self.status_columns = []
+        self.types_filter = []
 
     def setPermanentFilter(self, pattern: str, columns: list):
         self.permanent_filter = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption)
@@ -84,10 +84,15 @@ class ProxyModel(QSortFilterProxyModel):
     def setSatusFilter(self, statuses: list, column: int):
         self.status_filter = statuses
         self.status_column = column
+
+    def setTypeFilter(self, signage_types: list, column: int):
+        self.types_filter = signage_types
+        self.types_column = column
     
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         user_filter = True
         status_filter = True
+        types_filter = True
 
         # Apply the permanent filter on the specified column
         for col in self.permanent_columns:
@@ -104,6 +109,14 @@ class ProxyModel(QSortFilterProxyModel):
             else:
                 status_filter = False
 
+        if len(self.types_filter) > 0:
+            index_type = self.sourceModel().index(source_row, self.types_column, source_parent)
+            data_type = self.sourceModel().data(index_type)
+            if data_type in self.types_filter:
+                types_filter = True
+            else:
+                types_filter = False
+
         # Apply the user filter on the specified columns
         for column in self.user_columns:
             index_user = self.sourceModel().index(source_row, column, source_parent)
@@ -115,6 +128,62 @@ class ProxyModel(QSortFilterProxyModel):
                 user_filter = True
                 break
             
-        return user_filter and status_filter
+        return user_filter and status_filter and types_filter
 
     
+
+class SummaryModel(QtCore.QAbstractTableModel):
+
+    def __init__(self, data=[[]]):
+        super().__init__()
+        self._data = data
+        self.header = []
+        self.vheader = []
+
+    def data(self, index, role):
+        if len(self._data) > 0:
+            if role == QtCore.Qt.ItemDataRole.DisplayRole:
+
+                if index.row() < len(self._data) - 1:
+                    if self._data[-1][index.column()] > 0:
+                        percentage = round(self._data[index.row()][index.column()]/self._data[-1][index.column()] * 100)
+                    else:
+                        percentage = "-"
+                    return f"{self._data[index.row()][index.column()]} ({percentage}%)"
+                return self._data[index.row()][index.column()]
+            
+        if role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+            return QtCore.Qt.AlignmentFlag.AlignVCenter + QtCore.Qt.AlignmentFlag.AlignHCenter
+        
+        if role ==  QtCore.Qt.ItemDataRole.ForegroundRole:
+            value = self._data[index.row()][index.column()]
+
+            if ((isinstance(value, int) or isinstance(value, float)) and value == 0):
+                return QtGui.QColor('lightGray')
+            
+        if role == QtCore.Qt.ItemDataRole.FontRole:
+            if index.row() == len(self._data) - 1:
+                return QtGui.QFont.Weight.Bold
+
+    def rowCount(self, index):
+        return len(self._data)
+
+    def columnCount(self, index):
+        return len(self._data[0])
+    
+    def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if len(self._data) > 0:
+            if orientation == QtCore.Qt.Orientation.Horizontal and role == QtCore.Qt.ItemDataRole.DisplayRole:
+                if len(self.hheader) > 0:
+                    return self.hheader[section]
+            if orientation == QtCore.Qt.Orientation.Vertical and role == QtCore.Qt.ItemDataRole.DisplayRole:
+                if len(self.vheader) > 0:
+                    return self.vheader[section]
+        return super().headerData(section, orientation, role)
+    
+    def loadData(self, data, vheaders, hheaders):
+        self.beginResetModel()
+        self._data = data
+        self.vheader = vheaders
+        self.hheader = hheaders
+        self.endResetModel()

@@ -3,7 +3,7 @@ from enum import Enum
 from datetime import datetime
 from qtpy import (Qt, QtCore, QtGui, QtWidgets, Slot, Signal)
 
-from db.database import AppDatabase
+from database.database import AppDatabase
 
 from utilities.utils import (hexuuid, createFolder, queryFileID)
 from utilities import config as mconf
@@ -60,7 +60,7 @@ class TextEdit(QtWidgets.QTextEdit):
             image = source.imageData()
             uuid = hexuuid()
 
-            image_dir = f"{AppDatabase.active_workspace.notebook_path}/.images"
+            image_dir = f"{AppDatabase.activeWorkspace().notebook_path}/.images"
             createFolder(image_dir)
             image_path = f'{image_dir}/{uuid}.png'
 
@@ -128,7 +128,7 @@ class RichTextEditor(QtWidgets.QWidget):
 
         self.editor.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse | Qt.TextInteractionFlag.TextEditorInteraction)
 
-        base_url = QtCore.QUrl(f"file:///{AppDatabase.active_workspace.notebook_path}/")
+        base_url = QtCore.QUrl(f"file:///{AppDatabase.activeWorkspace().notebook_path}/")
         self.editor.document().setBaseUrl(base_url)
 
         # Define CSS for blockquote
@@ -680,3 +680,9 @@ class RichTextEditor(QtWidgets.QWidget):
         cursor.mergeBlockCharFormat(block_char_fmt)
         cursor.mergeBlockFormat(block_fmt)
         cursor.endEditBlock()
+
+    def focusInEvent(self, a0):
+        return super().focusInEvent(a0)
+    
+    def focusOutEvent(self, a0):
+        return super().focusOutEvent(a0)

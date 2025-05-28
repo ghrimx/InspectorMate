@@ -114,12 +114,17 @@ class CheckableComboBox(QtWidgets.QComboBox):
             self.addItem(text, data)
 
     def currentData(self):
-        # Return the list of selected items data
+        """Return the list of selected items data"""
         res = []
         for i in range(self.model().rowCount()):
             if self.model().item(i).checkState() == Qt.CheckState.Checked:
                 res.append(self.model().item(i).data())
         return res
+    
+    def clearSelection(self):
+        for i in range(self.model().rowCount()):
+            selection_item: QtGui.QStandardItem = self.model().item(i)
+            selection_item.setCheckState(Qt.CheckState.Unchecked)
     
 
         

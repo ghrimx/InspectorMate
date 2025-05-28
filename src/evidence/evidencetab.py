@@ -1,25 +1,26 @@
+# Standard library imports.
 import logging
 
-from PyQt6.QtSql import QSqlRelationalDelegate
-from qtpy import (Qt, QtWidgets, QtGui, QtCore, Signal, Slot)
+# Related third party imports.
+from qtpy import (Qt, QtGui, QtCore, Signal, Slot)
 
-from evidence.evidencemodel import (DocTableModel, DocExplorerModel, DocStatusSummary)
+# Local application/library specific imports.
+from evidence.evidencemodel import (EvidenceModel, DocExplorerModel)
 from evidence.evidencetable import DocTable
+from evidence.evidence_dialogs import FilterDialog
+from evidence.evidencetab_rightpane import DocInfoWidget
+from evidence.evidencetab_leftpane import SignageFilter
 
-from signage.signagemodel import SignageTablelModel
-from signage.signagetable import SignageTable
+from signage.signage_model import SignageTreeModel
 
 from models.model import ProxyModel
-
-from db.database import AppDatabase
-from db.dbstructure import Document
+from database.dbstructure import Document
 
 from widgets.basetab import BaseTab
 from widgets.treeview import TreeView
-from widgets.fitcontenteditor import FitContentTextEdit
-from widgets.richtexteditor import RichTextEditor
-from widgets.combobox import CheckableComboBox
 from widgets.waitingspinner import WaitingSpinner
+
+from utilities.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +33,7 @@ class LoadWorkerSignals(QtCore.QObject):
 
 
 class LoadDocWorker(QtCore.QRunnable):
-    
-    def __init__(self, model: DocTableModel):
+    def __init__(self, model: EvidenceModel):
         super().__init__()
         self.model = model
         self.signals = LoadWorkerSignals()
@@ -48,187 +48,41 @@ class LoadDocWorker(QtCore.QRunnable):
             self.signals.finished.emit()
 
 
-class DocInfoWidget(QtWidgets.QWidget):
+class EvidenceTab(BaseTab):
+    sigOpenDocument = Signal(object, QtCore.QModelIndex)
+    sigStatusUpdated = Signal()
+    sigRefkeyUpdated = Signal()
+    sigDocUploaded = Signal()
+    sigCreateSignage = Signal(str, str)
+    sigCreateChildSignage = Signal(int, str, str)
 
-    def __init__(self, model: DocTableModel, index: QtCore.QModelIndex, document: Document = None, parent=None):
-        super().__init__(parent=parent)
-        self._model = model
-        self._index = index
-        self._document = document
-
-        formlayout = QtWidgets.QFormLayout(self)
-        self.setLayout(formlayout)
-
-        self.status = QtWidgets.QComboBox()
-        self.status_model = self._model.relationModel(self._model.Fields.Status.index)
-        self.status.setModel(self.status_model)
-        self.status.setModelColumn(1)
-
-        self.title = FitContentTextEdit(False)
-        self.refKey = QtWidgets.QLineEdit()
-        self.subtitle = QtWidgets.QLineEdit()
-        self.reference = QtWidgets.QLineEdit()
-        self.filename = FitContentTextEdit(True)
-        self.note = RichTextEditor.fromMapper(bar=False, parent=self)
-
-        formlayout.addRow("Status", self.status)
-        formlayout.addRow("RefKey", self.refKey)
-        formlayout.addRow("Title", self.title)
-        formlayout.addRow("SubTitle", self.subtitle)
-        formlayout.addRow("Reference", self.reference)
-        formlayout.addRow("Filename", self.filename)
-
-        spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
-        formlayout.addItem(spacer)
-
-        self.mapper = QtWidgets.QDataWidgetMapper(self)
-        self.mapper.setModel(self._model)
-        self.mapper.setItemDelegate(QSqlRelationalDelegate(self))
-        self.mapper.addMapping(self.status, self._model.Fields.Status.index)
-        self.mapper.addMapping(self.refKey, self._model.Fields.RefKey.index)
-        self.mapper.addMapping(self.title, self._model.Fields.Title.index, b"plainText")
-        self.mapper.addMapping(self.subtitle, self._model.Fields.Subtitle.index)
-        self.mapper.addMapping(self.reference, self._model.Fields.Reference.index)
-        self.mapper.addMapping(self.filename, self._model.Fields.Filename.index, b"plainText")
-        self.mapper.addMapping(self.note.editor, self._model.Fields.Note.index)
-        self.mapper.setCurrentModelIndex(self._index)
-        self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
-
-        self.status.activated.connect(self.submitMapper)
-
-    def index(self):
-        return self._index()
-
-    def submitMapper(self):
-        self.mapper.submit()
-
-    def setMapperIndex(self, index: QtCore.QModelIndex):
-        self.mapper.setCurrentModelIndex(index)
-
-    def document(self):
-        return self._document
-
-    def update_mapped_widgets(self):
-        if self._model.rowCount():
-            self.mapper.toFirst()
-        else:
-            self.mapper.setCurrentIndex(-1)
-            for section in range(self._model.columnCount()):
-                widget: QtWidgets.QWidget = self.mapper.mappedWidgetAt(section)
-                if not widget:
-                    pass
-                elif isinstance(widget, QtWidgets.QComboBox):
-                    widget.setCurrentIndex(-1)
-                else:
-                    widget.clear()
-
-
-class SummaryTab(QtWidgets.QWidget):
-    def __init__(self, evidence_model: DocTableModel, parent=None):
-        super().__init__(parent=parent)
-
-        self._evidence_model = evidence_model
-        self._model = DocStatusSummary()
-
-        vbox = QtWidgets.QVBoxLayout()
-        self.setLayout(vbox)
-
-        form = QtWidgets.QFormLayout()
-        vbox.addLayout(form)
-
-        self.count_evidence = QtWidgets.QLabel()
-        form.addRow("Total evidence:", self.count_evidence)
-
-        self.status_table = QtWidgets.QTableView(self)
-        self.status_table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.NoSelection)
-        self.status_table.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self.status_table.verticalHeader().setVisible(False)
-        self.status_table.horizontalHeader().setVisible(True)
-        self.status_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        # self.status_table.horizontalHeader().setStretchLastSection(True)
-        self.status_table.setModel(self._model)
-        self._model.refresh()
-
-        vbox.addWidget(self.status_table)
-
-    def refreshWidget(self):
-        self._model.refresh()
-        self.count_evidence.setText(str(self._evidence_model.rowCount()))
-
-
-class RefKeyTab(QtWidgets.QWidget):
-    def __init__(self, model: SignageTablelModel = None, parent=None):
-        super().__init__(parent)
-
-        self._model = model
-        self.table_proxy_model = ProxyModel(self._model)
-        self.table_proxy_model.setPermanentFilter('request', [self._model.Fields.Type.index])
-        self.table_proxy_model.setUserFilter('', self._model.visible_fields())
-        self.table_proxy_model.setDynamicSortFilter(False)
-
-        vbox = QtWidgets.QVBoxLayout()
-        self.setLayout(vbox)
-
-        form = QtWidgets.QFormLayout()
-        vbox.addLayout(form)
-
-        self.count_request = QtWidgets.QLabel()
-        form.addRow("Total request:", self.count_request)
-
-        self.table = SignageTable(self._model, self.table_proxy_model)
-        self.table.hide_columns(set(range(self._model.columnCount())) - {self._model.Fields.RefKey.index, self._model.Fields.Title.index})
-
-        vbox.addWidget(self.table)
-
-        self.count_request.setText(str(self.table_proxy_model.rowCount()))
-
-    @Slot()
-    def updateCounter(self):
-        self.count_request.setText(f"{AppDatabase.countRequest()}")
-
-class FilterDialog(QtWidgets.QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
-
-        self.buttonBox = QtWidgets.QDialogButtonBox(buttons)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-
-        form = QtWidgets.QFormLayout()
-        self.setLayout(form)
-
-        self.status_combobox = CheckableComboBox()
-        self.status_combobox.addItems(AppDatabase.cache_doc_status.keys())
-
-        form.addRow("Status:", self.status_combobox)
-        form.addWidget(self.buttonBox)
-
-    def accept(self):
-        super().accept()
-
-    def filters(self):
-        return [x for x in self.status_combobox.currentData()]
-
-
-class DocTab(BaseTab):
-    sig_open_document = Signal(QtCore.QModelIndex)
-    sig_load_file = Signal()
-
-    def __init__(self, model: DocTableModel, parent=None):
-        super().__init__(parent)
+    def __init__(self, model: EvidenceModel, parent=None):
+        super(EvidenceTab, self).__init__(parent)
         self.create_models(model=model)
         self.initUI()
-        self.connect_signals()
+        self.connectSignals()
 
         self.threadpool = QtCore.QThreadPool()
 
     def initUI(self):
-        # Dialogs
-        self.filter_dialog: FilterDialog = None
+        """Init the GUI"""
+        self.setupLeftPane()
+        self.setupCentralWidget()
+        self.setupRightPane()
+        self.setupToolbar()
+        self.setupDialogs()
+        self.createShortcuts()
 
-        # Left pane
+        self.splitter.addWidget(self.table)
+        self.splitter.addWidget(self.right_pane)
+        self.splitter.setSizes([150, 500, 100])
+
+    def setupDialogs(self):
+        """Setup dialogs"""
+        self.filter_dialog: FilterDialog = None
+    
+    def setupLeftPane(self):
+        """Remove the Left Pane and the collapse button from the Toolbar"""
         self.doc_filter = TreeView(parent=self, border=False)
         self.doc_filter.setModel(self.doc_explorer_model.proxy_model)
         self.doc_filter.setRootIndex(self.doc_explorer_model.proxy_index)
@@ -236,42 +90,33 @@ class DocTab(BaseTab):
         self.doc_filter.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         self.doc_filter.sortByColumn(0, Qt.SortOrder.AscendingOrder)
 
-        action_reset_doc_explorer_filter = QtGui.QAction("Reset filter", self.doc_filter)
-        action_reset_doc_explorer_filter.triggered.connect(self.reset_doc_explorer_filter)
-        self.doc_filter.addAction(action_reset_doc_explorer_filter)
-
         # Tag filter tab
-        self.tag_filter = QtWidgets.QListView(self)
-
-        # Summary tab
-        self.summary_tab = SummaryTab(self.doctable_model)
-        self.summary_tab.refreshWidget()
+        # self.tag_filter = QtWidgets.QListView(self)
 
         self.left_pane.addTab(self.doc_filter, QtGui.QIcon(":node-tree"), "")
-        self.left_pane.addTab(self.tag_filter, QtGui.QIcon(":tags"), "")
-        self.left_pane.addTab(self.summary_tab, QtGui.QIcon(":percent-line"), "")
+        # self.left_pane.addTab(self.tag_filter, QtGui.QIcon(":tags"), "")
+    
+    def setupCentralWidget(self):
+        """Init Central Widget"""
+        self.table = DocTable(model=self._model, proxy_model=self.doctable_proxy_model)
 
-        # Central widget
-        self.table = DocTable(model=self.doctable_model, proxy_model=self.doctable_proxy_model)
-        self.table.hide_columns(self.doctable_model.hidden_fields())
-        self.table.resizeColumnToContents(self.doctable_model.Fields.RefKey.index)
-        self.table.resizeColumnToContents(self.doctable_model.Fields.Status.index)
-        self.table.resizeColumnToContents(self.doctable_model.Fields.Note.index)
-        self.table.resizeColumnToContents(self.doctable_model.Fields.Title.index)
-        self.table.header().setSectionResizeMode(self.doctable_model.Fields.Reference.index, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.table.sortByColumn(self.doctable_model.Fields.RefKey.index, Qt.SortOrder.AscendingOrder)
-        self.splitter.addWidget(self.table)
+        for field in self._model.Fields.fields():
+            if not field.visible:
+                self.table.hideColumn(field.index)
 
-        # Right pane
-        self.doc_info_tab = DocInfoWidget(self.doctable_model, QtCore.QModelIndex(), None)
+        self.table.sortByColumn(self._model.Fields.Refkey.index, Qt.SortOrder.AscendingOrder)
+
+        # Restore columns size
+        self.restoreTableColumnWidth()
+
+    def setupRightPane(self):
+        """Setup the Right Pane"""
+        self.doc_info_tab = DocInfoWidget(self._model, self)
         self.right_pane.addTab(self.doc_info_tab, "Info")
         self.right_pane.addTab(self.doc_info_tab.note, "Note")
 
-        self.splitter.addWidget(self.right_pane)
-
-        self.splitter.setSizes([150, 500, 100])
-
-        # Toolbar
+    def setupToolbar(self):
+        """Add custom button to the Toolbar"""
         self.load_file = QtGui.QAction(QtGui.QIcon(":folder_upload"), "Load file", self, triggered=self.handle_load_file)
         self.toolbar.insertAction(self.action_separator, self.load_file)
 
@@ -281,16 +126,41 @@ class DocTab(BaseTab):
         self.filtering = QtGui.QAction(QtGui.QIcon(":filter-line"), "Filter", self, triggered=self.setFilters)
         self.toolbar.insertAction(self.action_separator, self.filtering)
 
-    def createRefKeyFilterPane(self, model):
-        self.request_filter_tab = RefKeyTab(model=model)
+        self.reset_filtering = QtGui.QAction(QtGui.QIcon(":filter-off-line"),
+                                             "Reset Filters",
+                                             self,
+                                             triggered=self.onResetFilters)
+        self.toolbar.insertAction(self.action_separator, self.reset_filtering)
+
+        self.action_create_signage = QtGui.QAction(QtGui.QIcon(":signpost-line"),
+                                                   "Create Signage (Ctrl + R)",
+                                                   self,
+                                                   triggered = self.createSignage)
+        self.toolbar.insertAction(self.action_separator, self.action_create_signage)
+
+        self.action_create_child_signage = QtGui.QAction(QtGui.QIcon(":signpost-line-child"),
+                                                   "Create Child Signage (Ctrl + N)",
+                                                   self,
+                                                   triggered = self.createChildSignage)
+        self.toolbar.insertAction(self.action_separator, self.action_create_child_signage)
+    
+    def createShortcuts(self):
+        self.shortcut_create_childsignage = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+N"),
+                                                            self,
+                                                            self.createChildSignage,
+                                                            context=QtCore.Qt.ShortcutContext.WindowShortcut)
+
+    def createRefKeyFilterPane(self, model: SignageTreeModel):
+        self.request_filter_tab = SignageFilter(model=model)
         self.request_filter_tab.table.clicked.connect(self.onRequestFilterClicked)
-        self.request_filter_tab.table.sortByColumn(SignageTablelModel.Fields.RefKey.index, Qt.SortOrder.AscendingOrder)
+        self.request_filter_tab.table.sortByColumn(model.Fields.Refkey.index, Qt.SortOrder.AscendingOrder)
         self.left_pane.insertTab(1, self.request_filter_tab, QtGui.QIcon(":request"), "")
 
     @Slot()
     def setFilters(self):
         if self.filter_dialog is None:
-            self.filter_dialog = FilterDialog(self)
+            self.filter_dialog = FilterDialog(self._model.cacheEvidenceStatus(),
+                                              self)
             self.filter_dialog.accepted.connect(self.applyFilters)
 
             # Move the dialog below the button
@@ -304,47 +174,70 @@ class DocTab(BaseTab):
 
         self.filter_dialog.exec()
 
+    @Slot()
     def applyFilters(self):
-        self.doctable_proxy_model.setSatusFilter(self.filter_dialog.filters(), self.doctable_model.Fields.Status.index)
+        self.doctable_proxy_model.setSatusFilter(self.filter_dialog.statusFilter(), self._model.Fields.Status.index)
         self.doctable_proxy_model.invalidateFilter()
 
-    def create_models(self, model: DocTableModel):
-        self.doctable_model = model
-        self.doctable_proxy_model = ProxyModel(self.doctable_model)
-        self.doctable_proxy_model.setUserFilter('', self.doctable_model.visible_fields())
+    def create_models(self, model: EvidenceModel):
+        self._model = model
+        self.doctable_proxy_model = ProxyModel(self._model)
+        self.doctable_proxy_model.setUserFilter('', self._model.visibleFields())
         self.doctable_proxy_model.setDynamicSortFilter(False)
         self.doc_explorer_model = DocExplorerModel()
 
-    def connect_signals(self):
+    def connectSignals(self):
         self.table.selectionModel().selectionChanged.connect(self.onRowSelected)
-        self.table.doubleClicked.connect(self.sig_open_document)
+        self.table.doubleClicked.connect(self.onTableDoubleClicked)
+        self.table.sigOpenDocument.connect(self.onTableDoubleClicked)
+        self.table.sigStatusUpdated.connect(self.sigStatusUpdated)
+        self.table.sigResetFilters.connect(self.onResetFilters)
         self.doc_filter.selectionModel().selectionChanged.connect(self.onFolderFilterClicked)
         self.search_tool.textChanged.connect(self.searchfor)
-        self.doctable_model.layoutChanged.connect(self.doctable_proxy_model.layoutChanged)
-        self.doctable_model.layoutChanged.connect(self.doctable_proxy_model.invalidateFilter)
-        self.doctable_model.layoutChanged.connect(lambda: self.doctable_proxy_model.setDynamicSortFilter(True))
-        self.table.sig_doc_status_update.connect(self.summary_tab.refreshWidget)
+        self._model.layoutChanged.connect(self.doctable_proxy_model.layoutChanged)
+        self._model.layoutChanged.connect(self.doctable_proxy_model.invalidateFilter)
+        self._model.layoutChanged.connect(lambda: self.doctable_proxy_model.setDynamicSortFilter(True))
+        self.doc_info_tab.sigStatusUpdated.connect(self.sigStatusUpdated)
+        self.doc_info_tab.sigRefkeyUpdated.connect(self.sigRefkeyUpdated)
+    
+    @Slot(QtCore.QModelIndex)
+    def onTableDoubleClicked(self, index: QtCore.QModelIndex):
+        sidx = self.doctable_proxy_model.mapToSource(index) # Source index
+        r = sidx.row() #row
 
-    def selectedIndex(self) -> QtCore.QModelIndex:
-        return self.selected_index
+        doc = Document(refkey=sidx.sibling(r, self._model.Fields.Refkey.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       title=sidx.sibling(r, self._model.Fields.Title.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       subtitle=sidx.sibling(r, self._model.Fields.Subtitle.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       reference=sidx.sibling(r, self._model.Fields.Reference.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       status=sidx.sibling(r, self._model.Fields.Status.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       type=sidx.sibling(r, self._model.Fields.Type.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       note=sidx.sibling(r, self._model.Fields.Note.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       id=sidx.sibling(r, self._model.Fields.ID.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       fileid=sidx.sibling(r, self._model.Fields.FileID.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       workspace_id=sidx.sibling(r, self._model.Fields.Workspace.index).data(QtCore.Qt.ItemDataRole.DisplayRole),
+                       signage_id=sidx.sibling(r, self._model.Fields.SignageID.index).data(QtCore.Qt.ItemDataRole.DisplayRole))
+
+        doc.filepath = sidx.sibling(r, self._model.Fields.Filepath.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+
+        # emit signals
+        self.sigOpenDocument.emit(doc, sidx)
 
     @Slot()
     def searchfor(self):
         pattern = self.search_tool.text()
         self.doctable_proxy_model.setUserFilter(pattern,
-                                                [self.doctable_model.Fields.RefKey.index,
-                                                 self.doctable_model.Fields.Status.index,
-                                                 self.doctable_model.Fields.Title.index,
-                                                 self.doctable_model.Fields.Note.index,
-                                                 self.doctable_model.Fields.Reference.index,
-                                                 self.doctable_model.Fields.Subtitle.index,
-                                                 self.doctable_model.Fields.Filepath.index])
+                                                [self._model.Fields.Refkey.index,
+                                                 self._model.Fields.Status.index,
+                                                 self._model.Fields.Title.index,
+                                                 self._model.Fields.Note.index,
+                                                 self._model.Fields.Reference.index,
+                                                 self._model.Fields.Subtitle.index,
+                                                 self._model.Fields.Filepath.index])
         self.doctable_proxy_model.invalidateFilter()
 
     @Slot()
     def refresh(self):
-        self.doctable_model.refresh()
-        self.doc_info_tab.update_mapped_widgets()
+        self._model.refresh()
         self.doc_explorer_model.refresh()
         self.doc_filter.setModel(self.doc_explorer_model.proxy_model)
         self.doc_filter.setRootIndex(self.doc_explorer_model.proxy_index)
@@ -352,8 +245,8 @@ class DocTab(BaseTab):
     @Slot(QtCore.QItemSelection, QtCore.QItemSelection)
     def onRowSelected(self, selected: QtCore.QItemSelection, deseleted: QtCore.QItemSelection):
         if len(self.table.selectedRows()) == 1:
-            self.selected_index = self.doctable_proxy_model.mapToSource(self.table.selectionModel().currentIndex())
-            self.doc_info_tab.setMapperIndex(self.selected_index)
+            self.source_index = self.doctable_proxy_model.mapToSource(self.table.selectionModel().currentIndex())
+            self.doc_info_tab.mapper.setCurrentModelIndex(self.source_index)
 
     @Slot()
     def onFolderFilterClicked(self):
@@ -363,31 +256,24 @@ class DocTab(BaseTab):
             logger.error(e)
         else:
             folderpath = self.doc_explorer_model.get_path(selected_index)
-            self.doctable_proxy_model.setUserFilter(folderpath.as_posix(), [self.doctable_model.Fields.Filepath.index])
+            self.doctable_proxy_model.setUserFilter(folderpath.as_posix(), [self._model.Fields.Filepath.index])
             self.doctable_proxy_model.invalidateFilter()
             self.table.updateAction()
 
     @Slot(QtCore.QModelIndex)
     def onRequestFilterClicked(self, index: QtCore.QModelIndex):
         """Filter the Evidence table on Request Refkey clicked"""
-        try:
-            idx = self.request_filter_tab.table.model().index(index.row(), SignageTablelModel.Fields.RefKey.index)
-        except Exception as e:
-            logger.error(e)
-        else:
-            refkey = self.request_filter_tab.table.model().data(idx, Qt.ItemDataRole.DisplayRole)
-            self.doctable_proxy_model.setUserFilter(f"{refkey}", [self.doctable_model.Fields.RefKey.index])
+        if index.isValid():
+            signage_refkey = index.sibling(index.row(), SignageTreeModel.Fields.Refkey.index).data(Qt.ItemDataRole.DisplayRole)
+            self.doctable_proxy_model.setUserFilter(f"{signage_refkey}", [self._model.Fields.Refkey.index])
             self.doctable_proxy_model.invalidateFilter()
 
-    @Slot()
-    def reset_doc_explorer_filter(self):
-        """Clear the document filter"""
-        self.doc_filter.selectionModel().clearSelection()
-        self.doctable_model.refresh()
-        self.doctable_proxy_model.setUserFilter("", [self.doctable_model.Fields.Filepath.index])
+    @Slot(str)
+    def filterWithRefkey(self, refkey: str):
+        self.doctable_proxy_model.setUserFilter(f"{refkey}", [self._model.Fields.Refkey.index])
         self.doctable_proxy_model.invalidateFilter()
 
-    @Slot()
+    @Slot() #TODO
     def handle_tag_explorer_selection(self, selected, deselected):
         """Filter docview from tag explorer filter pane"""
         # select from model the list of document associated to the tag selected
@@ -399,35 +285,90 @@ class DocTab(BaseTab):
             print(f'deselected : {j.row()} - {j.data()}')
         taglist = ...
         doclist = ...
-        self.doctable_model.apply_filter('doc_id', doclist)
+        self._model.apply_filter('doc_id', doclist)
+
+    @Slot()
+    def createSignage(self):
+        source = f'{{"application":"InspectorMate", "module":"Evidence"}}'
+        self.sigCreateSignage.emit("", source)
+
+    @Slot()
+    def createChildSignage(self):
+        index = self.table.selectionModel().currentIndex()
+
+        if not index.isValid():
+            return
+
+        sidx = self.doctable_proxy_model.mapToSource(index)
+
+        signage_id = sidx.sibling(sidx.row(), self._model.Fields.SignageID.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+
+        try:
+            signage_id = int(signage_id)
+        except Exception as e:
+            signage_id = -1
+
+        title = sidx.sibling(sidx.row(), self._model.Fields.Title.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        uid = sidx.sibling(sidx.row(), self._model.Fields.ID.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        source = f'{{"application":"InspectorMate", "module":"Evidence", "item":"document", "item_title":"{title}", "item_id":"{uid}"}}'
+        self.sigCreateChildSignage.emit(signage_id, "", source)
 
     @Slot()
     def handle_load_file(self):
-        self.docloadspinner = WaitingSpinner(self, True, True, Qt.WindowModality.WindowModal)
+        self.docloadspinner = WaitingSpinner(self, True, True, QtCore.Qt.WindowModality.WindowModal)
         self.docloadspinner.start()
 
-        worker = LoadDocWorker(self.doctable_model)
+        worker = LoadDocWorker(self._model)
 
         worker.signals.finished.connect(self.handleLoadEnded)
         self.threadpool.tryStart(worker)
 
-    def close(self) -> bool:
-        err = self.submitMapper()
-        return err
+    @Slot()
+    def onResetFilters(self):
+        """Reset Evidence Table Filters"""
+        self.doctable_proxy_model.setUserFilter("", [self._model.Fields.Refkey.index])
+        self.doctable_proxy_model.setSatusFilter([], self._model.Fields.Status.index)
+        self.doctable_proxy_model.setTypeFilter([], self._model.Fields.Type.index)
+        self.doctable_proxy_model.invalidateFilter()
+        self.table.sortByColumn(self._model.Fields.Refkey.index, QtCore.Qt.SortOrder.AscendingOrder)
+
+        self.search_tool.clear()
+
+        if self.filter_dialog is not None:
+            self.filter_dialog.resetFields()
 
     def handleLoadEnded(self):
         self.docloadspinner.stop()
-        self.sig_load_file.emit()
-        self.summary_tab.refreshWidget()
+        self.sigDocUploaded.emit()
 
     @Slot()
     def submitMapper(self) -> bool:
-        if self.doctable_model.lastError().text():
+        if self._model.lastError().isValid():
             err = True
             logger.info(f"Utility pane mapper submitted: {err}")
-            logger.error(f'Mapper failed to submit - {self.doctable_model.lastError().text()}')
+            logger.error(f'Mapper failed to submit - {self._model.lastError().text()}')
         else:
-            self.doctable_model.submitAll()
-            self.doctable_model.refresh()
+            self._model.submitAll()
+            self._model.refresh()
             err = False
         return err
+    
+    def restoreTableColumnWidth(self):
+        """Restore table column width upon GUI initialization"""
+        settings.beginGroup("evidence")
+        for column in range(self._model.columnCount()):
+            # if settings.contains(f"column-{column}"):
+            self.table.setColumnWidth(column, settings.value(f"column-{column}", 100, int))
+        settings.endGroup()
+
+    def saveTableColumnWidth(self):
+        """Save table column width upon closing"""
+        settings.beginGroup("evidence")
+        for column in range(self._model.columnCount()):
+            settings.setValue(f"column-{column}", self.table.columnWidth(column))
+        settings.endGroup()
+
+    def closeEvent(self, a0):
+        self.saveTableColumnWidth()
+        self.submitMapper()
+        return super().closeEvent(a0)

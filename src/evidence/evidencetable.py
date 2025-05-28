@@ -4,25 +4,25 @@ from pathlib import Path
 
 from qtpy import (QtWidgets, Qt, QtCore, QtGui, Slot, Signal)
 
-from evidence.evidencemodel import DocTableModel
+from evidence.evidencemodel import EvidenceModel
 from models.model import ProxyModel
-from db.dbstructure import Document
+from database.dbstructure import Document
 
 from widgets.treeview import TreeView
 from delegates.delegate import (NoteColumnDelegate, ReadOnlyDelegate)
 
 from utilities.utils import (open_file, queryFileNameByID)
 
-from db.database import AppDatabase
-
 logger = logging.getLogger(__name__)
 
 
 class DocTable(TreeView):
-    sig_open_document = Signal()
-    sig_doc_status_update = Signal()
+    sigOpenDocument = Signal(QtCore.QModelIndex)
+    sigStatusUpdated = Signal()
+    sigResetFilters = Signal()
+    sigDeleteRows = Signal()
 
-    def __init__(self, model: DocTableModel, proxy_model: ProxyModel):
+    def __init__(self, model: EvidenceModel, proxy_model: ProxyModel):
         super().__init__()
 
         self._model = model
@@ -42,10 +42,14 @@ class DocTable(TreeView):
                                                 "Delete",
                                                 self,
                                                 triggered=self.deleteRows)
+        self.action_open = QtGui.QAction(QtGui.QIcon(":file-4-line"),
+                                         "Open",
+                                         self,
+                                         triggered=self.openFile)
         self.action_open_externally = QtGui.QAction(QtGui.QIcon(":share-forward-2-line"),
-                                                    "Open externally",
+                                                    "Open with...",
                                                     self,
-                                                    triggered=self.openExternally)
+                                                    triggered=self.openWith)
         self.action_open_folder = QtGui.QAction(QtGui.QIcon(":folder-open-line"),
                                                 "Open folder",
                                                 self,
@@ -66,15 +70,16 @@ class DocTable(TreeView):
                                            self,
                                            triggered=self.locate)
         self.status_menu = QtWidgets.QMenu("Status", self)
-        for status in AppDatabase.cache_doc_status:
-            self.status_menu.addAction(status)
+
+        for status in self._model.cacheEvidenceStatus().values():
+            self.status_menu.addAction(status.name)
 
         self.status_menu.triggered.connect(self.setStatus)
 
         self.action_resetfilter = QtGui.QAction(QtGui.QIcon(":filter-off-line"),
                                                 "Reset filters",
                                                 self,
-                                                triggered=self.resetFilters)
+                                                triggered=self.sigResetFilters)
 
         self.action_setRefKey = QtGui.QAction(QtGui.QIcon(":key-2-line"),
                                               "Set RefKey",
@@ -91,7 +96,7 @@ class DocTable(TreeView):
 
         menu.addMenu(self.status_menu)
         menu.addAction(self.action_delete_rows)
-        menu.addAction(self.action_delete_rows)
+        menu.addAction(self.action_open)
         menu.addAction(self.action_open_externally)
         menu.addAction(self.action_open_folder)
         menu.addAction(self.action_cite)
@@ -102,10 +107,10 @@ class DocTable(TreeView):
 
         menu.exec(QtGui.QCursor().pos())
 
-    def proxy_model(self):
+    def proxy_model(self) -> ProxyModel:
         return self._proxy_model
 
-    def model(self):
+    def model(self) -> EvidenceModel:
         return self._model
 
     def document(self) -> Document:
@@ -113,7 +118,7 @@ class DocTable(TreeView):
         selected_model_index: QtCore.QModelIndex = self._proxy_model.mapToSource(self.selectionModel().currentIndex())
         return self._model.document(selected_model_index)
 
-    def setDelegate(self, model: DocTableModel):
+    def setDelegate(self, model: EvidenceModel):
         self.delegate = ReadOnlyDelegate(self)
         self.setItemDelegate(self.delegate)
 
@@ -143,6 +148,7 @@ class DocTable(TreeView):
 
     def updateAction(self):
         if len(self.selectedRows()) == 1:
+            self.action_open.setEnabled(True)
             self.action_open_externally.setEnabled(True)
             self.action_open_folder.setEnabled(True)
             self.action_cite.setEnabled(True)
@@ -153,6 +159,7 @@ class DocTable(TreeView):
             self.status_menu.setEnabled(True)
 
         if len(self.selectedRows()) == 0:
+            self.action_open.setEnabled(False)
             self.action_open_externally.setEnabled(False)
             self.action_open_folder.setEnabled(False)
             self.action_cite.setEnabled(False)
@@ -163,6 +170,7 @@ class DocTable(TreeView):
             self.status_menu.setEnabled(False)
 
         if len(self.selectedRows()) > 1:
+            self.action_open.setEnabled(False)
             self.action_open_externally.setEnabled(False)
             self.action_open_folder.setEnabled(False)
             self.action_cite.setEnabled(False)
@@ -172,25 +180,16 @@ class DocTable(TreeView):
             self.action_locate.setEnabled(False)
             self.status_menu.setEnabled(True)
 
-    # Slots
-    @Slot()
-    def resetFilters(self):
-        self.selectionModel().clearSelection()
-        self._model.refresh()
-        self._proxy_model.setUserFilter("", [self._model.Fields.RefKey.index])
-        self._proxy_model.invalidateFilter()
-        self.sortByColumn(self._model.Fields.RefKey.index, Qt.SortOrder.AscendingOrder)
-
     @Slot(QtGui.QAction)
     def setStatus(self, action: QtGui.QAction):
-        status_int = AppDatabase.cache_doc_status.get(action.text())
+        status = self._model.cacheEvidenceStatus().get(action.text())
 
-        if status_int is not None:
+        if status is not None:
             rows = self.selectedRows()
-            r = self._model.updateStatus(rows, status_int)
+            r = self._model.updateStatus(rows, status.uid)
 
             if r:
-                self.sig_doc_status_update.emit()
+                self.sigStatusUpdated.emit()
 
     @Slot()
     def setRefKey(self):
@@ -200,15 +199,30 @@ class DocTable(TreeView):
 
     @Slot()
     def cite(self):
-        doc = self.document()
-        refkey = "refkey: " + doc.refKey if doc.refKey != "" else None
-        title = f'"{doc.title}"'
-        citation = "; ".join(x for x in [refkey, title, doc.subtitle, doc.reference] if x)
+        index = self.selectionModel().currentIndex()
+        refkey = index.sibling(index.row(), self._model.Fields.Refkey.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        title = index.sibling(index.row(), self._model.Fields.Title.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        subtitle = index.sibling(index.row(), self._model.Fields.Subtitle.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        reference = index.sibling(index.row(), self._model.Fields.Reference.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        
+        refkey = "refkey: " + refkey if refkey != "" else None
+        title = f'"{title}"'
+        citation = "; ".join(x for x in [refkey, title, subtitle, reference] if x)
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(f"[{citation}]")
 
     @Slot()
     def deleteRows(self):
+        msgbox = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
+                              "Delete document",
+                              "Are you sure you want to delete this document",
+                              QtWidgets.QMessageBox.StandardButton.Yes|QtWidgets.QMessageBox.StandardButton.No,
+                              self)
+        confirm = msgbox.exec()
+        
+        if not confirm == QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+
         indexes = self.selectedIndexes()
         selected_indexes = []
         for index in indexes:
@@ -216,17 +230,24 @@ class DocTable(TreeView):
         self._model.deleteRows(selected_indexes)
 
     @Slot()
-    def openExternally(self):
-        selected_index: QtCore.QModelIndex = self._proxy_model.mapToSource(self.selectionModel().currentIndex())
+    def openFile(self):
+        idx = self.selectionModel().currentIndex()
+        self.sigOpenDocument.emit(idx)
 
-        doc = self._model.document(selected_index)
-        open_file(doc.filepath)
+    @Slot()
+    def openWith(self):
+        index: QtCore.QModelIndex = self._proxy_model.mapToSource(self.selectionModel().currentIndex())
+        filepath = index.sibling(index.row(), self._model.Fields.Filepath.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        open_file(filepath)
 
     @Slot()
     def openFolder(self):
-        selected_index: QtCore.QModelIndex = self._proxy_model.mapToSource(self.selectionModel().currentIndex())
-        doc = self._model.document(selected_index)
-        open_file(doc.folderpath())
+        index: QtCore.QModelIndex = self._proxy_model.mapToSource(self.selectionModel().currentIndex())
+        filepath = index.sibling(index.row(), self._model.Fields.Filepath.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        fpath = Path(filepath)
+
+        if fpath.exists():
+            open_file(fpath.parent)
 
     @Slot()
     def autoRefKey(self):
@@ -234,19 +255,19 @@ class DocTable(TreeView):
 
     @Slot()
     def locate(self):
-        row_idx: QtCore.QModelIndex = self._proxy_model.mapToSource(self.selectionModel().currentIndex())
-        fileid = self._model.data(self._model.index(row_idx.row(), self._model.Fields.FileID.index), Qt.ItemDataRole.DisplayRole)
+        index: QtCore.QModelIndex = self._proxy_model.mapToSource(self.selectionModel().currentIndex())
+        fileid = index.sibling(index.row(), self._model.Fields.FileID.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
         filepath = queryFileNameByID(fileid)
 
         if Path(filepath).exists():
             folder = Path(filepath).parent.as_posix()
         else:
-            folder = AppDatabase.active_workspace.rootpath
+            folder = self._model.activeWorkspace().rootpath
 
         filepath = QtWidgets.QFileDialog.getOpenFileName(caption='Locate the file...', directory=folder)
 
         if filepath[0] != "":
-            self._model.updateFilePath(row_idx.row(), filepath[0])
+            self._model.updateFilePath(index, filepath[0])
 
 
 class TitleColumnDelegate(QtWidgets.QStyledItemDelegate):
@@ -258,7 +279,7 @@ class TitleColumnDelegate(QtWidgets.QStyledItemDelegate):
         super().initStyleOption(option, index)
 
         title = index.data(Qt.ItemDataRole.DisplayRole)
-        doc_type_idx = self._model.index(index.row(), self._model.sourceModel().Fields.Type.index)
+        doc_type_idx = index.sibling(index.row(), self._model.sourceModel().Fields.Type.index)
         icon_binary: str = doc_type_idx.data()
         pix = QtGui.QPixmap()
 

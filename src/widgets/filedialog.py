@@ -1,7 +1,7 @@
 import logging
 
 from qtpy import (QtWidgets, Slot)
-from db.database import AppDatabase
+from database.database import AppDatabase
 from utilities.utils import (mergeExcelFiles, unpackZip)
 
 from widgets.fileselectiondialog import selectFilesDialog
@@ -61,7 +61,7 @@ class MergeExcelDialog(QtWidgets.QDialog):
         self.destination_button = QtWidgets.QPushButton("Destination")
         self.destination_button.clicked.connect(self.selectFolder)
         self.destination = QtWidgets.QLineEdit(self)
-        self.destination.setText(AppDatabase.active_workspace.rootpath)
+        self.destination.setText(AppDatabase.activeWorkspace().rootpath)
         self.destination.setReadOnly(True)
 
         buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
@@ -86,14 +86,14 @@ class MergeExcelDialog(QtWidgets.QDialog):
     
     @Slot()
     def selectFiles(self):
-        self._files = selectFilesDialog("*.xls*", AppDatabase.active_workspace.rootpath)
+        self._files = selectFilesDialog("*.xls*", AppDatabase.activeWorkspace().rootpath)
         self.selected_file.setText(f"{len(self._files)} files")
         self.updateButtonState()
 
     @Slot()
     def selectFolder(self):
         folder_path = QtWidgets.QFileDialog.getExistingDirectory(caption='',
-                                                                 directory=AppDatabase.active_workspace.rootpath,
+                                                                 directory=AppDatabase.activeWorkspace().rootpath,
                                                                  options=QtWidgets.QFileDialog.Option.ShowDirsOnly)
         if folder_path != "":
             self.destination.setText(folder_path)

@@ -140,7 +140,7 @@ The final hierarchy should look like this:
 Alternatively use the following powershell script
 
 ```
-$path = 'HKEY_CLASSES_ROOT\TypeLib\{0EA692EE-BB50-4E3C-AEF0-356D91732725}\1.0'
+$path 'HKEY_CLASSES_ROOT\TypeLib\{0EA692EE-BB50-4E3C-AEF0-356D91732725}\1.0'
 
 if (Test-Path -Path registry::$path){
   Get-Item registry::$path | Remove-Item -Verbose

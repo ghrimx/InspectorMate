@@ -3,12 +3,14 @@ from pathlib import Path
 
 from qtpy import QtCore, Signal, Slot
 
-from documentviewer.pdfviewer import PdfViewer
+from PyMuPDF4QT.pymupdfviewer import PdfViewer
 from documentviewer.imageviewer import ImageViewer
 from documentviewer.officeviewer import OfficeViewer
 from documentviewer.txtviewer import TxtViewer
 
-from db.dbstructure import Document
+from evidence.evidencemodel import EvidenceModel
+
+from database.dbstructure import Document
 
 import utilities.msoffice2pdf as ms
 
@@ -24,9 +26,9 @@ class ConverterWorkerSignals(QtCore.QObject):
 
 
 class DocConverterWorker(QtCore.QRunnable):
-    def __init__(self, filepath: Path, convert: ms.convert):
+    def __init__(self, filepath: Path, converter: ms.office2pdf):
         super().__init__()
-        self.convert = convert
+        self.converter = converter
         self._filepath = filepath
         self.signals = ConverterWorkerSignals()
     
@@ -34,7 +36,7 @@ class DocConverterWorker(QtCore.QRunnable):
     def run(self):
         try:
             self.signals.started.emit()
-            self.converted_pdf: Path = self.convert(self._filepath, self._filepath.parent)
+            self.converted_pdf: Path = self.converter(self._filepath, self._filepath.parent)
         except Exception as e:
             self.signals.error.emit(e)
         finally:
@@ -46,11 +48,11 @@ class DocConverterWorker(QtCore.QRunnable):
 
 
 class ViewerFactory:
-    def __init__(self, model, mainwindow) -> None:
-        self._model = model
+    def __init__(self, model: EvidenceModel, mainwindow) -> None:
         self._mainWindow = mainwindow
         self._viewers = {}
         self.threadpool = QtCore.QThreadPool()
+        self._model = model
 
         # Register the classes
         classViewer: PdfViewer | ImageViewer | OfficeViewer | TxtViewer
@@ -70,12 +72,14 @@ class ViewerFactory:
         if isinstance(viewer, OfficeViewer):
             self.convert(doc, viewer)
         
-        err = viewer.initViewer(doc, index)
+        err = viewer.initViewer()
 
         if isinstance(err, Exception):
             return None
         
-        viewer.loadDocument()
+        viewer.createMapper(self._model, index)
+        viewer.document = doc
+        viewer.loadDocument(doc.filepath.as_posix())
 
         return viewer
 
@@ -83,12 +87,14 @@ class ViewerFactory:
         viewer: PdfViewer | ImageViewer | OfficeViewer | TxtViewer
         for viewer in self._viewers.values():
             if extension in viewer.supportedFormats():
-                return viewer(self._model, self._mainWindow)
+                return viewer(self._mainWindow)
             
     def convert(self, doc: Document, viewer: OfficeViewer):
         """Convert Office document to PDF"""
-        worker = DocConverterWorker(doc.filepath, ms.convert)
+        worker = DocConverterWorker(doc.filepath, ms.convert2pdf)
         worker.signals.started.connect(viewer.handleConversionStarted)
         worker.signals.finished.connect(viewer.handleConversionEnded)
         worker.signals.error.connect(viewer.handleConversionEnded)
         self.threadpool.tryStart(worker)
+
+    

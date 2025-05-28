@@ -1,8 +1,5 @@
 import os
 from pathlib import Path, WindowsPath
-import io
-import re
-import typing
 import re
 import json
 import uuid
@@ -10,8 +7,8 @@ import pandas as pd
 import fitz
 from zipfile import ZipFile
 
-from os import scandir, popen
-from pathlib import Path, PureWindowsPath
+from os import popen
+from pathlib import Path
 from base64 import (b64decode, b64encode)
 
 from qtpy import (QtWidgets, QtCore, QtGui)
@@ -35,6 +32,9 @@ def walkFolder(path: str | Path) -> set[Path]:
 
 def hexuuid():
     return uuid.uuid4().hex
+
+def timeuuid():
+    return uuid.uuid1().time
 
 def createFolder(fpath: str):
     _path = Path(fpath)
@@ -222,6 +222,34 @@ def unpackPDF(filepath: str):
         else:
             return True
 
+def writeJson(json_path: str, data: dict) -> tuple[bool, str]:
+    """Write JSON file"""
+    jsonfile = QtCore.QFile(json_path)
+    err = None
 
+    if not jsonfile.open(QtCore.QIODeviceBase.OpenModeFlag.WriteOnly):
+        err = f"Opening Error: {IOError(jsonfile.errorString())}"
+        return False, err
+    
+    json_document = QtCore.QJsonDocument.fromVariant(data)
 
+    if json_document.isNull():
+        err = f"Failed to map JSON data structure"
+        return False, err
+
+    jsonfile.write(json_document.toJson(QtCore.QJsonDocument.JsonFormat.Indented))
+    jsonfile.close()
+
+    return True, err
+
+def readJson(json_file: str) -> tuple[dict, str]:
+        try:
+            with open(json_file, mode='r', encoding='utf8') as file:
+                return json.load(file), ""
+        except json.JSONDecodeError:
+            err = f"Warning: {json_file} is empty or contains invalid JSON."
+            return {}, err
+        except FileNotFoundError:
+                err = f"Error: {json_file} not found."
+                return {}, err
 

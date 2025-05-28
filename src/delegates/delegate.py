@@ -27,9 +27,10 @@ class NoteColumnDelegate(ReadOnlyDelegate):
             raw_text: str = html2text.html2text(value)
             if not (raw_text.strip()) == "":
                 option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-                option.icon = QtGui.QIcon(':notebook-sticky-note')
+                option.icon = QtGui.QIcon(':quill-pen-fill')
                 option.text = ""
-                option.displayAlignment = Qt.AlignmentFlag.AlignHCenter
-                option.decorationAlignment = Qt.AlignmentFlag.AlignHCenter
+                option.decorationSize = QtCore.QSize(self.parent().columnWidth(index.column()), self.parent().header().geometry().height())
+                option.displayAlignment = QtCore.Qt.AlignmentFlag.AlignHCenter|QtCore.Qt.AlignmentFlag.AlignVCenter
+                option.decorationAlignment = QtCore.Qt.AlignmentFlag.AlignHCenter|QtCore.Qt.AlignmentFlag.AlignVCenter
             else:
                 option.text = ""

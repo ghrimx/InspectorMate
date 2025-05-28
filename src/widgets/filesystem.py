@@ -1,10 +1,11 @@
-from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot)
-from db.database import AppDatabase
-from utilities.utils import (createFolder, open_file)
+from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot, Signal)
 
 class FileSystem(QtWidgets.QTreeView):
+    sigOpenFile = Signal(str)
+    sigOpenNote = Signal(str)
+
     def __init__(self, rootpath: str, parent=None):
-        super(FileSystem, self).__init__()
+        super(FileSystem, self).__init__(parent)
         self._model: QtGui.QFileSystemModel = QtGui.QFileSystemModel()
         self.setModel(self._model)
         self.set_root_path(rootpath)
@@ -15,24 +16,19 @@ class FileSystem(QtWidgets.QTreeView):
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
 
-        self.action_addfile = QtGui.QAction(QtGui.QIcon(":file_add"),
-                                            "Add file",
-                                            self,
-                                            triggered=self.addFile)
-
         self.action_delete = QtGui.QAction(QtGui.QIcon(":delete-bin2"),
                                            "Delete",
                                            self,
                                            triggered=self.deleteItem)
 
         self.action_open_externally = QtGui.QAction(QtGui.QIcon(":share-forward-2-line"),
-                                                    "Open externally",
+                                                    "Open",
                                                     self,
-                                                    triggered=self.openExternally)
+                                                    triggered=self.openPathEntry)
 
-        self.addAction(self.action_addfile)
         self.addAction(self.action_delete)
         self.addAction(self.action_open_externally)
+        self.doubleClicked.connect(self.openPathEntry)
 
     def set_root_path(self, rootpath: str):
         index = self._model.setRootPath(rootpath)
@@ -48,23 +44,34 @@ class FileSystem(QtWidgets.QTreeView):
 
     @Slot()
     def deleteItem(self):
-        current_index = self.selectionModel().currentIndex()
-        self._model.remove(current_index)
+        index = self.selectionModel().currentIndex()
+        fileinfo = QtCore.QFileInfo(self._model.filePath(index))
+
+        if fileinfo.isFile():
+            name = fileinfo.fileName()
+        else:
+            name = "the folder"
+
+        dlg = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
+                                    "Delete ...",
+                                    f"Are you sure you want to permanently remove {name}")
+        dlg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Cancel|QtWidgets.QMessageBox.StandardButton.Ok)
+
+        ret = dlg.exec()
+
+        if ret == QtWidgets.QMessageBox.StandardButton.Ok:
+            self._model.remove(index)
 
     @Slot()
-    def addFile(self, parent=None):
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(parent,
-                                                            caption="Create a note",
-                                                            directory=AppDatabase.active_workspace.notebook_path,
-                                                            filter="Text files (*.phv)")
-        if filename:
-            with open(filename, "w") as f:
-                text = ""
-                f.write(text)
-                f.close()
+    def openPathEntry(self):
+        index = self.selectionModel().currentIndex()
+        filepath = self._model.filePath(index)
 
-    @Slot()
-    def openExternally(self):
-        selected_index: QtCore.QModelIndex = self.selectionModel().currentIndex()
-        open_file(self._model.filePath(selected_index))
+        fileinfo = QtCore.QFileInfo(filepath)
+
+        if fileinfo.suffix() == "html":
+            self.sigOpenNote.emit(filepath)
+        else:
+            self.sigOpenFile.emit(filepath)
+        
 

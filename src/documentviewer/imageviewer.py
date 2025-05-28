@@ -2,17 +2,17 @@ import logging
 from qtpy import (QtCore, QtWidgets, QtGui, Slot)
 
 from documentviewer.viewerwidget import ViewerWidget
-from db.dbstructure import Document
+from database.dbstructure import Document
 
 logger = logging.getLogger(__name__)
 
 class ImageViewer(ViewerWidget):
-    def __init__(self, model, parent):
-        super().__init__(model, parent=parent)
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self._imageView = None
-        self._document = None
         self._image = None
         self._scaleFactor = 0.0
+        self._document = None
 
     @classmethod
     def viewerName(cls):
@@ -20,22 +20,20 @@ class ImageViewer(ViewerWidget):
 
     @classmethod
     def supportedFormats(cls) -> list[str]:
-        return [".png", ".jpeg", ".jpg"]
+        return [".png", ".jpeg", ".jpg", ".gif"]
 
-    def document(self):
-        return self._document
-
-    def loadDocument(self):
-        self._image.load(self._document.filepath.as_posix())
+    def loadDocument(self, filepath: str = ""):
+        if filepath == "":
+            return
+        
+        self._image.load(filepath)
         try:
             self._imageView.setPixmap(QtGui.QPixmap.fromImage(self._image))
         except Exception as e:
             logger.error(e)
         self.normalSize()
 
-    def initViewer(self, doc: Document, model_index: QtCore.QModelIndex):
-        self._document = doc
-
+    def initViewer(self):
         self.left_pane.hide()
         self._toolbar.removeAction(self.fold_left_pane)
         self._toolbar.removeAction(self.action_first_separator)
@@ -92,9 +90,10 @@ class ImageViewer(ViewerWidget):
         self.action_snip.clicked.connect(lambda: self.capture(self.citation()))
         self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_snip)
 
-        self.normalSize()
+        # Create Signage
+        self._toolbar.insertAction(self._toolbar_spacer, self.action_create_child_signage)
 
-        self.createMapper(model_index)
+        self.normalSize()
 
     def widget(self):
         return self._imageView
@@ -145,3 +144,9 @@ class ImageViewer(ViewerWidget):
             self.normalSize()
 
         self.updateActions()
+    
+    def source(self) -> str:
+        title = self._document.title
+        viewer = self.viewerName()
+        source = f'{{"application":"InspectorMate", "module":"{viewer}", "item":"document", "item_title":"{title}"}}'
+        return source

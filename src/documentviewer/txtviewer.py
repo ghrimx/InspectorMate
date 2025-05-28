@@ -4,13 +4,13 @@ from qtpy import (QtWidgets, QtCore, QtGui, Slot)
 
 from documentviewer.viewerwidget import ViewerWidget
 
-from db.dbstructure import Document
+from database.dbstructure import Document
 
 logger = logging.getLogger(__name__)
 
 class TxtViewer(ViewerWidget):
-    def __init__(self, model, parent):
-        super().__init__(model, parent)
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self._document = None
 
     @classmethod
@@ -21,12 +21,7 @@ class TxtViewer(ViewerWidget):
     def supportedFormats(cls) -> list[str]:
         return [".txt", ".md"]
     
-    def document(self):
-        return self._document
-    
-    def initViewer(self, doc: Document, model_index: QtCore.QModelIndex):
-        self._document = doc
-
+    def initViewer(self):
         self._textreader = QtWidgets.QPlainTextEdit(self)
         self._textreader.setReadOnly(True)
 
@@ -50,10 +45,14 @@ class TxtViewer(ViewerWidget):
         self.action_snip.clicked.connect(lambda: self.capture(self.citation()))
         self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_snip)
 
-        self.createMapper(model_index)
+        # Create Signage
+        self._toolbar.insertAction(self._toolbar_spacer, self.action_create_child_signage)
 
-    def loadDocument(self):
-        file = QtCore.QFile(self._document.filepath.as_posix())
+    def loadDocument(self, filepath: str = ""):
+        if filepath == "":
+            return
+        
+        file = QtCore.QFile(filepath)
         try:
             file.open(QtCore.QIODevice.OpenModeFlag.ReadOnly | QtCore.QIODevice.OpenModeFlag.Text)
         except Exception as err:
@@ -72,3 +71,9 @@ class TxtViewer(ViewerWidget):
         title = f'"{self.title.toPlainText()}"'
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text()] if x)
         return f"[{citation}]"
+    
+    def source(self) -> str:
+        title = self._document.title
+        viewer = self.viewerName()
+        source = f'{{"application":"InspectorMate", "module":"{viewer}", "item":"document", "item_title":"{title}"}}'
+        return source

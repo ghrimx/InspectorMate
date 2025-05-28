@@ -5,11 +5,11 @@ from datetime import datetime
 
 from qtpy import (QtWidgets, QtCore, QtGui, Slot, Signal)
 
-from db.database import AppDatabase
-from db.dbstructure import Signage, SignageType
+from database.database import AppDatabase
+from database.dbstructure import Signage, SignageType
 
 from utilities.config import settings
-from utilities.utils import (hexuuid, createFolder, queryFileID)
+from utilities.utils import (hexuuid, timeuuid, createFolder, queryFileID)
 from utilities import config as mconf
 
 logger = logging.getLogger(__name__)
@@ -56,15 +56,19 @@ class TextEdit(QtWidgets.QTextEdit):
     def __init__(self, filename=str, text=str, parent=None):
         super(TextEdit, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.setAutoFormatting(QtWidgets.QTextEdit.AutoFormattingFlag.AutoAll)
+
         self.filename: str = filename
-        base_url = QtCore.QUrl(f"file:///{AppDatabase.active_workspace.notebook_path}/")
+        base_url = QtCore.QUrl(f"file:///{AppDatabase.activeWorkspace().notebook_path}/")
         self.document().setBaseUrl(base_url)
 
+        self.zoom_factor = 0 #TEST
+
         # Initialize default font size.
-        # font = QtGui.QFont("Segoe UI", 12)
-        # font.setStyleHint(QtGui.QFont.StyleHint.SansSerif)
-        # self.setFont(font)
-        # # self.setFontPointSize(12)
+        self.base_fontsize = 12
+        font : QtGui.QFont = self.document().defaultFont()
+        font.setPointSize(self.base_fontsize)
+        self.document().setDefaultFont(font)
 
         self.setHtml(text)
 
@@ -152,7 +156,7 @@ class TextEdit(QtWidgets.QTextEdit):
             image = source.imageData()
             uuid = hexuuid()
 
-            image_dir = f"{AppDatabase.active_workspace.notebook_path}/.images"
+            image_dir = f"{AppDatabase.activeWorkspace().notebook_path}/.images"
             createFolder(image_dir)
             image_path = f'{image_dir}/{uuid}.png'
 
@@ -209,6 +213,9 @@ class TextEdit(QtWidgets.QTextEdit):
             super(TextEdit, self).insertFromMimeData(source)
     
     def closeEvent(self, event):
+        if self.zoom_factor != 0:
+            self.resetZoom()
+
         if self.document().isModified():
             err = self.save()
 
@@ -341,6 +348,7 @@ class TextEdit(QtWidgets.QTextEdit):
             block_fmt.setHeadingLevel(style.value)
             cursor.setBlockFormat(block_fmt)
             fmt = QtGui.QTextCharFormat()
+            fmt.setForeground(QtGui.QColor(85, 0, 255)) #TODO
             fmt.setFontWeight(QtGui.QFont.Weight.Bold if style.value > 0 else QtGui.QFont.Weight.Normal)
             fmt.setProperty(QtGui.QTextFormat.Property.FontSizeAdjustment, 4 - style.value if style.value > 0 else 0)
             self.merge_format_on_line_or_selection(fmt)
@@ -381,6 +389,33 @@ class TextEdit(QtWidgets.QTextEdit):
     def bulletList(self):
         cursor = self._cursor
         marker = QtGui.QTextBlockFormat.MarkerType.NoMarker
+
+        if cursor.currentList():
+            style = cursor.currentList().format().style()
+        else:
+            style = QtGui.QTextListFormat.Style.ListDisc
+
+        cursor.beginEditBlock()
+        block_fmt = cursor.blockFormat()
+
+        block_fmt.setMarker(marker)
+        cursor.setBlockFormat(block_fmt)
+        list_fmt = QtGui.QTextListFormat()
+        if cursor.currentList():
+            list_fmt = cursor.currentList().format()
+        else:
+            list_fmt.setIndent(block_fmt.indent() + 1)
+            block_fmt.setIndent(0)
+            cursor.setBlockFormat(block_fmt)
+        list_fmt.setStyle(style)
+        cursor.createList(list_fmt)
+
+        cursor.endEditBlock()
+
+    @Slot()
+    def addCheckbox(self):
+        cursor = self._cursor
+        marker = QtGui.QTextBlockFormat.MarkerType.Unchecked
 
         if cursor.currentList():
             style = cursor.currentList().format().style()
@@ -458,16 +493,19 @@ class TextEdit(QtWidgets.QTextEdit):
         cursor.beginEditBlock()
 
         tablefmt = QtGui.QTextTableFormat()
-        tablefmt.setCellPadding(5.0)
+        tablewidth = QtGui.QTextLength(QtGui.QTextLength.Type.VariableLength, 100.0)
+        tablefmt.setColumnWidthConstraints([tablewidth])
+        tablefmt.setCellPadding(10.0)
         tablefmt.setBackground(QtGui.QColor("#e6f2ff"))
         tablefmt.setBorderStyle(QtGui.QTextFrameFormat.BorderStyle.BorderStyle_None)
+        tablefmt.setBorderCollapse(False)
  
         cursor.insertTable(1, 1, tablefmt)
  
         cursor.endEditBlock()
 
     @Slot()
-    def addHorizontalLine(self):
+    def addHorizontalLine2(self):
         cursor = self._cursor
 
         # Save the cursor position and selection
@@ -480,17 +518,16 @@ class TextEdit(QtWidgets.QTextEdit):
 
         selected_text = cursor.selectedText()
 
-        # Wrap the selected text in blockquote tags
-        hr = r'<hr style="width=2px;">'
+        hr = r'<hr style="width=2px;"/>'
 
         if selected_text == "":
-            formatted_text = hr
+            underlined_text = hr
         else:
-            formatted_text = f'<p>{selected_text}</p>{hr}'
+            underlined_text = f'<p>{selected_text}{hr}</p>'
 
         cursor.beginEditBlock()
         cursor.removeSelectedText()
-        cursor.insertHtml(formatted_text)
+        cursor.insertHtml(underlined_text)
         cursor.endEditBlock()
 
         # Restore the cursor position
@@ -498,6 +535,22 @@ class TextEdit(QtWidgets.QTextEdit):
         cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
         self.setFocus()
         self.setTextCursor(cursor)
+
+    @Slot()
+    def addHorizontalLine(self):
+        cursor = self._cursor
+        if not cursor.hasSelection():
+            # Select the current line if no text is selected
+            cursor.select(QtGui.QTextCursor.SelectionType.LineUnderCursor)
+
+        selected_text = cursor.selectedText()
+
+        if selected_text.strip() == "":
+            cursor.insertHtml(r'<hr style="width=2px;"/>')
+        else:
+            cursor.movePosition(QtGui.QTextCursor.MoveOperation.EndOfLine, QtGui.QTextCursor.MoveMode.MoveAnchor, 1)
+            cursor.movePosition(QtGui.QTextCursor.MoveOperation.Down, QtGui.QTextCursor.MoveMode.MoveAnchor, 1)
+            cursor.insertHtml(r'<hr style="width=2px;"/>')
 
     @Slot()
     def text_color(self):
@@ -515,9 +568,44 @@ class TextEdit(QtWidgets.QTextEdit):
         pix.fill(c)
         # self.color_action.setIcon(QtGui.QIcon(pix))
 
-class Notepad(QtWidgets.QWidget):
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+        #Zoom : CTRL + wheel
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.KeyboardModifier.ControlModifier:
+            if event.angleDelta().y() > 0:
+                self.zoom_factor += 1
+                self._update_font_sizes()
+            else:
+                self.zoom_factor -= 1
+                self._update_font_sizes()
+        else:
+            super().wheelEvent(event)
 
-    sigCreateRequest = Signal(tuple)
+    def _update_font_sizes(self):
+        """Update font sizes for all text elements in the document."""
+        scale_factor = max(1, self.base_fontsize + self.zoom_factor * 2)  # Adjust scale dynamically
+
+        cursor = self.textCursor()
+        cursor.select(QtGui.QTextCursor.SelectionType.Document)
+        char_format = QtGui.QTextCharFormat()
+        char_format.setFontPointSize(scale_factor)
+        cursor.mergeCharFormat(char_format)
+
+        font = self.document().defaultFont()
+        font.setPointSize(scale_factor)
+        self.document().setDefaultFont(font)
+
+    def resetZoom(self):
+        # reset zoom
+        self.zoom_factor = 0
+        font = self.document().defaultFont()
+        font.setPointSize(12)
+        self.document().setDefaultFont(font)
+        self._update_font_sizes()
+
+
+class Notepad(QtWidgets.QWidget):
+    sigCreateSignage = Signal(str, str, str)
 
     class LayoutStrategy(enum.Enum):
         Cascade = 0
@@ -595,6 +683,9 @@ class Notepad(QtWidgets.QWidget):
 
         # Bullet List
         self.action_bullet = QtGui.QAction(QtGui.QIcon(":list-unordered"), "Bullet list (Ctrl+;)", self, triggered=self.bulletList)
+
+        # Checkbox
+        self.action_checkbox = QtGui.QAction(QtGui.QIcon(":list-check-3"), "Checkbox (Ctrl+Alt+;)", self, triggered=self.addCheckbox)
 
         # Line Spacing
         self.action_line_spacing_normal = QtGui.QAction("1.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL))
@@ -693,6 +784,7 @@ class Notepad(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_horizontal_line)
         self.toolbar.addAction(self.action_blockquote)
         self.toolbar.addAction(self.action_bullet)
+        self.toolbar.addAction(self.action_checkbox)
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.action_insertSignage)
 
@@ -723,6 +815,7 @@ class Notepad(QtWidgets.QWidget):
         self.shortcut_underline = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+U"), self, self.textUnderline, ambiguousMember=self.textUnderline, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_insertLine = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+L"), self, self.addHorizontalLine, ambiguousMember=self.addHorizontalLine, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_bulletList = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+;"), self, self.bulletList, ambiguousMember=self.bulletList, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_checkbox = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+;"), self, self.addCheckbox, ambiguousMember=self.addCheckbox, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
     @Slot()
     def update_window_menu(self):
@@ -798,6 +891,12 @@ class Notepad(QtWidgets.QWidget):
             self.setTabbedView()
 
     def loadfile(self, filename, title: str = ""):
+        for subwindow in self.mdi.subWindowList():
+            textedit: TextEdit = subwindow.widget()
+            if textedit.filename == filename:
+                self.mdi.setActiveSubWindow(subwindow)
+                return
+
         textedit = TextEdit.load(filename)
         if textedit is not None:
             textedit.currentCharFormatChanged.connect(self.updateToolbarState)
@@ -897,6 +996,11 @@ class Notepad(QtWidgets.QWidget):
             self.active_mdi_child().bulletList()
 
     @Slot()
+    def addCheckbox(self):
+        if self.active_mdi_child():
+            self.active_mdi_child().addCheckbox()
+
+    @Slot()
     def setLineSpacing(self, spacing):
         if self.active_mdi_child():
             self.active_mdi_child().setLineSpacing(spacing)
@@ -931,33 +1035,34 @@ class Notepad(QtWidgets.QWidget):
         form.addRow("Heading 4:", QtWidgets.QLabel("Ctrl+Alt+4"))
         form.addRow("Paragraph:", QtWidgets.QLabel("Ctrl+Alt+P"))
         form.addRow("Insert Bullet list:", QtWidgets.QLabel("Ctrl+;"))
+        form.addRow("Insert Checkbox:", QtWidgets.QLabel("Ctrl+Alt+;"))
 
         dlg.exec()
 
     @Slot()
     def createSignage(self):
-        self.sigCreateRequest.emit((self.active_mdi_child().textCursor().selectedText(), f"InspectorMate:///Notepad:{self.active_mdi_child().userFriendlyFilename()}"))
+        title = self.active_mdi_child().textCursor().selectedText()
+        hanchor = str(timeuuid())
+        source = f'{{"application":"InspectorMate", "module":"Notebook", "item":"Note", "item_title":"{self.active_mdi_child().userFriendlyFilename()}", "hanchor":"{hanchor}"}}'
+  
+        self.sigCreateSignage.emit(title, source, hanchor)
 
-    def insertSignage(self, signage: Signage):
-        icon = None
-        signage_type: SignageType
-        for signage_type in AppDatabase.cache_signage_type.values():
-            if signage_type.type_id == signage.type_id:
-                icon = signage_type.icon
+    def insertSignage(self, signage: Signage, hanchor: str):
+        icon = AppDatabase.cache_signage_type.get(signage.type).icon
 
         fmt = QtGui.QTextCharFormat()
         fmt.setAnchor(True)
-        fmt.setAnchorHref("AnchorHref")
-        fmt.setAnchorNames([f"signage_type={signage.type_id}; id={signage.signage_id}"])
+        fmt.setAnchorHref("")
+        fmt.setAnchorNames([f"signage_type={signage.type}; id={hanchor}"])
         fmt.setForeground((QtCore.Qt.GlobalColor.blue))
         fmt.setFontUnderline(True)
         if icon != "":
             img = QtGui.QTextImageFormat()
             img.setName(f"data:image/png;base64,{icon}")
             self.active_mdi_child().textCursor().insertImage(img)
-            self.active_mdi_child().textCursor().insertText(f" {signage.refKey} {signage.title}", fmt)
+            self.active_mdi_child().textCursor().insertText(f" {signage.refkey} {signage.title}", fmt)
         else:
-            self.active_mdi_child().textCursor().insertText(f'{signage.refKey} {signage.title}', fmt)
+            self.active_mdi_child().textCursor().insertText(f'{signage.refkey} {signage.title}', fmt)
 
     @Slot()
     def loadFiles(self):
@@ -985,7 +1090,7 @@ class Notepad(QtWidgets.QWidget):
         filename = f"Untitled.html"
         fname = QtWidgets.QFileDialog.getSaveFileName(parent=None,
                                                       caption="RichTextEditor -- Save File As",
-                                                      directory=f"{AppDatabase.active_workspace.notebook_path}/{filename}",
+                                                      directory=f"{AppDatabase.activeWorkspace().notebook_path}/{filename}",
                                                       filter="Text files (*.html *.*)")
         if fname[0] == "":
             return
@@ -1000,19 +1105,13 @@ class Notepad(QtWidgets.QWidget):
     def editNote(self):
         fname = QtWidgets.QFileDialog.getOpenFileName(parent=None,
                                                       caption="RichTextEditor -- Select file",
-                                                      directory=f"{AppDatabase.active_workspace.notebook_path}",
+                                                      directory=f"{AppDatabase.activeWorkspace().notebook_path}",
                                                       filter="Text files (*.html *.*)")
         
         if fname[0] == "":
             return
 
-        for subwindow in self.mdi.subWindowList():
-            textedit: TextEdit = subwindow.widget()
-            if textedit.filename == fname[0]:
-                self.mdi.setActiveSubWindow(subwindow)
-                break
-        else:
-            self.loadfile(fname[0])
+        self.loadfile(fname[0])
 
     def setTabbedView(self):
         self.mdi.setViewMode(QtWidgets.QMdiArea.ViewMode.TabbedView)

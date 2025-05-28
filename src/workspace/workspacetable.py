@@ -8,7 +8,6 @@ from delegates.delegate import ReadOnlyDelegate
 class WorkspaceTable(TableView):
     def __init__(self, model: WorkspaceModel):
         super().__init__()
-
         self.setModel(model)
         self.horizontalHeader().setStretchLastSection(True)
 

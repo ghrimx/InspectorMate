@@ -23,10 +23,10 @@ formatter=fileFormatter
 args=('%(logfilepath)s','a')
 
 [formatter_consoleFormatter]
-format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+format=%(levelname)s - %(asctime)s - %(name)s - %(funcName)s - %(message)s
 datefmt=%Y-%m-%d %H:%M:%S
 
 [formatter_fileFormatter]
-format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+format=%(levelname)s - %(asctime)s - %(name)s - %(funcName)s - %(message)s
 datefmt=%Y-%m-%d %H:%M:%S
 """

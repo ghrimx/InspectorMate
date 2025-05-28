@@ -2,24 +2,24 @@ import logging
 from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot, Signal)
 from PyQt6.QtSql import QSqlRelationalDelegate
 
-from evidence.evidencemodel import DocTableModel
-from db.dbstructure import Document
+from evidence.evidencemodel import EvidenceModel
+from database.dbstructure import Document
 
 from widgets.toolbar import ToolBar
 from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.richtexteditor import RichTextEditor
 
 from snipping.snippingtool import Capture
-from utilities import config as mconf
 
 logger = logging.getLogger(__name__)
 
-class ViewerWidget(QtWidgets.QWidget):
 
-    def __init__(self, model, parent=None):
+class ViewerWidget(QtWidgets.QWidget):
+    sigCreateChildSignage = Signal(int, str, str)
+
+    def __init__(self, parent=None):
         super().__init__(parent)
         self._document: Document = None
-        self.model: DocTableModel = model
 
         self.createToolbar(parent)
 
@@ -58,22 +58,28 @@ class ViewerWidget(QtWidgets.QWidget):
 
         self.splitter.setSizes([100, 600, 100])
         
-        self.vbox  = QtWidgets.QVBoxLayout(self)
+        self.vbox  = QtWidgets.QVBoxLayout()
         self.vbox.addWidget(self._toolbar)
         self.vbox.addWidget(self.splitter)
         self.setLayout(self.vbox)
         
-        self.onFoldLeftSidebarTriggered()
         self.onFoldRightSidebarTriggered()
-
 
     @classmethod
     def viewerName(cls):
-        return "AbstractViewer"
+        return cls.__name__
     
     @classmethod
     def supportedFormats(cls):
         return [""]
+    
+    @property
+    def document(self):
+        return self._document
+    
+    @document.setter
+    def document(self, doc: Document):
+        self._document = doc
     
     def createInfoTab(self):
         self.info_tab = QtWidgets.QWidget(self)
@@ -84,7 +90,11 @@ class ViewerWidget(QtWidgets.QWidget):
         self.subtitle = QtWidgets.QLineEdit()
         self.reference = QtWidgets.QLineEdit()
         self.filename = FitContentTextEdit(True)
+        self.filename.setStyleSheet("color: grey;")
         self.refKey = QtWidgets.QLineEdit()
+        self.signage_id = QtWidgets.QLineEdit()
+        self.signage_id.setReadOnly(True)
+        self.signage_id.setStyleSheet("color: grey;")
 
         formlayout.addRow('Status', self.status)
         formlayout.addRow('RefKey', self.refKey)
@@ -92,6 +102,7 @@ class ViewerWidget(QtWidgets.QWidget):
         formlayout.addRow('Subtitle', self.subtitle)
         formlayout.addRow('Reference', self.reference)
         formlayout.addRow('Filename', self.filename)
+        formlayout.addRow('Signage id', self.signage_id)
 
         spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         formlayout.addItem(spacer)
@@ -105,21 +116,32 @@ class ViewerWidget(QtWidgets.QWidget):
         self.right_pane.addTab(self.note_tab, "Note")
 
     def createToolbar(self, parent=None) :
-        self._toolbar = ToolBar(self, icon_size=(24,24))
+        self._toolbar = QtWidgets.QToolBar(parent)
 
         # Fold Left Pane
-        self.fold_left_pane = QtGui.QAction(QtGui.QIcon(':sidebar-fold-line'), "Fold left pane", self._toolbar)
+        self.fold_left_pane = QtGui.QAction(QtGui.QIcon(':sidebar-fold-line'), "Fold left pane", self)
         self.fold_left_pane.triggered.connect(self.onFoldLeftSidebarTriggered)
         self._toolbar.addAction(self.fold_left_pane)
 
         # Separator
+        spacer = QtWidgets.QWidget(self)
+        spacer.setContentsMargins(0,0,0,0)
+        spacer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         self.action_first_separator = self._toolbar.addSeparator()
 
         # Spacer
-        self._toolbar_spacer = self._toolbar.add_spacer()
+        self._toolbar_spacer = self._toolbar.addWidget(spacer)
+
+        # Create Child Signage
+        # Action inserted to toolbar after init
+        self.action_create_child_signage = QtGui.QAction(QtGui.QIcon(":signpost-line-child"),
+                                                         "Create Child Signage (Ctrl + N)",
+                                                         self,
+                                                         triggered = self.createChildSignage)
+        self.action_create_child_signage.setShortcut(QtGui.QKeySequence("Ctrl+N"))
 
         # Fold Right Pane
-        self.fold_right_pane = QtGui.QAction(QtGui.QIcon(":sidebar-unfold-line"), "Fold right pane", self._toolbar)
+        self.fold_right_pane = QtGui.QAction(QtGui.QIcon(":sidebar-unfold-line"), "Fold right pane", self)
         self.fold_right_pane.triggered.connect(self.onFoldRightSidebarTriggered)
         self._toolbar.addAction(self.fold_right_pane)
 
@@ -129,33 +151,32 @@ class ViewerWidget(QtWidgets.QWidget):
     def toolbarFreeSpace(self):
         return self._toolbar_spacer
     
-    def createMapper(self, model_index: QtCore.QModelIndex):
-        self.model_index = model_index
-
-        self.status_model = self.model.relationModel(self.model.Fields.Status.index)
+    def createMapper(self, model: EvidenceModel, index: QtCore.QModelIndex):
+        self.status_model = model.relationModel(model.Fields.Status.index)
         self.status.setModel(self.status_model)
         self.status.setModelColumn(1)
 
         self.mapper = QtWidgets.QDataWidgetMapper()
-        self.mapper.setModel(self.model)
+        self.mapper.setModel(model)
         self.mapper.setItemDelegate(QSqlRelationalDelegate(self))
 
         # Info tab
-        self.mapper.addMapping(self.status, self.model.Fields.Status.index)
-        self.mapper.addMapping(self.refKey, self.model.Fields.RefKey.index)
-        self.mapper.addMapping(self.title, self.model.Fields.Title.index, b"plainText")
-        self.mapper.addMapping(self.subtitle, self.model.Fields.Subtitle.index)
-        self.mapper.addMapping(self.reference, self.model.Fields.Reference.index)
-        self.mapper.addMapping(self.filename, self.model.Fields.Filename.index, b"plainText")
+        self.mapper.addMapping(self.status, model.Fields.Status.index)
+        self.mapper.addMapping(self.refKey, model.Fields.Refkey.index)
+        self.mapper.addMapping(self.title, model.Fields.Title.index, b"plainText")
+        self.mapper.addMapping(self.subtitle, model.Fields.Subtitle.index)
+        self.mapper.addMapping(self.reference, model.Fields.Reference.index)
+        self.mapper.addMapping(self.filename, model.Fields.Filepath.index, b"plainText")
+        self.mapper.addMapping(self.signage_id, model.Fields.SignageID.index)
 
         # Note tab
-        self.mapper.addMapping(self.note_tab.editor, self.model.Fields.Note.index)
-        self.mapper.setCurrentModelIndex(self.model_index)
+        self.mapper.addMapping(self.note_tab.editor, model.Fields.Note.index)
+        self.mapper.setCurrentModelIndex(index)
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
 
     def setMapperIndex(self, index: QtCore.QModelIndex):
         self.mapper.setCurrentModelIndex(index)
-
+    
     @Slot()
     def onFoldLeftSidebarTriggered(self):
         self.left_pane_folded = not self.left_pane_folded
@@ -187,6 +208,20 @@ class ViewerWidget(QtWidgets.QWidget):
     def capture(self, citation):
         self.capturer = Capture(source=citation, parent=self)
         self.capturer.show()
+
+    def source(self) -> str:
+        ...
+
+    @Slot()
+    def createChildSignage(self):
+        signage_id = self.signage_id.text()
+
+        try:
+            signage_id = int(self.signage_id.text())
+        except Exception as e:
+            signage_id = -1
+
+        self.sigCreateChildSignage.emit(signage_id, "", self.source())
 
     def showEvent(self, event: QtGui.QShowEvent):
         super().showEvent(event)

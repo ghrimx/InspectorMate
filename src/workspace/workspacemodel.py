@@ -1,9 +1,9 @@
 import logging
 
 from datetime import datetime
-from qtpy import QtCore
+from qtpy import QtCore, QtSql
 
-from db.database import AppDatabase
+from database.database import AppDatabase
 from models.objectclass import (Workspace, DatabaseField)
 from models.model import BaseRelationalTableModel
 
@@ -22,8 +22,7 @@ class WorkspaceModel(BaseRelationalTableModel):
         OneNoteSection = DatabaseField
         CreationDate = DatabaseField
         ModificationDate = DatabaseField
-        Reference = DatabaseField
-        
+        Reference = DatabaseField    
 
     def __init__(self) -> None:
         super().__init__()
@@ -63,29 +62,42 @@ class WorkspaceModel(BaseRelationalTableModel):
         WorkspaceModel.Fields.ModificationDate = DatabaseField("modification_date", self.fieldIndex('modification_date'), False)
         WorkspaceModel.Fields.Reference = DatabaseField("reference", self.fieldIndex('reference'), True)
 
-    def insert(self, workspace: Workspace) -> tuple[bool,str]:
-        r = self.record()
-        r.setValue('name', workspace.name)
-        r.setValue('reference', workspace.reference)
-        r.setValue('root', workspace.rootpath)
-        r.setValue('state', workspace.state)
-        r.setValue('attachments_path', workspace.evidence_path)
-        r.setValue('notebook_path', workspace.notebook_path)
-        r.setValue('onenote_section', workspace.onenote_section)
-        r.setValue('creation_date', datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-        r.setValue('modification_date', datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-        res = self.insertRecord(-1, r)
+    def insertWorkspace(self, workspace: Workspace) -> tuple[bool,str]:
+        record = self.record()
+        record.setValue('name', workspace.name)
+        record.setValue('reference', workspace.reference)
+        record.setValue('root', workspace.rootpath)
+        record.setValue('state', workspace.state)
+        record.setValue('attachments_path', workspace.evidence_path)
+        record.setValue('notebook_path', workspace.notebook_path)
+        record.setValue('onenote_section', workspace.onenote_section)
+        record.setValue('creation_date', datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+        record.setValue('modification_date', datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
-        if res:
-            err = ""
-            logger.info(f"Successfully created {workspace}")
-            self.refresh()
-        else:
-            err = f"Error saving {workspace} -- Error: {self.lastError().text()}"
-            logger.error(err)
-        
-        return res, err
+        self.beginInsertRows(QtCore.QModelIndex(), self.rowCount(), self.rowCount())
+        inserted = self.insertRecord(-1, record)
+        self.endInsertRows()
+
+        if not inserted:
+            err = f"insertWorkspace > Cannot insert new workspace - Error:{self.lastError().text()}"
+            logger.info(err)
+            return False, err
+       
+        if not self.refresh():
+            err = f"insertWorkspace > Cannot refresh workspace model - Error:{self.lastError().text()}"
+            logger.info(err)
+            return False, err
+
+        return True, "Workspace inserted successfully !"
 
     def refresh(self):
         AppDatabase.setActiveWorkspace()
-        self.select()
+        ok = self.select()
+        return ok
+
+    def activeWorkspace(self):
+        return AppDatabase.activeWorkspace()
+
+
+
+
