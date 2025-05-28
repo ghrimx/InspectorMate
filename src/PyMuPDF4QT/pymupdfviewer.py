@@ -7,18 +7,20 @@ from enum import Enum
 from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
 from documentviewer.viewerwidget import ViewerWidget
 from PyMuPDF4QT.QtPymuPdf import (OutlineModel,
-                       OutlineItem,
-                       PageNavigator,
-                       ZoomSelector,
-                       SearchModel,
-                       SearchItem,
-                       MetaDataWidget,
-                       TextSelection,
-                       RectItem,
-                       LinkBox)
+                                  OutlineItem,
+                                  PageNavigator,
+                                  ZoomSelector,
+                                  SearchModel,
+                                  SearchItem,
+                                  MetaDataWidget,
+                                  TextSelection,
+                                  RectItem,
+                                  LinkBox)
 from PyMuPDF4QT.annotation import AnnotationModel, AnnotationDelegate
 
 from resources import qrc_resources
+
+from utilities.utils import timeuuid
 
 SUPPORTED_FORMART = (".pdf", ".epub")
 
@@ -646,7 +648,7 @@ class PdfViewer(ViewerWidget):
         json_position = json.dumps(position)
         record.setValue(self.annotation_model.Fields.Position.index, json_position)
         record.setValue(self.annotation_model.Fields.Text.index, annot.textSelection.text)
-
+        record.setValue(self.annotation_model.Fields.Uid.index, timeuuid())
         self.annotation_model.beginInsertRows(QtCore.QModelIndex(), self.annotation_model.rowCount(), self.annotation_model.rowCount() + 1)
         inserted = self.annotation_model.insertRecord(-1, record)
         self.annotation_model.endInsertRows()
