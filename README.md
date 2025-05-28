@@ -2,8 +2,6 @@
 [![pylama-failed]][pylama-url]
 ![project-status-progress]
 
-🔨 **Note**: major refactoring of the code is planned
-
 <a name="readme-top"></a>
 
 <!-- PROJECT LOGO -->
@@ -115,64 +113,6 @@ Right-click within the "Explorer" or "Notebook" panel to open the context menu. 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Known issues
-
-### 1. OneNote COM error
-If the app failed to connect to OneNote try the following workarounds:
-
-#### Workaround 1: Delete the registry key
-run regedit.exe, and navigate to
-```HKEY_CLASSES_ROOT\TypeLib\{0EA692EE-BB50-4E3C-AEF0-356D91732725}```
-
-There should only be one subfolder in this class called 1.1.
-If you see 1.0 or any other folders, you'll need to delete them.
-
-The final hierarchy should look like this:
-```
-|- {0EA692EE-BB50-4E3C-AEF0-356D91732725}
-|     |- 1.1
-|         |-0
-|         | |- win32
-|         |- FLAGS
-|         |- HELPDIR
-```
-
-Alternatively use the following powershell script
-
-```
-$path 'HKEY_CLASSES_ROOT\TypeLib\{0EA692EE-BB50-4E3C-AEF0-356D91732725}\1.0'
-
-if (Test-Path -Path registry::$path){
-  Get-Item registry::$path | Remove-Item -Verbose
-}
-```
-
-#### Workaround 2: Delete gen_py
-Clear the content of ```C:\Users\<username>\AppData\Local\Temp\gen_py```
-
-Type ```%temp%``` in the address bar in FileExplorer and delete the folder ```gen_py```.
-
-### 2. HyperLink warning in OneNote
-1. In the Registry Editor, locate the following subkey:
-
-```HKEY_CURRENT_USER\Software\Microsoft\Office\16.0\Common```
-
-2. On the menu bar, click Edit > New > Key and type ```Security``` and press Enter.
-
-3. Right click Security, then click New > DWORD (32-bit) Value and type ```DisableHyperlinkWarning``` and press Enter.
-
-4. Double click the above value, select Decimal and change the Value data to ```1```, then click OK.
-
-### 3. Blurry images
-The document viewer has the functionality of taking screen capture. Depending on the Windows display configuration, the images might be blurry.
-The solution is to set the Windows text size to 100 % instead of 150 % (default).
-
-1. Right-click on the desktop
-2. Display parameters
-3. Change the value of the dropdown menu under "Scale and layout" to 100 %
-
-Remember that in most Windows applications, you can change the text font size by using "Ctrl + wheel"
-
 <!-- CONTRIBUTING -->
 ## Contributing
 
@@ -253,9 +193,7 @@ Ready to contribute? Here's how to set up `InspectorMate` for local development.
 
 ## Contributors
 
-None yet. Why not be the first?
-
-💖 Help will be greatly appreciated for issue [#01](https://github.com/ghrimx/InspectorMate/issues/1#issue-2524412537)
+💖 None yet. Why not be the first?
 
 <!-- LICENSE -->
 ## License
