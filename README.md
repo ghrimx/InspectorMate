@@ -1,6 +1,5 @@
 [![license-shield]][license-url]
-[![pylama-failed]][pylama-url]
-![project-status-progress]
+
 
 <a name="readme-top"></a>
 
