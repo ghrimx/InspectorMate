@@ -58,6 +58,7 @@
     <file alias="glasses-2">icons/remix/glasses-2-line.svg</file>
     <file alias="lock-2">icons/remix/lock-2-line.svg</file>
     <file alias="eye-line">icons/remix/eye-line.svg</file>
+    <file alias="eye-off-line">icons/remix/eye-off-line.svg</file>
     <file alias="stack-line">icons/remix/stack-line.svg</file>
     <file alias="layout-grid-line">icons/remix/layout-grid-line.svg</file>
     <file alias="folder-2-line">icons/remix/folder-2-line.svg</file>
