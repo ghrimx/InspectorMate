@@ -92,6 +92,7 @@
     <file alias="list-check-3">icons/remix/list-check-3.svg</file>
     <file alias="file-4-line">icons/remix/file-4-line.svg</file>
     <file alias="git-merge-line">icons/remix/git-merge-line.svg</file>
+    <file alias="save-3-line">icons/remix/save-3-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>
