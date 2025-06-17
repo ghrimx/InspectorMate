@@ -91,6 +91,7 @@
     <file alias="task-line">icons/remix/task-line.svg</file>
     <file alias="list-check-3">icons/remix/list-check-3.svg</file>
     <file alias="file-4-line">icons/remix/file-4-line.svg</file>
+    <file alias="git-merge-line">icons/remix/git-merge-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>
@@ -104,5 +105,8 @@
     <file alias="branch-more">icons/custom/branch-more.svg</file>
     <file alias="branch-end">icons/custom/branch-end.svg</file>
     <file alias="hand-doc-fill-orange">icons/custom/hand-doc-fill-orange.svg</file>
+    <file alias="merge-circle">icons/custom/merge-circle.svg</file>
+    <file alias="listinsight-logo">icons/custom/listinsight-logo.svg</file>
+    <file alias="listinsight-logo-line">icons/custom/listinsight-logo-line.svg</file>
 </qresource>
 </RCC>
