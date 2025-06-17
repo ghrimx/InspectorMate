@@ -22,6 +22,7 @@ from widgets.filedialog import (MergeExcelDialog, UnzipDialog)
 from widgets.summarydialog import SummaryDialog
 from widgets.aboutdialog import About
 from widgets.debuglogviewer import DebugLogViewer
+from widgets.batchrename import BatchRenameWidget
 
 from utilities import utils
 from utilities import config as mconf
@@ -196,6 +197,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tools_menu.addAction(QtGui.QAction("Unpack PDF",
                                                 self.menubar,
                                                 triggered=self.handleUnpackPDF))
+        self.tools_menu.addAction(QtGui.QAction("Batch Rename file",
+                                                self.menubar,
+                                                triggered=self.handleBatchRenameFile))
+        
         # Help menu
         self.help_menu = self.menubar.addMenu("Help")
         self.help_menu.addAction(QtGui.QAction("Summary",
@@ -397,6 +402,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def handleUnzipArchive(self):
         self.unzip_dialog = UnzipDialog(source=AppDatabase.activeWorkspace().rootpath, dest=AppDatabase.activeWorkspace().evidence_path)
         self.unzip_dialog.exec()
+
+    @Slot()
+    def handleBatchRenameFile(self):
+        dlg = BatchRenameWidget()
+        dlg.exec()
 
     @Slot()
     def handleUnpackPDF(self):
