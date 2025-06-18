@@ -22,7 +22,7 @@ from widgets.filedialog import (MergeExcelDialog, UnzipDialog)
 from widgets.summarydialog import SummaryDialog
 from widgets.aboutdialog import About
 from widgets.debuglogviewer import DebugLogViewer
-from widgets.batchrename import BatchRenameWidget
+from widgets.batch_renamer import BatchRenameWidget
 
 from utilities import utils
 from utilities import config as mconf

@@ -48,7 +48,7 @@ def open_file(filepath: Path|str) -> None:
 
     if filepath.exists():
 
-        fileCanBeOpened = QtGui.QDesktopServices.openUrl(QtCore.QUrl(f"file:///{filepath.as_posix()}", QtCore.QUrl.ParsingMode.TolerantMode))
+        fileCanBeOpened = QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(filepath.as_posix()))
 
         if not fileCanBeOpened:
             q = QtWidgets.QMessageBox()
