@@ -405,8 +405,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @Slot()
     def handleBatchRenameFile(self):
-        dlg = BatchRenameWidget()
-        dlg.exec()
+        self.dlg = BatchRenameWidget()
+        self.dlg.show()
 
     @Slot()
     def handleUnpackPDF(self):

@@ -4,27 +4,32 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLineEdit, QLabel, QListWidget,
-    QFileDialog, QMessageBox, QCheckBox, QComboBox, QListWidgetItem, QSplitter
+    QFileDialog, QMessageBox, QCheckBox, QComboBox, QSplitter
 )
-from PyQt6.QtCore import Qt
-
+from PyQt6.QtCore import Qt, QItemSelectionModel, pyqtSlot as Slot
+from PyQt6.QtGui import QIntValidator
 
 class BatchRenameWidget(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent = None):
+        super().__init__(parent)
         self.setWindowTitle("Batch File Renamer")
         self.resize(750, 520)
+
+        self.files = []
 
         layout = QVBoxLayout(self)
 
         # File selection
         self.select_btn = QPushButton("📁 Select Files or Folder")
-        # self.include_dirs_checkbox = QCheckBox("Include Directory")
+        self.folder_only_checkbox = QCheckBox("Show Folder only")
         self.recursive_checkbox = QCheckBox("Include Subfolders")
-        # self.select_btn.clicked.connect(self.select_files)
+        self.recursive_checkbox.setEnabled(False)
+        self.select_btn.clicked.connect(self.select_files)
         layout.addWidget(self.select_btn)
-        # layout.addWidget(self.include_dirs_checkbox)
+        layout.addWidget(self.folder_only_checkbox)
         layout.addWidget(self.recursive_checkbox)
+
+        self.folder_only_checkbox.checkStateChanged.connect(self.update_checkbox)
 
         # Options layout
         options_layout = QHBoxLayout()
@@ -32,6 +37,9 @@ class BatchRenameWidget(QWidget):
         self.num_chars_input = QLineEdit()
         self.num_chars_input.setPlaceholderText("# of chars")
         self.num_chars_input.setFixedWidth(80)
+
+        validator = QIntValidator(0, 999)
+        self.num_chars_input.setValidator(validator)
 
         self.replace_input = QLineEdit()
         self.replace_input.setPlaceholderText("Replacement")
@@ -65,19 +73,20 @@ class BatchRenameWidget(QWidget):
         self.regex_checkbox = QCheckBox("Use Regex")
         self.regex_pattern_input = QLineEdit()
         self.regex_pattern_input.setPlaceholderText("Regex Pattern")
+        spacer = QLabel('>>>')
         self.regex_repl_input = QLineEdit()
         self.regex_repl_input.setPlaceholderText("Replacement")
+        self.error_regex = QLabel()
+        self.error_regex.setFixedHeight(15)
+        self.error_regex.setMargin(0)
+        self.error_regex.setStyleSheet("QLabel { color : red; }")
 
         regex_layout.addWidget(self.regex_checkbox)
         regex_layout.addWidget(self.regex_pattern_input)
+        regex_layout.addWidget(spacer)
         regex_layout.addWidget(self.regex_repl_input)
         layout.addLayout(regex_layout)
-
-        # Checkboxes layout
-        checkbox_layout = QHBoxLayout()
-        self.dry_run_checkbox = QCheckBox("Dry Run (preview only)")
-        checkbox_layout.addWidget(self.dry_run_checkbox)
-        layout.addLayout(checkbox_layout)
+        layout.addWidget(self.error_regex)
 
         splitter = QSplitter()
 
@@ -89,6 +98,8 @@ class BatchRenameWidget(QWidget):
         self.src_list = QListWidget()
         self.src_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         src_layout.addWidget(self.src_list)
+
+        self.src_list.itemSelectionChanged.connect(self.sync_selection_to_renamed)
 
         # Dest list
         dst_widget = QWidget()
@@ -107,7 +118,7 @@ class BatchRenameWidget(QWidget):
         action_layout = QHBoxLayout()
 
         self.rename_btn = QPushButton("✅ Rename")
-        # self.rename_btn.clicked.connect(self.rename_files)
+        self.rename_btn.clicked.connect(self.rename_files)
 
         self.remove_btn = QPushButton("🗑 Remove Selected")
         # self.remove_btn.clicked.connect(self.remove_selected_files)
@@ -115,6 +126,108 @@ class BatchRenameWidget(QWidget):
         action_layout.addWidget(self.rename_btn)
         action_layout.addWidget(self.remove_btn)
         layout.addLayout(action_layout)
+
+        self.num_chars_input.textChanged.connect(self.preview_renames)
+        self.replace_input.textChanged.connect(self.preview_renames)
+        self.prefix_input.textChanged.connect(self.preview_renames)
+        self.suffix_input.textChanged.connect(self.preview_renames)
+        self.regex_pattern_input.textChanged.connect(self.preview_renames)
+        self.regex_repl_input.textChanged.connect(self.preview_renames)
+        self.position_box.currentIndexChanged.connect(self.preview_renames)
+        self.regex_checkbox.stateChanged.connect(self.preview_renames)
+
+    @Slot(Qt.CheckState)
+    def update_checkbox(self, state: Qt.CheckState):
+        self.recursive_checkbox.setEnabled(state.value)
+
+    def select_files(self):
+        self.src_list.clear()
+        self.dst_list.clear()
+        
+        if self.folder_only_checkbox.isChecked():
+            dir_path = QFileDialog.getExistingDirectory(self, "Select Directory")
+            if dir_path:
+                base = Path(dir_path)
+                if self.recursive_checkbox.isChecked():
+                    self.files = [p for p in base.rglob('*') if p.is_file()]
+                else:
+                    self.files = [p for p in base.iterdir() if p.is_file()]
+        else:
+            file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Files")
+            if file_paths:
+                self.files = [Path(p) for p in file_paths]
+
+        self.src_list.addItems([f.name for f in self.files])
+        self.dst_list.addItems([f.name for f in self.files])
+
+    def sync_selection_to_renamed(self):
+        self.dst_list.clearSelection()
+        for index in self.src_list.selectedIndexes():
+            self.dst_list.setCurrentRow(index.row(), QItemSelectionModel.SelectionFlag.Select)
+           
+    def preview_renames(self):
+        if not self.files:
+            return
+        
+        count = int(self.num_chars_input.text()) if self.num_chars_input.text() else 0
+
+        replacement = self.replace_input.text()
+        prefix = self.prefix_input.text()
+        suffix = self.suffix_input.text()
+        position = self.position_box.currentText()
+
+        use_regex = self.regex_checkbox.isChecked()
+        regex_pattern = self.regex_pattern_input.text()
+        regex_replacement = self.regex_repl_input.text()
+
+        self.rename_pairs = []
+        self.dst_list.clear()
+        self.dst_list.addItems([f.name for f in self.files])
+
+        for i in range(self.dst_list.count()):
+            item = self.dst_list.item(i)
+            path = self.files[i]
+            name = path.stem
+            ext = path.suffix
+
+            try:
+                self.error_regex.setText('')
+                if use_regex:
+                    name = re.sub(regex_pattern, regex_replacement, name)
+                elif count > 0:
+                    if position == "Replace Leading":
+                        name = replacement + name[count:]
+                    else:
+                        name = name[:-count] + replacement if count <= len(name) else replacement
+
+                name = prefix + name + suffix
+                new_path = path.with_name(name + ext)
+
+                if path != new_path:
+                    self.rename_pairs.append((path, new_path))
+                    item.setText(new_path.name)
+            except re.error as e:
+                self.error_regex.setText(f"Invalid regex: {e}")
+                return
+
+    def rename_files(self):
+        renamed_count = 0
+
+        for src, dst in self.rename_pairs:
+            try:
+                if src != dst and not dst.exists():
+                    src.rename(dst)
+                    renamed_count += 1
+            except Exception as e:
+                QMessageBox.critical(self, "Rename Error", f"Failed to rename {src.name}:\n{e}")
+
+        QMessageBox.information(self, "Done", f"Renamed {renamed_count} files.")
+
+        self.rename_pairs.clear()
+        self.files.clear()
+        self.src_list.clear()
+        self.dst_list.clear()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
