@@ -16,6 +16,7 @@ class BatchRenameWidget(QWidget):
         self.resize(750, 520)
 
         self.files = []
+        self.rename_pairs = []
 
         layout = QVBoxLayout(self)
 
@@ -120,11 +121,11 @@ class BatchRenameWidget(QWidget):
         self.rename_btn = QPushButton("✅ Rename")
         self.rename_btn.clicked.connect(self.rename_files)
 
-        self.remove_btn = QPushButton("🗑 Remove Selected")
+        # self.remove_btn = QPushButton("🗑 Remove Selected")
         # self.remove_btn.clicked.connect(self.remove_selected_files)
 
         action_layout.addWidget(self.rename_btn)
-        action_layout.addWidget(self.remove_btn)
+        # action_layout.addWidget(self.remove_btn)
         layout.addLayout(action_layout)
 
         self.num_chars_input.textChanged.connect(self.preview_renames)
@@ -180,7 +181,7 @@ class BatchRenameWidget(QWidget):
         regex_pattern = self.regex_pattern_input.text()
         regex_replacement = self.regex_repl_input.text()
 
-        self.rename_pairs = []
+        self.rename_pairs.clear()
         self.dst_list.clear()
         self.dst_list.addItems([f.name for f in self.files])
 
@@ -211,6 +212,9 @@ class BatchRenameWidget(QWidget):
                 return
 
     def rename_files(self):
+        if not self.rename_pairs:
+            return
+
         renamed_count = 0
 
         for src, dst in self.rename_pairs:
