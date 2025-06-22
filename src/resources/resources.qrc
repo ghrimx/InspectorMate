@@ -108,7 +108,6 @@
     <file alias="hand-doc-fill-orange">icons/custom/hand-doc-fill-orange.svg</file>
     <file alias="merge-circle">icons/custom/merge-circle.svg</file>
     <file alias="listinsight-logo">icons/custom/listinsight-logo.svg</file>
-    <file alias="listinsight-logo-line">icons/custom/listinsight-logo-line.svg</file>
     <file alias="heading-clean-line">icons/custom/heading-clean-line.svg</file>
 </qresource>
 </RCC>
