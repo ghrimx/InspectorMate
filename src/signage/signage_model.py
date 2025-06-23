@@ -768,7 +768,7 @@ class SignageTreeModel(TreeModel):
             signage.refkey = find_match(tag.text, regex)
             signage.title = tag.text
 
-            signage_type: SignageType = AppDatabase.cache_signage_type.get(tag.type)
+            signage_type: SignageType = AppDatabase.cache_signage_type.get(tag.type.lower().strip())
 
             # Ignore unknown signage
             if signage_type is None:

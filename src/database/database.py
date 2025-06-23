@@ -181,7 +181,7 @@ class AppDatabase(QtSql.QSqlDatabase):
         else:
             while query.next():
                 signage_type = SignageType(query.value(0), query.value(1), query.value(2), query.value(3))
-                cls.cache_signage_type.add(query.value(0), query.value(1), signage_type)
+                cls.cache_signage_type.add(query.value(0), query.value(1).lower(), signage_type)
             logger.info(f"Success! - Cache's size={cls.cache_signage_type.len()}")
 
     @classmethod
