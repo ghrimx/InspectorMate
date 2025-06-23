@@ -109,6 +109,7 @@ class WorkspaceManagerDialog(QtWidgets.QDialog):
         createFolder(workspace.evidence_path)
         createFolder(workspace.notebook_path)
         createFolder(f"{workspace.notebook_path}/.images")
+        createFolder(f"{workspace.rootpath}/ListInsight")
 
         ok, err = self._model.insertWorkspace(workspace)
 
