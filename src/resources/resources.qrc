@@ -95,6 +95,7 @@
     <file alias="save-3-line">icons/remix/save-3-line.svg</file>
     <file alias="arrow-left-right-line">icons/remix/arrow-left-right-line.svg</file>
     <file alias="bar-chart-box-ai-line">icons/remix/bar-chart-box-ai-line.svg</file>
+    <file alias="bar-chart-box-line">icons/remix/bar-chart-box-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>
