@@ -20,7 +20,12 @@ def get_theme_color(theme: Theme) -> QColor:
 def make_theme_icon(svg_path: str, theme: Theme, size: QSize = QSize(24, 24)) -> QIcon:
     color = get_theme_color(theme)
 
-    renderer = QSvgRenderer(svg_path)
+    try:
+        renderer = QSvgRenderer(svg_path)
+    except:
+        print(f"❌ Cannot load resource: {svg_path}")
+        return QIcon()
+    
     if not renderer.isValid():
         print(f"❌ Cannot load resource: {svg_path}")
         return QIcon()

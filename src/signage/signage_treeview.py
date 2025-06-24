@@ -5,7 +5,7 @@ import html2text
 from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
 from signage.signage_style import TABLE_STYLE
 from widgets.treeview import TreeView
-
+from theme_manager import theme_icon_manager
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +34,12 @@ class SignageTreeView(TreeView):
         return super().focusOutEvent(a0)      
 
     def createAction(self, statuses: dict = None, owners: list = None):
-        self.action_delete_rows = QtGui.QAction(QtGui.QIcon(":delete-bin2"),
+        self.action_delete_rows = QtGui.QAction(theme_icon_manager.get_icon(":delete-bin2"),
                                                 "Delete",
                                                 self,
                                                 triggered=self.signals.delete)
 
-        # self.action_openLink = QtGui.QAction(QtGui.QIcon(":link-m"),
+        # self.action_openLink = QtGui.QAction(theme_icon_manager.get_icon(":link-m"),
         #                                      "Open Link",
         #                                      self,
         #                                      triggered=self.openLink)
@@ -59,15 +59,15 @@ class SignageTreeView(TreeView):
                 self.owner_menu.addAction(owner)
             self.owner_menu.triggered.connect(self.handleUpdateActionSignal)
 
-        self.action_resetfilter = QtGui.QAction(QtGui.QIcon(":filter-off-line"),
+        self.action_resetfilter = QtGui.QAction(theme_icon_manager.get_icon(":filter-off-line"),
                                                 "Reset filters",
                                                 self,
                                                 triggered=self.signals.resetFilters)
-        self.action_expandAll = QtGui.QAction(QtGui.QIcon(":expand-vertical-line"),
+        self.action_expandAll = QtGui.QAction(theme_icon_manager.get_icon(":expand-vertical-line"),
                                                 "Expand All",
                                                 self,
                                                 triggered=self.expandAll)
-        self.action_collapseAll = QtGui.QAction(QtGui.QIcon(":collapse-vertical-line"),
+        self.action_collapseAll = QtGui.QAction(theme_icon_manager.get_icon(":collapse-vertical-line"),
                                                 "Collapse All",
                                                 self,
                                                 triggered=self.collapseAll)
@@ -225,7 +225,7 @@ class PrivateNoteDelegate(QtWidgets.QStyledItemDelegate):
 
             if raw_note.strip() != "":
                 option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-                option.icon = QtGui.QIcon(':quill-pen-fill')
+                option.icon = theme_icon_manager.get_icon(':quill-pen-fill')
                 option.text = ""
                 option.decorationSize = QtCore.QSize(self.parent().columnWidth(index.column()), self.parent().header().geometry().height())
                 option.displayAlignment = QtCore.Qt.AlignmentFlag.AlignHCenter|QtCore.Qt.AlignmentFlag.AlignVCenter
@@ -247,7 +247,7 @@ class PublicNoteDelegate(QtWidgets.QStyledItemDelegate):
 
             if raw_note.strip() != "":
                 option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-                option.icon = QtGui.QIcon(':quill-pen-fill-red')
+                option.icon = theme_icon_manager.get_icon(':quill-pen-fill-red')
                 option.text = ""
                 option.decorationSize = QtCore.QSize(self.parent().columnWidth(index.column()), self.parent().header().geometry().height())
                 option.displayAlignment = QtCore.Qt.AlignmentFlag.AlignHCenter|QtCore.Qt.AlignmentFlag.AlignVCenter
@@ -269,7 +269,7 @@ class EvidenceDelegate(QtWidgets.QStyledItemDelegate):
 
             if int(evidence_count) > 0:
                 option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-                option.icon = QtGui.QIcon(':file-text-line')
+                option.icon = theme_icon_manager.get_icon(':file-text-line')
                 option.text = ""
                 option.decorationSize = QtCore.QSize(self.parent().columnWidth(index.column()), self.parent().header().geometry().height())
                 option.displayAlignment = QtCore.Qt.AlignmentFlag.AlignHCenter|QtCore.Qt.AlignmentFlag.AlignVCenter

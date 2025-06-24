@@ -8,6 +8,8 @@ from database.database import AppDatabase, Cache, Document
 from models.model import (BaseRelationalTableModel, DatabaseField)
 from utilities import (utils, config as mconf)
 
+from theme_manager import theme_icon_manager, Theme
+
 logger = logging.getLogger(__name__)
 
 
@@ -228,6 +230,10 @@ class EvidenceModel(BaseRelationalTableModel):
             if status_item is not None :
                 
                 color_hex = status_item.color
+
+                if color_hex == "#000000" and theme_icon_manager.get_theme() == Theme.DARK:
+                    color_hex = theme_icon_manager.get_theme_color().name(QtGui.QColor.NameFormat.HexRgb)
+
                 if color_hex:
                     return QtGui.QColor(color_hex)
 

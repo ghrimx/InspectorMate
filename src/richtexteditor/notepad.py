@@ -11,6 +11,7 @@ from database.dbstructure import Signage, SignageType
 from utilities.config import settings
 from utilities.utils import (hexuuid, timeuuid, createFolder, queryFileID)
 from utilities import config as mconf
+from theme_manager import theme_icon_manager
 
 logger = logging.getLogger(__name__)
 
@@ -636,79 +637,79 @@ class Notepad(QtWidgets.QWidget):
         self.loadSettings()
 
     def createActions(self):
-        self.action_addnote = QtGui.QAction(QtGui.QIcon(':file_add'), "Add note (Ctrl+N)", self, triggered=self.addNote)
-        self.action_editnote = QtGui.QAction(QtGui.QIcon(':file-edit-line'), "Edit note (Ctrl+E)", self, triggered=self.editNote)
+        self.action_addnote = QtGui.QAction(theme_icon_manager.get_icon(':file_add'), "Add note (Ctrl+N)", self, triggered=self.addNote)
+        self.action_editnote = QtGui.QAction(theme_icon_manager.get_icon(':file-edit-line'), "Edit note (Ctrl+E)", self, triggered=self.editNote)
 
-        self.action_minimizeAll = QtGui.QAction(QtGui.QIcon(':folder-2-line'), "Minimize", self, triggered=self.minimizeAll)
-        self.action_showNormalAll = QtGui.QAction(QtGui.QIcon(':folder-2-line'), "Normal", self, triggered=self.showNormalAll)
-        self.action_showMaximizeAll = QtGui.QAction(QtGui.QIcon(':folder-2-line'), "Maximized", self, triggered=self.showMaximizeAll)
-        self.action_setTileView = QtGui.QAction(QtGui.QIcon(':layout-grid-line'), "Tile", self, triggered=self.setTileView)
-        self.action_setTabbedView = QtGui.QAction(QtGui.QIcon(':folder-2-line'), "Tabbed", self, triggered=self.setTabbedView)
+        self.action_minimizeAll = QtGui.QAction(theme_icon_manager.get_icon(':folder-2-line'), "Minimize", self, triggered=self.minimizeAll)
+        self.action_showNormalAll = QtGui.QAction(theme_icon_manager.get_icon(':folder-2-line'), "Normal", self, triggered=self.showNormalAll)
+        self.action_showMaximizeAll = QtGui.QAction(theme_icon_manager.get_icon(':folder-2-line'), "Maximized", self, triggered=self.showMaximizeAll)
+        self.action_setTileView = QtGui.QAction(theme_icon_manager.get_icon(':layout-grid-line'), "Tile", self, triggered=self.setTileView)
+        self.action_setTabbedView = QtGui.QAction(theme_icon_manager.get_icon(':folder-2-line'), "Tabbed", self, triggered=self.setTabbedView)
 
         self.action_close = QtGui.QAction("Cl&ose", self, statusTip="Close the active window", triggered=self.close)
         self.action_closeall = QtGui.QAction("Close &All", self, statusTip="Close all the windows", triggered=self.close_all)
 
         # Text actions
-        self.action_bold = QtGui.QAction(QtGui.QIcon(':bold'), "Bold (Ctrl+B)", self, triggered=self.textBold ,checkable=True)
-        self.action_italic =  QtGui.QAction(QtGui.QIcon(':italic'), "Italic (Ctrl+I)", self, triggered=self.textItalic, checkable=True)
-        self.action_underline = QtGui.QAction(QtGui.QIcon(':underline'), "Underline (Ctrl+U)", self, triggered=self.textUnderline, checkable=True)
-        self.action_strikeout = QtGui.QAction(QtGui.QIcon(':strikeout'), "StrikeOut (Ctrl+-)", self, triggered=self.textStrikeout, checkable=True)
+        self.action_bold = QtGui.QAction(theme_icon_manager.get_icon(':bold'), "Bold (Ctrl+B)", self, triggered=self.textBold ,checkable=True)
+        self.action_italic =  QtGui.QAction(theme_icon_manager.get_icon(':italic'), "Italic (Ctrl+I)", self, triggered=self.textItalic, checkable=True)
+        self.action_underline = QtGui.QAction(theme_icon_manager.get_icon(':underline'), "Underline (Ctrl+U)", self, triggered=self.textUnderline, checkable=True)
+        self.action_strikeout = QtGui.QAction(theme_icon_manager.get_icon(':strikeout'), "StrikeOut (Ctrl+-)", self, triggered=self.textStrikeout, checkable=True)
 
         # Date/Time
-        self.action_date = QtGui.QAction(QtGui.QIcon(":calendar-line"), "Date (Ctrl+Alt+D)", self, triggered=self.insertDate)
-        self.action_time = QtGui.QAction(QtGui.QIcon(":time-line"), "Time (Ctrl+Alt+T)", self, triggered=self.insertTime)
+        self.action_date = QtGui.QAction(theme_icon_manager.get_icon(":calendar-line"), "Date (Ctrl+Alt+D)", self, triggered=self.insertDate)
+        self.action_time = QtGui.QAction(theme_icon_manager.get_icon(":time-line"), "Time (Ctrl+Alt+T)", self, triggered=self.insertTime)
 
         # Headings
-        self.action_paragraph = QtGui.QAction(QtGui.QIcon(":paragraph"), "Paragraph", self, triggered = lambda:self.textHeading(HeadingStyle.P))
-        self.action_h1 = QtGui.QAction(QtGui.QIcon(":h-1"), "Heading 1", self, triggered = lambda:self.textHeading(HeadingStyle.H1))
-        self.action_h2 = QtGui.QAction(QtGui.QIcon(":h-2"), "Heading 2", self, triggered = lambda:self.textHeading(HeadingStyle.H2))
-        self.action_h3 = QtGui.QAction(QtGui.QIcon(":h-3"), "Heading 3", self, triggered = lambda:self.textHeading(HeadingStyle.H3))
-        self.action_h4 = QtGui.QAction(QtGui.QIcon(":h-4"), "Heading 4", self, triggered = lambda:self.textHeading(HeadingStyle.H4))
+        self.action_paragraph = QtGui.QAction(theme_icon_manager.get_icon(":paragraph"), "Paragraph", self, triggered = lambda:self.textHeading(HeadingStyle.P))
+        self.action_h1 = QtGui.QAction(theme_icon_manager.get_icon(":h-1"), "Heading 1", self, triggered = lambda:self.textHeading(HeadingStyle.H1))
+        self.action_h2 = QtGui.QAction(theme_icon_manager.get_icon(":h-2"), "Heading 2", self, triggered = lambda:self.textHeading(HeadingStyle.H2))
+        self.action_h3 = QtGui.QAction(theme_icon_manager.get_icon(":h-3"), "Heading 3", self, triggered = lambda:self.textHeading(HeadingStyle.H3))
+        self.action_h4 = QtGui.QAction(theme_icon_manager.get_icon(":h-4"), "Heading 4", self, triggered = lambda:self.textHeading(HeadingStyle.H4))
 
         # Highlight
-        self.action_highlight = QtGui.QAction(QtGui.QIcon(":mark_pen"), "Highlight (Ctrl+Alt+H)", self, triggered= self.textHighlight)
+        self.action_highlight = QtGui.QAction(theme_icon_manager.get_icon(":mark_pen"), "Highlight (Ctrl+Alt+H)", self, triggered= self.textHighlight)
 
         # Quoteblock
-        self.action_blockquote = QtGui.QAction(QtGui.QIcon(':double-quotes'), "Block quote (Ctrl+Alt+B)", self, triggered=self.insertBlockquote)       
+        self.action_blockquote = QtGui.QAction(theme_icon_manager.get_icon(':double-quotes'), "Block quote (Ctrl+Alt+B)", self, triggered=self.insertBlockquote)       
 
         # Horizontal line
-        self.action_horizontal_line = QtGui.QAction(QtGui.QIcon(':horizontal-line'), "Horizontal line (Ctrl+Alt+L)", self, triggered=self.addHorizontalLine)
+        self.action_horizontal_line = QtGui.QAction(theme_icon_manager.get_icon(':horizontal-line'), "Horizontal line (Ctrl+Alt+L)", self, triggered=self.addHorizontalLine)
 
         # Clear formatting
-        self.action_clear_formatting = QtGui.QAction(QtGui.QIcon(':format-clear'), "Clear formatting (Ctrl+Shift+N)", self, triggered=self.clearFormatting)
+        self.action_clear_formatting = QtGui.QAction(theme_icon_manager.get_icon(':format-clear'), "Clear formatting (Ctrl+Shift+N)", self, triggered=self.clearFormatting)
 
         pix = QtGui.QPixmap(16, 16)
         pix.fill(QtCore.Qt.GlobalColor.black)
         self.action_color = QtGui.QAction(QtGui.QIcon(pix),"Color Text", self, triggered=self.textColor)
 
         # Bullet List
-        self.action_bullet = QtGui.QAction(QtGui.QIcon(":list-unordered"), "Bullet list (Ctrl+;)", self, triggered=self.bulletList)
+        self.action_bullet = QtGui.QAction(theme_icon_manager.get_icon(":list-unordered"), "Bullet list (Ctrl+;)", self, triggered=self.bulletList)
 
         # Checkbox
-        self.action_checkbox = QtGui.QAction(QtGui.QIcon(":list-check-3"), "Checkbox (Ctrl+Alt+;)", self, triggered=self.addCheckbox)
+        self.action_checkbox = QtGui.QAction(theme_icon_manager.get_icon(":list-check-3"), "Checkbox (Ctrl+Alt+;)", self, triggered=self.addCheckbox)
 
         # Line Spacing
         self.action_line_spacing_normal = QtGui.QAction("1.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL))
         self.action_line_spacing_1_5 = QtGui.QAction("1.5", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL_HALF))
         self.action_line_spacing_double = QtGui.QAction("2.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.DOUBLE))
 
-        self.action_insertSignage = QtGui.QAction(QtGui.QIcon(':signpost-line'), "Insert Signage", self, triggered=self.createSignage)
+        self.action_insertSignage = QtGui.QAction(theme_icon_manager.get_icon(':signpost-line'), "Insert Signage", self, triggered=self.createSignage)
 
-        self.action_help = QtGui.QAction(QtGui.QIcon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
+        self.action_help = QtGui.QAction(theme_icon_manager.get_icon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
 
     def createToolbar(self):
         self.toolbar = QtWidgets.QToolBar(self)
 
         # View menu
         viewmenu_toolbutton = QtWidgets.QToolButton(self)
-        viewmenu_toolbutton.setIcon(QtGui.QIcon(':eye-line'))
+        viewmenu_toolbutton.setIcon(theme_icon_manager.get_icon(':eye-line'))
         viewmenu_toolbutton.setText("Views")
         viewmenu_toolbutton.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
 
         viewmenu = QtWidgets.QMenu("View", self)
 
         cascade_menu = QtWidgets.QMenu("Cascade", self)
-        cascade_menu.setIcon(QtGui.QIcon(':stack-line'))
+        cascade_menu.setIcon(theme_icon_manager.get_icon(':stack-line'))
         cascade_menu.addAction(self.action_minimizeAll)
         cascade_menu.addAction(self.action_showNormalAll)
         cascade_menu.addAction(self.action_showMaximizeAll)
@@ -722,7 +723,7 @@ class Notepad(QtWidgets.QWidget):
         self.window_menu = QtWidgets.QMenu("Window", self)
 
         self.windowmenu_toolbutton = QtWidgets.QToolButton(self)
-        self.windowmenu_toolbutton.setIcon(QtGui.QIcon(':window-2-line'))
+        self.windowmenu_toolbutton.setIcon(theme_icon_manager.get_icon(':window-2-line'))
         self.windowmenu_toolbutton.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
         self.windowmenu_toolbutton.setMenu(self.window_menu)
         self.update_window_menu()
@@ -733,7 +734,7 @@ class Notepad(QtWidgets.QWidget):
         self.datetime_menu.addAction(self.action_date)
         self.datetime_menu.addAction(self.action_time)
         self.datetime_toolbutton = QtWidgets.QToolButton(self)
-        self.datetime_toolbutton.setIcon(QtGui.QIcon(":calendar-schedule-line"))
+        self.datetime_toolbutton.setIcon(theme_icon_manager.get_icon(":calendar-schedule-line"))
         self.datetime_toolbutton.setToolTip("Insert date/time")
         self.datetime_toolbutton.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)       
         self.datetime_toolbutton.setMenu(self.datetime_menu)
@@ -741,7 +742,7 @@ class Notepad(QtWidgets.QWidget):
         # Headings menu
         self.heading_toolbutton = QtWidgets.QToolButton(self)
         self.heading_toolbutton.setText("Headings")
-        self.heading_toolbutton.setIcon(QtGui.QIcon(":heading"))
+        self.heading_toolbutton.setIcon(theme_icon_manager.get_icon(":heading"))
         self.heading_toolbutton.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
 
         self.heading_menu = QtWidgets.QMenu(self)
@@ -756,7 +757,7 @@ class Notepad(QtWidgets.QWidget):
         self.line_spacing_toolbutton = QtGui.QAction(self)
         self.line_spacing_toolbutton.setText("Line Spacing")
         self.line_spacing_toolbutton.setToolTip("Line Spacing")
-        self.line_spacing_toolbutton.setIcon(QtGui.QIcon(":line-height"))
+        self.line_spacing_toolbutton.setIcon(theme_icon_manager.get_icon(":line-height"))
 
         self.line_spacing_menu = QtWidgets.QMenu("Line spacing", self)
         self.line_spacing_menu.addAction(self.action_line_spacing_normal)
