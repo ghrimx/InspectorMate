@@ -21,6 +21,8 @@ from utilities.utils import mergeExcelFiles, find_match
 
 from onenote.msonenote import OnenoteModel, OE
 
+from theme_manager import theme_icon_manager, Theme
+
 logger = logging.getLogger(__name__)
 
 
@@ -92,6 +94,10 @@ class SignageTreeModel(TreeModel):
             if signage_status is not None :
                 
                 color_hex = signage_status.color
+
+                if color_hex == "#000000" and theme_icon_manager.get_theme() == Theme.DARK:
+                    color_hex = theme_icon_manager.get_theme_color().name(QtGui.QColor.NameFormat.HexRgb)
+
                 if color_hex:
                     return QtGui.QColor(color_hex)
 

@@ -1,5 +1,6 @@
 from qtpy import (QtCore, Qt, QtGui, QtWidgets, QtAds, Slot)
 from resources import qrc_resources
+from theme_manager import theme_icon_manager, Theme
 import logging
  
 from signage.signage_model import SignageTreeModel
@@ -51,7 +52,7 @@ class MainWindow(QtWidgets.QMainWindow):
         QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)
         QtAds.CDockManager.setAutoHideConfigFlags(QtAds.CDockManager.eAutoHideFlag.DefaultAutoHideConfig)
         self.dock_manager = QtAds.CDockManager(self)
-        
+       
         self.setGeometry(100, 100, 800, 600)
         self.set_window_title(AppDatabase.activeWorkspace().name)
 
@@ -77,17 +78,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notebook_doc_widget_container.setMinimumWidth(250)
 
         # Signage Tree Widget        
-        self.signage_dock_widget = QtAds.CDockWidget("Signage")
+        self.signage_dock_widget = QtAds.CDockWidget("Signage", self)
         self.signage_tree_tab = SignageTreeTab(model=self.signage_treemodel)
         self.signage_dock_widget.setWidget(self.signage_tree_tab)
         self.signage_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.signage_dock_widget.resize(250, 150)
         self.signage_dock_widget.setMinimumSize(200, 150)
         self.signage_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.LeftDockWidgetArea, self.signage_dock_widget)
-        
+        if theme_icon_manager.get_theme() == Theme.DARK:
+            self.signage_area.setStyleSheet("color: white;")
+
         # Notebook widget
         self.notepad_tab = Notepad(self)
-        self.notepad_dock_widget = QtAds.CDockWidget("Notebook")
+        self.notepad_dock_widget = QtAds.CDockWidget("Notebook", self)
         self.notepad_dock_widget.setWidget(self.notepad_tab)
         self.notepad_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.notepad_dock_widget.resize(250, 150)
@@ -97,7 +100,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Document widget
         self.evidence_tab = EvidenceTab(model=self.evidence_model)
-        self.evidence_tab_dock_widget = QtAds.CDockWidget("Evidence")
+        self.evidence_tab_dock_widget = QtAds.CDockWidget("Evidence", self)
         self.evidence_tab_dock_widget.setWidget(self.evidence_tab)
         self.evidence_tab_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.evidence_tab_dock_widget.resize(250, 150)
@@ -160,7 +163,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_open_option.setChecked(True)
         self.edit_menu.addAction(self.file_open_option)
 
-        self.edit_menu.addAction(QtGui.QAction(QtGui.QIcon(":onenote"),
+        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":onenote"),
                                                "OneNote Test connection",
                                                self,
                                                triggered=self.open_onenote_picker))
@@ -185,6 +188,22 @@ class MainWindow(QtWidgets.QMainWindow):
         app_menu.addAction(QtGui.QAction("Large", self, triggered=lambda: self.setAppFont(11.0)))
         app_menu.addAction(QtGui.QAction("Extra Large", self, triggered=lambda: self.setAppFont(13.0)))
         self.view_menu.addMenu(app_menu) 
+
+        color_theme_menu = QtWidgets.QMenu("Color Theme", self.menubar)
+        self.light_action = QtGui.QAction("Light", self, triggered=lambda: self.setColorTheme(Theme.LIGHT))
+        self.light_action.setCheckable(True)
+        self.dark_action = QtGui.QAction("Dark", self, triggered=lambda: self.setColorTheme(Theme.DARK))
+        self.dark_action.setCheckable(True)
+
+        if theme_icon_manager.get_theme() == Theme.DARK:
+            self.dark_action.setChecked(True)
+        else:
+            self.light_action.setChecked(True)
+
+        color_theme_menu.addAction(self.light_action)
+        color_theme_menu.addAction(self.dark_action)
+        self.view_menu.addMenu(color_theme_menu)
+
 
         # Tools Menu
         self.tools_menu = self.menubar.addMenu("Tools")
@@ -260,6 +279,16 @@ class MainWindow(QtWidgets.QMainWindow):
         font.setPointSizeF(fontsize)
         QtWidgets.QApplication.setFont(font)
         mconf.settings.setValue("app_fontsize", fontsize)
+
+    @Slot()
+    def setColorTheme(self, theme: Theme):
+        if theme == Theme.DARK:
+            self.light_action.setChecked(False)
+        elif theme == Theme.LIGHT:
+            self.dark_action.setChecked(False)
+
+        mconf.settings.setValue("app_color_theme", theme.value)
+        theme_icon_manager.set_theme(theme)
 
     @Slot()
     def addRemoveOwner(self):

@@ -23,6 +23,8 @@ from widgets.waitingspinner import WaitingSpinner
 
 from utilities.config import settings
 
+from theme_manager import theme_icon_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -124,19 +126,19 @@ class SignageTab(BaseTab):
 
     def setupToolbar(self):
         """Add custom button to the Toolbar"""
-        self.action_create_signage = QtGui.QAction(QtGui.QIcon(":signpost-line"),
+        self.action_create_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line"),
                                                    "Create Signage (Ctrl + R)",
                                                    self,
                                                    triggered = lambda: self.createSignage(source=self.signageSource()))
         self.toolbar.insertAction(self.action_separator, self.action_create_signage)
 
-        self.action_create_child_signage = QtGui.QAction(QtGui.QIcon(":signpost-line-child"),
+        self.action_create_child_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line-child"),
                                                          "Create Child Signage (Ctrl + N)",
                                                          self,
                                                          triggered = lambda: self.createChildSignage(source=self.signageSource()))
         self.toolbar.insertAction(self.action_separator, self.action_create_child_signage)
 
-        self.action_delete_signage = QtGui.QAction(QtGui.QIcon(":delete-bin2"),
+        self.action_delete_signage = QtGui.QAction(theme_icon_manager.get_icon(":delete-bin2"),
                                                    "Delete Signage",
                                                    self,
                                                    triggered = self.deleteRow)
@@ -145,37 +147,37 @@ class SignageTab(BaseTab):
         separator = self.toolbar.addSeparator()
         self.toolbar.insertAction(self.action_separator, separator)
 
-        self.filtering = QtGui.QAction(QtGui.QIcon(":filter-line"),
+        self.filtering = QtGui.QAction(theme_icon_manager.get_icon(":filter-line"),
                                        "Filters",
                                        self,
                                        triggered=self.setFilters)
         self.toolbar.insertAction(self.action_separator, self.filtering)
 
-        self.reset_filtering = QtGui.QAction(QtGui.QIcon(":filter-off-line"),
+        self.reset_filtering = QtGui.QAction(theme_icon_manager.get_icon(":filter-off-line"),
                                              "Reset Filters",
                                              self,
                                              triggered=self.onResetFilters)
         self.toolbar.insertAction(self.action_separator, self.reset_filtering)
 
-        self.sort_by_creation_order = QtGui.QAction(QtGui.QIcon(":sort-number-asc"),
+        self.sort_by_creation_order = QtGui.QAction(theme_icon_manager.get_icon(":sort-number-asc"),
                                                     "Sort by Creation Order",
                                                     self,
                                                     triggered=self.onSortByCreationOrder)
         self.toolbar.insertAction(self.action_separator, self.sort_by_creation_order)
 
-        self.action_expandAll = QtGui.QAction(QtGui.QIcon(":expand-vertical-line"),
+        self.action_expandAll = QtGui.QAction(theme_icon_manager.get_icon(":expand-vertical-line"),
                                                 "Expand All",
                                                 self,
                                                 triggered=self.table.expandAll)
         self.toolbar.insertAction(self.action_separator, self.action_expandAll)
         
-        self.action_collapseAll = QtGui.QAction(QtGui.QIcon(":collapse-vertical-line"),
+        self.action_collapseAll = QtGui.QAction(theme_icon_manager.get_icon(":collapse-vertical-line"),
                                                 "Collapse All",
                                                 self,
                                                 triggered=self.table.collapseAll)
         self.toolbar.insertAction(self.action_separator, self.action_collapseAll)
 
-        self.action_load_onenote = QtGui.QAction(QtGui.QIcon(":onenote"), "Import signage from OneNote", self, triggered=self.loadFromOnenote)
+        self.action_load_onenote = QtGui.QAction(theme_icon_manager.get_icon(":onenote"), "Import signage from OneNote", self, triggered=self.loadFromOnenote)
         self.toolbar.insertAction(self.action_separator, self.action_load_onenote)
     
     def createShortcuts(self):
@@ -194,8 +196,8 @@ class SignageTab(BaseTab):
         self.info_tab = SignageInfoWidget(self._model.cacheSignageStatus(), self._model.cacheSignageType())
         self.info_tab.setupMapper(self._model)
         self.right_pane.addTab(self.info_tab, "Info")
-        self.right_pane.addTab(self.info_tab.note, QtGui.QIcon(':lock-2'), "Private Note")
-        self.right_pane.addTab(self.info_tab.public_note, QtGui.QIcon(':glasses-2'), "Public Note")
+        self.right_pane.addTab(self.info_tab.note, theme_icon_manager.get_icon(':lock-2'), "Private Note")
+        self.right_pane.addTab(self.info_tab.public_note, theme_icon_manager.get_icon(':glasses-2'), "Public Note")
 
     def setupDialogs(self):
         """Setup dialogs"""
@@ -446,7 +448,6 @@ class SignageTab(BaseTab):
         parent = self.sender().parent()
         if isinstance(parent, SignageInfoWidget):
             update_treemodel = False
-
 
         index = self.table.selectionModel().currentIndex()
         treemodel_index = self.proxy_model.mapToSource(index)
