@@ -22,6 +22,8 @@ from widgets.waitingspinner import WaitingSpinner
 
 from utilities.config import settings
 
+from theme_manager import theme_icon_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -93,8 +95,8 @@ class EvidenceTab(BaseTab):
         # Tag filter tab
         # self.tag_filter = QtWidgets.QListView(self)
 
-        self.left_pane.addTab(self.doc_filter, QtGui.QIcon(":node-tree"), "")
-        # self.left_pane.addTab(self.tag_filter, QtGui.QIcon(":tags"), "")
+        self.left_pane.addTab(self.doc_filter, theme_icon_manager.get_icon(":node-tree"), "")
+        # self.left_pane.addTab(self.tag_filter, theme_icon_manager.get_icon(":tags"), "")
     
     def setupCentralWidget(self):
         """Init Central Widget"""
@@ -117,28 +119,28 @@ class EvidenceTab(BaseTab):
 
     def setupToolbar(self):
         """Add custom button to the Toolbar"""
-        self.load_file = QtGui.QAction(QtGui.QIcon(":folder_upload"), "Load file", self, triggered=self.handle_load_file)
+        self.load_file = QtGui.QAction(theme_icon_manager.get_icon(":folder_upload"), "Load file", self, triggered=self.handle_load_file)
         self.toolbar.insertAction(self.action_separator, self.load_file)
 
-        self.detect_refkey = QtGui.QAction(QtGui.QIcon(":refkey"), "Detect refkey", self, triggered=self.table.autoRefKey)
+        self.detect_refkey = QtGui.QAction(theme_icon_manager.get_icon(":refkey"), "Detect refkey", self, triggered=self.table.autoRefKey)
         self.toolbar.insertAction(self.action_separator, self.detect_refkey)
 
-        self.filtering = QtGui.QAction(QtGui.QIcon(":filter-line"), "Filter", self, triggered=self.setFilters)
+        self.filtering = QtGui.QAction(theme_icon_manager.get_icon(":filter-line"), "Filter", self, triggered=self.setFilters)
         self.toolbar.insertAction(self.action_separator, self.filtering)
 
-        self.reset_filtering = QtGui.QAction(QtGui.QIcon(":filter-off-line"),
+        self.reset_filtering = QtGui.QAction(theme_icon_manager.get_icon(":filter-off-line"),
                                              "Reset Filters",
                                              self,
                                              triggered=self.onResetFilters)
         self.toolbar.insertAction(self.action_separator, self.reset_filtering)
 
-        self.action_create_signage = QtGui.QAction(QtGui.QIcon(":signpost-line"),
+        self.action_create_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line"),
                                                    "Create Signage (Ctrl + R)",
                                                    self,
                                                    triggered = self.createSignage)
         self.toolbar.insertAction(self.action_separator, self.action_create_signage)
 
-        self.action_create_child_signage = QtGui.QAction(QtGui.QIcon(":signpost-line-child"),
+        self.action_create_child_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line-child"),
                                                    "Create Child Signage (Ctrl + N)",
                                                    self,
                                                    triggered = self.createChildSignage)
@@ -154,7 +156,7 @@ class EvidenceTab(BaseTab):
         self.request_filter_tab = SignageFilter(model=model)
         self.request_filter_tab.table.clicked.connect(self.onRequestFilterClicked)
         self.request_filter_tab.table.sortByColumn(model.Fields.Refkey.index, Qt.SortOrder.AscendingOrder)
-        self.left_pane.insertTab(1, self.request_filter_tab, QtGui.QIcon(":request"), "")
+        self.left_pane.insertTab(1, self.request_filter_tab, theme_icon_manager.get_icon(":request"), "")
 
     @Slot()
     def setFilters(self):

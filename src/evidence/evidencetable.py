@@ -13,6 +13,8 @@ from delegates.delegate import (NoteColumnDelegate, ReadOnlyDelegate)
 
 from utilities.utils import (open_file, queryFileNameByID)
 
+from theme_manager import theme_icon_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -38,34 +40,34 @@ class DocTable(TreeView):
         self.createAction()
 
     def createAction(self):
-        self.action_delete_rows = QtGui.QAction(QtGui.QIcon(":delete-bin2"),
+        self.action_delete_rows = QtGui.QAction(theme_icon_manager.get_icon(":delete-bin2"),
                                                 "Delete",
                                                 self,
                                                 triggered=self.deleteRows)
-        self.action_open = QtGui.QAction(QtGui.QIcon(":file-4-line"),
+        self.action_open = QtGui.QAction(theme_icon_manager.get_icon(":file-4-line"),
                                          "Open",
                                          self,
                                          triggered=self.openFile)
-        self.action_open_externally = QtGui.QAction(QtGui.QIcon(":share-forward-2-line"),
+        self.action_open_externally = QtGui.QAction(theme_icon_manager.get_icon(":share-forward-2-line"),
                                                     "Open with...",
                                                     self,
                                                     triggered=self.openWith)
-        self.action_open_folder = QtGui.QAction(QtGui.QIcon(":folder-open-line"),
+        self.action_open_folder = QtGui.QAction(theme_icon_manager.get_icon(":folder-open-line"),
                                                 "Open folder",
                                                 self,
                                                 triggered=self.openFolder)
-        self.action_cite = QtGui.QAction(QtGui.QIcon(":double-quotes"),
+        self.action_cite = QtGui.QAction(theme_icon_manager.get_icon(":double-quotes"),
                                          "Cite",
                                          self,
                                          triggered=self.cite)
         self.shortcut_action_cite = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+C"), self, self.cite, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.action_cite.setShortcut(QtGui.QKeySequence("Ctrl+Alt+C"))
 
-        self.action_auto_refkey = QtGui.QAction(QtGui.QIcon(":refkey"),
+        self.action_auto_refkey = QtGui.QAction(theme_icon_manager.get_icon(":refkey"),
                                                 "auto RefKey",
                                                 self,
                                                 triggered=self.autoRefKey)
-        self.action_locate = QtGui.QAction(QtGui.QIcon(":search-line"),
+        self.action_locate = QtGui.QAction(theme_icon_manager.get_icon(":search-line"),
                                            "Locate",
                                            self,
                                            triggered=self.locate)
@@ -76,12 +78,12 @@ class DocTable(TreeView):
 
         self.status_menu.triggered.connect(self.setStatus)
 
-        self.action_resetfilter = QtGui.QAction(QtGui.QIcon(":filter-off-line"),
+        self.action_resetfilter = QtGui.QAction(theme_icon_manager.get_icon(":filter-off-line"),
                                                 "Reset filters",
                                                 self,
                                                 triggered=self.sigResetFilters)
 
-        self.action_setRefKey = QtGui.QAction(QtGui.QIcon(":key-2-line"),
+        self.action_setRefKey = QtGui.QAction(theme_icon_manager.get_icon(":key-2-line"),
                                               "Set RefKey",
                                               self,
                                               triggered=self.setRefKey)
@@ -316,7 +318,7 @@ class ExistColumnDelegate(QtWidgets.QStyledItemDelegate):
 
         if (not value == ""):
             option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-            option.icon = QtGui.QIcon(ico)
+            option.icon = theme_icon_manager.get_icon(ico)
             option.text = ""
 
     def createEditor(self, *args):

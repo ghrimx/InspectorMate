@@ -1,6 +1,7 @@
 from qtpy import (Qt, QtWidgets, QtGui)
 
 from widgets.toolbar import ToolBar
+from theme_manager import theme_icon_manager
 
 class BaseTab(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -32,7 +33,7 @@ class BaseTab(QtWidgets.QWidget):
         self.toolbar = ToolBar(parent, icon_size=(24,24))
 
         # Fold Left Pane
-        self.fold_left_pane = QtGui.QAction(QtGui.QIcon(':sidebar-fold-line'), "Fold left pane", self, triggered=self.onFoldLeftSidebarTriggered)
+        self.fold_left_pane = QtGui.QAction(theme_icon_manager.get_icon(':sidebar-fold-line'), "Fold left pane", self, triggered=self.onFoldLeftSidebarTriggered)
         self.toolbar.addAction(self.fold_left_pane)
 
         # Search LineEdit
@@ -48,7 +49,10 @@ class BaseTab(QtWidgets.QWidget):
         self.action_separator = self.toolbar.add_spacer()
 
         # Fold Right Pane
-        self.fold_right_pane = QtGui.QAction(QtGui.QIcon(":sidebar-unfold-line"), "Fold right pane", self, triggered=self.onFoldRightSidebarTriggered)
+        self.fold_right_pane = QtGui.QAction(theme_icon_manager.get_icon(":sidebar-unfold-line"),
+                                             "Fold right pane",
+                                             self,
+                                             triggered=self.onFoldRightSidebarTriggered)
         self.toolbar.addAction(self.fold_right_pane)
 
     def onFoldLeftSidebarTriggered(self):
@@ -56,19 +60,19 @@ class BaseTab(QtWidgets.QWidget):
 
         if self.left_pane_folded:
             self.left_pane.hide()
-            self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
+            self.fold_left_pane.setIcon(theme_icon_manager.get_icon(':sidebar-unfold-line'))
         else:
             self.left_pane.show()
-            self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+            self.fold_left_pane.setIcon(theme_icon_manager.get_icon(':sidebar-fold-line'))
 
     def onFoldRightSidebarTriggered(self):
         self.right_pane_folded = not self.right_pane_folded
 
         if self.right_pane_folded:
             self.right_pane.hide()
-            self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+            self.fold_right_pane.setIcon(theme_icon_manager.get_icon(':sidebar-fold-line'))
         else:
             self.right_pane.show()
-            self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
+            self.fold_right_pane.setIcon(theme_icon_manager.get_icon(':sidebar-unfold-line'))
      
     
