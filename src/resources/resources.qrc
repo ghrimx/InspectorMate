@@ -98,6 +98,7 @@
     <file alias="bar-chart-box-line">icons/remix/bar-chart-box-line.svg</file>
     <file alias="file-upload-line">icons/remix/file-upload-line.svg</file>
     <file alias="table-2">icons/remix/table-2.svg</file>
+    <file alias="find-replace-line">icons/remix/find-replace-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>
