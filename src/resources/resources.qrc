@@ -99,6 +99,8 @@
     <file alias="file-upload-line">icons/remix/file-upload-line.svg</file>
     <file alias="table-2">icons/remix/table-2.svg</file>
     <file alias="find-replace-line">icons/remix/find-replace-line.svg</file>
+    <file alias="input-field">icons/remix/input-field.svg</file>
+    <file alias="t-box-line">icons/remix/t-box-line.svg</file>
 <!-- Custom -->
     <file alias="refkey">icons/custom/refkey.svg</file>
     <file alias="mylogo">icons/custom/mylogo2.svg</file>
