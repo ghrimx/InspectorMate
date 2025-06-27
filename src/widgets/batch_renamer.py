@@ -92,7 +92,7 @@ class BatchRenameWidget(QWidget):
         self.regex_pattern_input = QLineEdit()
         self.regex_pattern_input.setPlaceholderText("Regex Pattern")
         spacer = QLabel('>>>')
-        self.regex_repl_input = QLineEdit()
+        self.regex_repl_input = QLineEdit('')
         self.regex_repl_input.setPlaceholderText("Replacement")
         self.error_regex = QLabel()
         self.error_regex.setFixedHeight(15)
