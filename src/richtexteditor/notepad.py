@@ -60,7 +60,7 @@ class TextEdit(QtWidgets.QTextEdit):
         self.setAutoFormatting(QtWidgets.QTextEdit.AutoFormattingFlag.AutoAll)
 
         self.filename: str = filename
-        base_url = QtCore.QUrl(f"file:///{AppDatabase.activeWorkspace().notebook_path}/")
+        base_url = QtCore.QUrl.fromLocalFile(AppDatabase.activeWorkspace().notebook_path + "/")
         self.document().setBaseUrl(base_url)
 
         self.zoom_factor = 0 #TEST
@@ -165,13 +165,20 @@ class TextEdit(QtWidgets.QTextEdit):
             if not image_saved:
                 logger.error(f"Error saving image saved: {image_path}")
             
-            img_url = QtCore.QUrl.fromLocalFile(f'.images/{uuid}.png')
-            resolved_url = document.baseUrl().resolved(img_url)
+            # img_url = QtCore.QUrl.fromLocalFile(f'/.images/{uuid}.png')
+            relative_url = QtCore.QUrl(".images/" + uuid + ".png")
+            resolved_url = self.document().baseUrl().resolved(relative_url)
+            # resolved_url = document.baseUrl().resolved(img_url)
 
             document.addResource(QtGui.QTextDocument.ResourceType.ImageResource, resolved_url, image)
 
             # insert image with relative path for web browser
-            cursor.insertImage(QtGui.QImage(image), img_url.toString())
+            image_format = QtGui.QTextImageFormat()
+            image_format.setName(relative_url.toString())  # Must match the resource key
+            # image_format.setWidth(image.width())
+            # image_format.setHeight(image.height())
+            # cursor.insertImage(QtGui.QImage(image), img_url.toString())
+            cursor.insertImage(image_format)
 
             # insert image as base64 string
             # img = QtGui.QImage(image)
@@ -1059,7 +1066,10 @@ class Notepad(QtWidgets.QWidget):
         fmt.setFontUnderline(True)
         if icon != "":
             img = QtGui.QTextImageFormat()
-            img.setName(f"data:image/png;base64,{icon}")
+            img.setWidth(24.0)
+            img.setHeight(24.0)
+            img.setName(f"data:image/svg+xml;base64,{icon}")
+            # img.setName(f"data:image/png;base64,{icon}")
             self.active_mdi_child().textCursor().insertImage(img)
             self.active_mdi_child().textCursor().insertText(f" {signage.refkey} {signage.title}", fmt)
         else:
