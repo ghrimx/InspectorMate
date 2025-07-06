@@ -1,11 +1,13 @@
 import base64
 import logging
 import html2text
-
+from functools import partial
 from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
 from signage.signage_style import TABLE_STYLE
 from widgets.treeview import TreeView
 from theme_manager import theme_icon_manager
+
+from utilities import config as mconf
 
 logger = logging.getLogger(__name__)
 
@@ -19,106 +21,66 @@ class SignageTreeView(TreeView):
         updateOwner = Signal(str)
         updateType = Signal()
 
-    def __init__(self, statuses: dict, owners: list, parent=None):
-        super(SignageTreeView, self).__init__(parent=parent)
+    def __init__(self, statuses: dict, parent=None):
+        super(SignageTreeView, self).__init__(parent)
         self.signals = self.Signals()
-        self.context_menu = QtWidgets.QMenu(self)
+        self.signage_status = statuses
         
         # Context Menu
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.contextMenuEvent)
-        self.createAction(statuses, owners)
         self.setStyleSheet(TABLE_STYLE)
 
     def focusOutEvent(self, a0):
         return super().focusOutEvent(a0)      
-
-    def createAction(self, statuses: dict = None, owners: list = None):
-        self.action_delete_rows = QtGui.QAction(theme_icon_manager.get_icon(":delete-bin2"),
-                                                "Delete",
-                                                self,
-                                                triggered=self.signals.delete)
-
-        # self.action_openLink = QtGui.QAction(theme_icon_manager.get_icon(":link-m"),
-        #                                      "Open Link",
-        #                                      self,
-        #                                      triggered=self.openLink)
-
-        # Status menu
-        self.status_menu = QtWidgets.QMenu("Status", self)
-        if statuses is not None:
-            for signage_status in statuses.values():
-                action_update_status = self.status_menu.addAction(signage_status.name)
-                action_update_status.setData(signage_status)
-            self.status_menu.triggered.connect(self.handleUpdateActionSignal)
-
-        # Owner menu
-        self.owner_menu = QtWidgets.QMenu("Owner", self)
-        if owners is not None:
-            for owner in owners:
-                self.owner_menu.addAction(owner)
-            self.owner_menu.triggered.connect(self.handleUpdateActionSignal)
-
-        self.action_resetfilter = QtGui.QAction(theme_icon_manager.get_icon(":filter-off-line"),
-                                                "Reset filters",
-                                                self,
-                                                triggered=self.signals.resetFilters)
-        self.action_expandAll = QtGui.QAction(theme_icon_manager.get_icon(":expand-vertical-line"),
-                                                "Expand All",
-                                                self,
-                                                triggered=self.expandAll)
-        self.action_collapseAll = QtGui.QAction(theme_icon_manager.get_icon(":collapse-vertical-line"),
-                                                "Collapse All",
-                                                self,
-                                                triggered=self.collapseAll)
-
-        # self.selectionModel().selectionChanged.connect(self.updateAction)
-
-        self.updateAction()
+            
+    @Slot(str)
+    def updateOwner(self, owner: str):
+        self.signals.updateOwner.emit(owner)
     
-    @Slot(QtGui.QAction)
-    def handleUpdateActionSignal(self, action: QtGui.QAction):
-        sender = self.sender()
-
-        match sender:
-            case self.status_menu:
-                status = action.data()
-                self.signals.updateStatus.emit(status.uid)
-            case self.owner_menu:
-                value = action.text()
-                self.signals.updateOwner.emit(value)
-            case _:
-                return
+    @Slot(str)
+    def updateSignageStatus(self, status_id):
+        self.signals.updateStatus.emit(status_id)
 
     def contextMenuEvent(self, event: QtGui.QMouseEvent):
         """Creating a context menu"""
-        self.context_menu.addMenu(self.status_menu)
-        self.context_menu.addMenu(self.owner_menu)
-        self.context_menu.addAction(self.action_delete_rows)
-        # self.context_menu.addAction(self.action_openLink)
-        self.context_menu.addAction(self.action_resetfilter)
-        self.context_menu.addAction(self.action_expandAll)
-        self.context_menu.addAction(self.action_collapseAll)
-        self.context_menu.exec(QtGui.QCursor().pos())
+        context_menu = QtWidgets.QMenu(self)
 
-    def updateAction(self):
-        pass
-        # if len(self.selectedRows()) == 1:
-        #     self.action_delete_rows.setEnabled(True)
-        #     self.owner_menu.setEnabled(True)
-        #     self.status_menu.setEnabled(True)
+        status_menu = QtWidgets.QMenu("Status", self)
+        context_menu.addMenu(status_menu)
 
-        # if len(self.selectedRows()) == 0:
-        #     self.action_delete_rows.setEnabled(False)
-        #     self.action_openLink.setEnabled(False)
-        #     self.owner_menu.setEnabled(False)
-        #     self.status_menu.setEnabled(False)
+        for status in self.signage_status.values():
+            action = status_menu.addAction(status.name)
+            action.setData(status.uid)
+            slot_func = partial(self.updateSignageStatus, status.uid)
+            action.triggered.connect(slot_func)
 
-        # if len(self.selectedRows()) > 1:
-        #     self.action_delete_rows.setEnabled(True)
-        #     self.action_openLink.setEnabled(False)
-        #     self.owner_menu.setEnabled(True)
-        #     self.status_menu.setEnabled(True)
+        owner_menu = QtWidgets.QMenu("Owner", self)
+        context_menu.addMenu(owner_menu)
+        owners: list = mconf.settings.value("owners", [], "QStringList")
+        for owner in owners:
+            action = owner_menu.addAction(owner)
+            slot_func = partial(self.updateOwner, owner)
+            action.triggered.connect(slot_func)
+
+        # context_menu.addAction(theme_icon_manager.get_icon(":link-m"),
+        #                        "Open Link",
+        #                        self.openLink)
+
+        context_menu.addAction(theme_icon_manager.get_icon(":filter-off-line"),
+                               "Reset filters",
+                               self.signals.resetFilters)
+        context_menu.addAction(theme_icon_manager.get_icon(":expand-vertical-line"),
+                               "Expand All",
+                               self.expandAll)
+        context_menu.addAction(theme_icon_manager.get_icon(":collapse-vertical-line"),
+                               "Collapse All",
+                               self.collapseAll)
+        context_menu.addAction(theme_icon_manager.get_icon(":delete-bin2"),
+                               "Delete",
+                               self.signals.delete)
+        
+        context_menu.exec(QtGui.QCursor().pos())
 
     def selectedProxyIndexes(self) -> list[QtCore.QModelIndex]:
         """Return a list of all selected indexes mapped to the source model indexes"""

@@ -85,7 +85,7 @@ class SignageTab(BaseTab):
 
     def setupCentralWidget(self):
         """Init Central Widget"""
-        self.table = SignageTreeView(self._model.cacheSignageStatus(), self._model.cacheSignageOwners(), self)
+        self.table = SignageTreeView(self._model.cacheSignageStatus(), self)
         self.proxy_model = SignageProxyModel(self._model)
         self.proxy_model.setDynamicSortFilter(False)
         self.table.setModel(self.proxy_model)
