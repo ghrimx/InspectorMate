@@ -56,6 +56,8 @@ class PdfView(QtWidgets.QGraphicsView):
 
     def __init__(self, parent=None):
         super(PdfView, self).__init__(parent)
+        screen = self.window().windowHandle().screen()
+        self.dpr = screen.devicePixelRatio() if screen else 1.0
 
         # Mouse coordinate
         self.mouse_interaction = MouseInteraction()
@@ -138,6 +140,7 @@ class PdfView(QtWidgets.QGraphicsView):
         fitzpix_bytes = fitzpix.tobytes()
         pixmap = QtGui.QPixmap()
         r = pixmap.loadFromData(fitzpix_bytes)
+        pixmap.setDevicePixelRatio(self.dpr)
         if not r:
             logger.error(f"Cannot load pixmap from data")
         return pixmap
@@ -153,7 +156,8 @@ class PdfView(QtWidgets.QGraphicsView):
     
     def createFitzpix(self, page_dlist: pymupdf.DisplayList, zoom_factor=1) -> pymupdf.Pixmap:
         """Create pymupdf.Pixmap applying zoom factor"""
-        mat = pymupdf.Matrix(zoom_factor, zoom_factor)  # zoom matrix
+        zf = zoom_factor * self.dpr
+        mat = pymupdf.Matrix(zf, zf)  # zoom matrix
         fitzpix: pymupdf.Pixmap = page_dlist.get_pixmap(alpha=0, matrix=mat)
         return fitzpix
     
@@ -199,6 +203,7 @@ class PdfView(QtWidgets.QGraphicsView):
 
         fitzpix = self.createFitzpix(page_dlist, self._zoom_selector.zoomFactor)
         pixmap = self.toQPixmap(fitzpix)
+        
         self.page_pixmap_item.setPixmap(pixmap)
 
         self.renderLinks(pno)

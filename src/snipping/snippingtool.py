@@ -14,6 +14,7 @@ class Capture(QtWidgets.QWidget):
         
         screen = self.screen()
         primary_screen = QtGui.QGuiApplication.primaryScreen()
+        
 
         # Extend the widget area in multi monitors setup
         self.setGeometry(primary_screen.geometry().x(),
@@ -29,10 +30,11 @@ class Capture(QtWidgets.QWidget):
         self.setCursor(Qt.CursorShape.CrossCursor)
 
         # Delay the capture to ensure init
-        QtCore.QTimer.singleShot(500, self.garbwindow)
+        QtCore.QTimer.singleShot(500, self.grabwindow)
     
-    def garbwindow(self):
+    def grabwindow(self):
         screen = self.screen()
+        self.dpr = screen.devicePixelRatio()
         self.pixmap = screen.grabWindow(0)
 
     def mousePressEvent(self, event: QtGui.QMouseEvent | None) -> None:
@@ -61,7 +63,10 @@ class Capture(QtWidgets.QWidget):
             y = abs(self.screen().geometry().y()) - abs(y)
             y = abs(y)
         
-        crop_area = QtCore.QRect(x, y, rect.width(), rect.height())
+        crop_area = QtCore.QRect(int(x * self.dpr), 
+                                 int(y * self.dpr), 
+                                 int(rect.width() * self.dpr),
+                                 int(rect.height() * self.dpr))
 
         return crop_area
 
