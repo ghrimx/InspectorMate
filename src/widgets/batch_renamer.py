@@ -2,11 +2,42 @@ import sys
 import re
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QFileIconProvider,
-                             QPushButton, QLineEdit, QLabel, QListWidget, QGroupBox, QRadioButton,
+                             QPushButton, QLineEdit, QLabel, QListWidget, QGroupBox, QRadioButton, QProgressDialog,
                              QFileDialog, QMessageBox, QCheckBox, QComboBox, QSplitter, QAbstractItemView, QListWidgetItem)
-from PyQt6.QtCore import Qt, QItemSelectionModel, pyqtSlot as Slot, QFileInfo
+from PyQt6.QtCore import Qt, QObject, QItemSelectionModel, pyqtSlot as Slot, pyqtSignal as Signal, QFileInfo, QThreadPool, QRunnable
 from PyQt6.QtGui import QIntValidator
 from typing import Literal
+
+
+class RenameWorkerSignals(QObject):
+    finished = Signal(list, int, int)
+    error = Signal()
+    result = Signal()
+    progress = Signal(int)
+
+class RenameWorker(QRunnable):
+    def __init__(self, rename_pairs):
+        super().__init__()
+        self.rename_pairs = rename_pairs
+        self.signals = RenameWorkerSignals()
+    
+    def run(self):
+        
+        renamed_count = 0
+        errors = []
+
+        src: Path
+        dst: Path
+        for src, dst in self.rename_pairs:
+            try:
+                if src != dst and not dst.exists():
+                    src.rename(dst)
+                    renamed_count += 1
+                    self.signals.progress.emit(renamed_count)
+            except Exception as e:
+                errors.append(f"Failed to rename {src.name}:\n{e}")
+        else:
+            self.signals.finished.emit(errors, len(self.rename_pairs), renamed_count)
 
 class BatchRenameWidget(QWidget):
     def __init__(self, parent = None):
@@ -17,6 +48,8 @@ class BatchRenameWidget(QWidget):
         self.files = []
         self.rename_pairs = []
         self.target_type: Literal['file', 'foler', 'both'] = 'file'
+
+        self.threadpool = QThreadPool()
 
         layout = QVBoxLayout(self)
 
@@ -296,18 +329,24 @@ class BatchRenameWidget(QWidget):
         if not self.rename_pairs:
             return
 
-        renamed_count = 0
+        self.progress_dialog = QProgressDialog("Renaming files...", None, 0, len(self.rename_pairs), self)
+        self.progress_dialog.setWindowTitle("Progress")
+        self.progress_dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.progress_dialog.setMinimumDuration(0)
 
-        for src, dst in self.rename_pairs:
-            try:
-                if src != dst and not dst.exists():
-                    src.rename(dst)
-                    renamed_count += 1
-            except Exception as e:
-                QMessageBox.critical(self, "Rename Error", f"Failed to rename {src.name}:\n{e}")
+        worker = RenameWorker(self.rename_pairs)
+        worker.signals.progress.connect(self.progress_dialog.setValue)
+        worker.signals.finished.connect(self.onRenameFinished)
+        worker.signals.finished.connect(self.progress_dialog.cancel)
+        self.threadpool.tryStart(worker)
 
-        QMessageBox.information(self, "Done", f"Renamed {renamed_count} item(s).")
+    @Slot(list, int, int)
+    def onRenameFinished(self, errors: list, to_rename, renamed_count):
+        if len(errors) > 0:
+            err = '\n'.join(errors)
+            QMessageBox.critical(self, "Rename Error", err)
 
+        QMessageBox.information(self, "Done", f"Renamed {renamed_count} of {to_rename}.")
         self.rename_pairs.clear()
         self.files.clear()
         self.src_list.clear()
