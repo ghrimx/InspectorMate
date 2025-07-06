@@ -161,33 +161,23 @@ class TextEdit(QtWidgets.QTextEdit):
             createFolder(image_dir)
             image_path = f'{image_dir}/{uuid}.png'
 
-            image_saved = QtGui.QImage(image).save(image_path, "PNG", 100)
-            if not image_saved:
+            img = QtGui.QImage(image)
+            if not img.save(image_path, "PNG", 100):
                 logger.error(f"Error saving image saved: {image_path}")
             
-            # img_url = QtCore.QUrl.fromLocalFile(f'/.images/{uuid}.png')
             relative_url = QtCore.QUrl(".images/" + uuid + ".png")
             resolved_url = self.document().baseUrl().resolved(relative_url)
-            # resolved_url = document.baseUrl().resolved(img_url)
 
             document.addResource(QtGui.QTextDocument.ResourceType.ImageResource, resolved_url, image)
 
             # insert image with relative path for web browser
             image_format = QtGui.QTextImageFormat()
             image_format.setName(relative_url.toString())  # Must match the resource key
-            # image_format.setWidth(image.width())
-            # image_format.setHeight(image.height())
-            # cursor.insertImage(QtGui.QImage(image), img_url.toString())
+
+            device_ratio = QtWidgets.QApplication.primaryScreen().devicePixelRatio()
+            image_format.setWidth(img.width() / device_ratio)
+            image_format.setHeight(img.height() / device_ratio)
             cursor.insertImage(image_format)
-
-            # insert image as base64 string
-            # img = QtGui.QImage(image)
-            # buffer = QtCore.QBuffer()
-            # buffer.open(QtCore.QIODevice.OpenModeFlag.WriteOnly)
-            # img.save(buffer, 'PNG')
-            # img_str = b64encode(buffer.data()).decode("utf8")
-
-            # cursor.insertHtml(f'<p><img alt="" src="data:image/png;base64,{img_str}"/></p>')
 
             # Add citation below the image
             # Get the Pixmap cacheKey from the Qsettings if cachekeys match then insert the citation along with the image
