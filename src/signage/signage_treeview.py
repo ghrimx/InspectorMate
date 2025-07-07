@@ -212,7 +212,7 @@ class PublicNoteDelegate(QtWidgets.QStyledItemDelegate):
 
             if raw_note.strip() != "":
                 option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-                option.icon = theme_icon_manager.get_icon(':quill-pen-fill-red')
+                option.icon = QtGui.QIcon(':quill-pen-fill-red')
                 option.text = ""
                 option.decorationSize = QtCore.QSize(self.parent().columnWidth(index.column()), self.parent().header().geometry().height())
                 option.displayAlignment = QtCore.Qt.AlignmentFlag.AlignHCenter|QtCore.Qt.AlignmentFlag.AlignVCenter
