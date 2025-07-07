@@ -276,27 +276,23 @@ class TitleColumnDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, model: ProxyModel, parent=None):
         super().__init__(parent=parent)
         self._model = model
+        self.cache_icon = {}
+        self.icon_provider = QtWidgets.QFileIconProvider()
 
     def initStyleOption(self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex) -> None:
         super().initStyleOption(option, index)
 
         title = index.data(Qt.ItemDataRole.DisplayRole)
-        doc_type_idx = index.sibling(index.row(), self._model.sourceModel().Fields.Type.index)
-        icon_binary: str = doc_type_idx.data()
-        pix = QtGui.QPixmap()
+        file_path = index.sibling(index.row(), self._model.sourceModel().Fields.Filepath.index).data(Qt.ItemDataRole.DisplayRole)
 
-        if icon_binary is not None:
-            try:
-                icon_bytearray = base64.b64decode(icon_binary)
-            except UnicodeError:
-                logger.error('Cannot decode string to bytes')
-            else:
-                pix.loadFromData(icon_bytearray)
-
-        doc_type_icon = QtGui.QIcon(pix)
+        if file_path not in self.cache_icon:
+            icon = self.icon_provider.icon(QtCore.QFileInfo(file_path)) 
+            self.cache_icon[file_path] = icon
+        else:
+            icon = self.cache_icon[file_path]
 
         option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-        option.icon = doc_type_icon
+        option.icon = icon
         option.text = title
 
     def createEditor(self, *args):

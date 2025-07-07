@@ -26,7 +26,7 @@ class SignageTreeView(TreeView):
         self.signals = self.Signals()
         self.signage_status = statuses
         
-        # Context Menu
+        # Context Menu 
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.contextMenuEvent)
         self.setStyleSheet(TABLE_STYLE)
