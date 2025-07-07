@@ -189,22 +189,6 @@ class MainWindow(QtWidgets.QMainWindow):
         app_menu.addAction(QtGui.QAction("Extra Large", self, triggered=lambda: self.setAppFont(13.0)))
         self.view_menu.addMenu(app_menu) 
 
-        color_theme_menu = QtWidgets.QMenu("Color Theme", self.menubar)
-        self.light_action = QtGui.QAction("Light", self, triggered=lambda: self.setColorTheme(Theme.LIGHT))
-        self.light_action.setCheckable(True)
-        self.dark_action = QtGui.QAction("Dark", self, triggered=lambda: self.setColorTheme(Theme.DARK))
-        self.dark_action.setCheckable(True)
-
-        if theme_icon_manager.get_theme() == Theme.DARK:
-            self.dark_action.setChecked(True)
-        else:
-            self.light_action.setChecked(True)
-
-        color_theme_menu.addAction(self.light_action)
-        color_theme_menu.addAction(self.dark_action)
-        self.view_menu.addMenu(color_theme_menu)
-
-
         # Tools Menu
         self.tools_menu = self.menubar.addMenu("Tools")
         self.tools_menu.addAction(QtGui.QAction("Merge Excel files",
@@ -279,16 +263,6 @@ class MainWindow(QtWidgets.QMainWindow):
         font.setPointSizeF(fontsize)
         QtWidgets.QApplication.setFont(font)
         mconf.settings.setValue("app_fontsize", fontsize)
-
-    @Slot()
-    def setColorTheme(self, theme: Theme):
-        if theme == Theme.DARK:
-            self.light_action.setChecked(False)
-        elif theme == Theme.LIGHT:
-            self.dark_action.setChecked(False)
-
-        mconf.settings.setValue("app_color_theme", theme.value)
-        theme_icon_manager.set_theme(theme)
 
     @Slot()
     def addRemoveOwner(self):

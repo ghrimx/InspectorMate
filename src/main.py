@@ -6,7 +6,7 @@ from qtpy import (QtWidgets, QtGui, Qt)
 from database.database import AppDatabase
 from mainwindow import MainWindow
 from utilities import config as mconf
-from theme_manager import theme_icon_manager, Theme
+from theme_manager import theme_icon_manager, Theme, is_dark_mode
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +36,7 @@ def main() -> int:
         app_font.setPointSizeF(float(app_fontsize))
         app.setFont(app_font)
 
-    color_theme = mconf.settings.value("app_color_theme")
-    theme = Theme.DARK if color_theme == Theme.DARK.value else Theme.LIGHT
+    theme = Theme.DARK if is_dark_mode(app) else Theme.LIGHT
     theme_icon_manager.set_theme(theme)
 
     # Splashscreen

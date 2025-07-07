@@ -10,6 +10,10 @@ class Theme(Enum):
     LIGHT = "light"
     DARK = "dark"
 
+def is_dark_mode(app: QApplication):
+    style_hints = app.styleHints()
+    scheme = style_hints.colorScheme()
+    return scheme == Qt.ColorScheme.Dark
 
 def get_theme_color(theme: Theme) -> QColor:
     if theme == Theme.DARK:
