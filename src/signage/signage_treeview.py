@@ -3,9 +3,9 @@ import logging
 import html2text
 from functools import partial
 from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
-from signage.signage_style import TABLE_STYLE
+from signage.signage_style import TABLE_STYLE, DARK_TABLE_STYLE
 from widgets.treeview import TreeView
-from theme_manager import theme_icon_manager
+from theme_manager import theme_icon_manager, Theme
 
 from utilities import config as mconf
 
@@ -29,7 +29,10 @@ class SignageTreeView(TreeView):
         # Context Menu 
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.contextMenuEvent)
-        self.setStyleSheet(TABLE_STYLE)
+        if theme_icon_manager.get_theme() == Theme.DARK:
+            self.setStyleSheet(DARK_TABLE_STYLE)
+        else:
+            self.setStyleSheet(TABLE_STYLE)
 
     def focusOutEvent(self, a0):
         return super().focusOutEvent(a0)      
