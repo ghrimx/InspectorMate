@@ -17,13 +17,13 @@ from qtpy import (QtWidgets, QtCore, QtGui)
 def walkFolder(path: str | Path) -> set[Path]:
     """
     Scan the directory tree and return a list of file
-    Ignore files that starts with a dot
+    Ignore files that starts with a dot or tilt char
     """
     
     file_list = set()
 
     for entry in Path(path).iterdir():
-        if not entry.name.startswith('.') and entry.is_file():
+        if not entry.name.startswith('.') and not entry.name.startswith('~') and entry.is_file():
             file_list.add(WindowsPath(entry))
         elif entry.is_dir():
             file_list.update(walkFolder(entry))
