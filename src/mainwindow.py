@@ -134,7 +134,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                       """)
         self.setStatusBar(self.status_bar)
         status_signal.status_message.connect(self.status_bar.showMessage)
-        self.status_bar.showMessage('Ready!', 30000)
+        self.status_bar.showMessage('✔️ Ready!', 30000)
 
     def setupDialogs(self):
         self.merge_excel_dialog: MergeExcelDialog = None
