@@ -32,6 +32,8 @@ from models.model import SummaryModel
 
 from listinsight import ListinsightWidget
 
+from utilities.decorators import status_message, status_signal
+
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -123,9 +125,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setupDialogs()
 
         # StatusBar
-        # self.status_bar = QtWidgets.QStatusBar(self)
-        # self.setStatusBar(self.status_bar)
-        # self.status_bar.showMessage('Ready', 5000)
+        self.status_bar = QtWidgets.QStatusBar(self)
+        self.status_bar.setStyleSheet("""
+                                      QStatusBar {
+                                            border-top: 2px solid #0078d7;
+                                            background-color: #f8f8f8; /* optional */
+                                        }
+                                      """)
+        self.setStatusBar(self.status_bar)
+        status_signal.status_message.connect(self.status_bar.showMessage)
+        self.status_bar.showMessage('Ready!', 30000)
 
     def setupDialogs(self):
         self.merge_excel_dialog: MergeExcelDialog = None
@@ -422,6 +431,7 @@ class MainWindow(QtWidgets.QMainWindow):
             elif err:
                 QtWidgets.QMessageBox.information(self, "unpackPDF -- Success", "PDF successfully unpacked")
 
+    @status_message('Workspace updated...', 10000)
     @Slot()
     def onWorkspaceChanged(self):
         self.evidence_tab.refresh()
@@ -436,7 +446,9 @@ class MainWindow(QtWidgets.QMainWindow):
         dockwidget: QtAds.CDockWidget
         for dockwidget in self.doc_viewers.copy().values():
             dockwidget.closeDockWidget()
+        
 
+    @status_message('Importing from OneNote...')
     @Slot()
     def open_onenote_picker(self):
         onenote_warning = QtWidgets.QMessageBox.warning(self,

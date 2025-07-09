@@ -22,8 +22,11 @@ from widgets.basetab import BaseTab
 from widgets.waitingspinner import WaitingSpinner
 
 from utilities.config import settings
+from utilities.decorators import status_signal
 
 from qt_theme_manager import theme_icon_manager
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -288,6 +291,7 @@ class SignageTab(BaseTab):
         if signage.type == 0:
             self.sigSignageTreemodelChanged.emit()
         
+        status_signal.status_message.emit("Signage created!", 10000)
         return True
 
     @Slot(int, str, str)

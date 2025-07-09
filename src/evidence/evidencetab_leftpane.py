@@ -104,7 +104,7 @@ class SignageFilter(QtWidgets.QWidget):
 
         self.count_request = QtWidgets.QLabel()
         self.count_request.setText(str(self._proxy_model.rowCount()))
-        form.addRow("Total request:", self.count_request)
+        form.addRow("count:", self.count_request)
 
         self.table = QtWidgets.QTableView()
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Make ReadOnly
@@ -126,6 +126,7 @@ class SignageFilter(QtWidgets.QWidget):
         vbox.addWidget(self.table)
 
         self._model.dataChanged.connect(self.updateCounter)
+        self._model.modelReset.connect(self.updateCounter)
 
     @Slot()
     def updateCounter(self):
