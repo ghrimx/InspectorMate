@@ -129,7 +129,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.status_bar.setStyleSheet("""
                                       QStatusBar {
                                             border-top: 2px solid #0078d7;
-                                            background-color: #f8f8f8; /* optional */
                                         }
                                       """)
         self.setStatusBar(self.status_bar)
