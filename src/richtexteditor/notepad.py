@@ -6,10 +6,10 @@ from datetime import datetime
 from qtpy import (QtWidgets, QtCore, QtGui, Slot, Signal)
 
 from database.database import AppDatabase
-from database.dbstructure import Signage, SignageType
+from database.dbstructure import Signage
 
 from utilities.config import settings
-from utilities.utils import (hexuuid, timeuuid, createFolder, queryFileID)
+from utilities.utils import (hexuuid, timeuuid, createFolder)
 from utilities import config as mconf
 from qt_theme_manager import theme_icon_manager
 
