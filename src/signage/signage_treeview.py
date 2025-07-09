@@ -5,7 +5,7 @@ from functools import partial
 from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
 from signage.signage_style import TABLE_STYLE, DARK_TABLE_STYLE
 from widgets.treeview import TreeView
-from theme_manager import theme_icon_manager, Theme
+from qt_theme_manager import theme_icon_manager, Theme
 
 from utilities import config as mconf
 

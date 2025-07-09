@@ -1,7 +1,7 @@
 from qtpy import (Qt, QtWidgets, QtGui)
 
 from widgets.toolbar import ToolBar
-from theme_manager import theme_icon_manager
+from qt_theme_manager import theme_icon_manager
 
 class BaseTab(QtWidgets.QWidget):
     def __init__(self, parent=None):

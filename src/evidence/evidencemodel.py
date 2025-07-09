@@ -8,7 +8,7 @@ from database.database import AppDatabase, Cache, Document
 from models.model import (BaseRelationalTableModel, DatabaseField)
 from utilities import (utils, config as mconf)
 
-from theme_manager import theme_icon_manager, Theme
+from qt_theme_manager import theme_icon_manager, Theme
 
 logger = logging.getLogger(__name__)
 

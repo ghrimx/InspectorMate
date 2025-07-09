@@ -21,7 +21,7 @@ from utilities.utils import mergeExcelFiles, find_match
 
 from onenote.msonenote import OnenoteModel, OE
 
-from theme_manager import theme_icon_manager, Theme
+from qt_theme_manager import theme_icon_manager, Theme
 
 logger = logging.getLogger(__name__)
 

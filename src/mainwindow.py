@@ -1,6 +1,5 @@
 from qtpy import (QtCore, Qt, QtGui, QtWidgets, QtAds, Slot)
-from resources import qrc_resources
-from theme_manager import theme_icon_manager, Theme
+from qt_theme_manager import theme_icon_manager, Theme
 import logging
  
 from signage.signage_model import SignageTreeModel

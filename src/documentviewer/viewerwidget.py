@@ -11,6 +11,8 @@ from widgets.richtexteditor import RichTextEditor
 
 from snipping.snippingtool import Capture
 
+from qt_theme_manager import theme_icon_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,7 +121,7 @@ class ViewerWidget(QtWidgets.QWidget):
         self._toolbar = QtWidgets.QToolBar(parent)
 
         # Fold Left Pane
-        self.fold_left_pane = QtGui.QAction(QtGui.QIcon(':sidebar-fold-line'), "Fold left pane", self)
+        self.fold_left_pane = QtGui.QAction(theme_icon_manager.get_icon(':sidebar-fold-line'), "Fold left pane", self)
         self.fold_left_pane.triggered.connect(self.onFoldLeftSidebarTriggered)
         self._toolbar.addAction(self.fold_left_pane)
 
@@ -134,14 +136,14 @@ class ViewerWidget(QtWidgets.QWidget):
 
         # Create Child Signage
         # Action inserted to toolbar after init
-        self.action_create_child_signage = QtGui.QAction(QtGui.QIcon(":signpost-line-child"),
+        self.action_create_child_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line-child"),
                                                          "Create Child Signage (Ctrl + N)",
                                                          self,
                                                          triggered = self.createChildSignage)
         self.action_create_child_signage.setShortcut(QtGui.QKeySequence("Ctrl+N"))
 
         # Fold Right Pane
-        self.fold_right_pane = QtGui.QAction(QtGui.QIcon(":sidebar-unfold-line"), "Fold right pane", self)
+        self.fold_right_pane = QtGui.QAction(theme_icon_manager.get_icon(":sidebar-unfold-line"), "Fold right pane", self)
         self.fold_right_pane.triggered.connect(self.onFoldRightSidebarTriggered)
         self._toolbar.addAction(self.fold_right_pane)
 
@@ -183,10 +185,10 @@ class ViewerWidget(QtWidgets.QWidget):
 
         if self.left_pane_folded:
             self.left_pane.hide()
-            self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
+            self.fold_left_pane.setIcon(theme_icon_manager.get_icon(':sidebar-unfold-line'))
         else:
             self.left_pane.show()
-            self.fold_left_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+            self.fold_left_pane.setIcon(theme_icon_manager.get_icon(':sidebar-fold-line'))
     
     @Slot()
     def onFoldRightSidebarTriggered(self):
@@ -194,10 +196,10 @@ class ViewerWidget(QtWidgets.QWidget):
 
         if self.right_pane_folded:
             self.right_pane.hide()
-            self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-fold-line'))
+            self.fold_right_pane.setIcon(theme_icon_manager.get_icon(':sidebar-fold-line'))
         else:
             self.right_pane.show()
-            self.fold_right_pane.setIcon(QtGui.QIcon(':sidebar-unfold-line'))
+            self.fold_right_pane.setIcon(theme_icon_manager.get_icon(':sidebar-unfold-line'))
 
     @Slot()
     def cite(self, citation):

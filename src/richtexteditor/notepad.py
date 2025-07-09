@@ -11,7 +11,7 @@ from database.dbstructure import Signage, SignageType
 from utilities.config import settings
 from utilities.utils import (hexuuid, timeuuid, createFolder, queryFileID)
 from utilities import config as mconf
-from theme_manager import theme_icon_manager
+from qt_theme_manager import theme_icon_manager
 
 logger = logging.getLogger(__name__)
 

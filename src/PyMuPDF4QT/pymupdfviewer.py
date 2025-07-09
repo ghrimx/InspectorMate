@@ -18,7 +18,7 @@ from PyMuPDF4QT.QtPymuPdf import (OutlineModel,
                                   LinkBox)
 from PyMuPDF4QT.annotation import AnnotationModel, AnnotationDelegate
 
-from resources import qrc_resources
+from qt_theme_manager import theme_icon_manager
 
 from utilities.utils import timeuuid
 
@@ -432,18 +432,18 @@ class PdfViewer(ViewerWidget):
         self.mouse_action_group.triggered.connect(self.triggerMouseAction)
 
         # Text Selector
-        self.text_selector = QtGui.QAction(QtGui.QIcon(':text-block'), "Text Selection", self)
+        self.text_selector = QtGui.QAction(theme_icon_manager.get_icon(':text-block'), "Text Selection", self)
         self.text_selector.setCheckable(True)
         self.text_selector.setShortcut(QtGui.QKeySequence("ctrl+alt+t"))
         self.text_selector.triggered.connect(self.triggerMouseAction)
 
         # Snipping tool
-        self.capture_area = QtGui.QAction(QtGui.QIcon(":capture_area"), "Capture Area (Ctrl+Alt+S)", self)
+        self.capture_area = QtGui.QAction(theme_icon_manager.get_icon(":capture_area"), "Capture Area (Ctrl+Alt+S)", self)
         self.capture_area.setShortcut(QtGui.QKeySequence("Ctrl+Alt+S"))
         self.capture_area.triggered.connect(lambda: self.capture(self.citation()))
         
         # MarkPen
-        self.mark_pen = QtGui.QAction(QtGui.QIcon(':mark_pen'), "Mark Text", self)
+        self.mark_pen = QtGui.QAction(theme_icon_manager.get_icon(':mark_pen'), "Mark Text", self)
         self.mark_pen.setCheckable(True)
         self.mark_pen.triggered.connect(lambda: self.triggerMouseAction)
         
@@ -455,10 +455,10 @@ class PdfViewer(ViewerWidget):
         self.zoom_selector = self.pdfview.zoomSelector()
         
         # Zoom
-        self.action_fitwidth = QtGui.QAction(QtGui.QIcon(':expand-width-fill'), "Fit Width", self)
+        self.action_fitwidth = QtGui.QAction(theme_icon_manager.get_icon(':expand-width-fill'), "Fit Width", self)
         self.action_fitwidth.triggered.connect(self.fitwidth)
 
-        self.action_fitheight = QtGui.QAction(QtGui.QIcon(':expand-height-line'), "Fit Height", self)
+        self.action_fitheight = QtGui.QAction(theme_icon_manager.get_icon(':expand-height-line'), "Fit Height", self)
         self.action_fitheight.triggered.connect(self.fitheight)
         
         # Zoom In/Out
@@ -467,16 +467,16 @@ class PdfViewer(ViewerWidget):
         zoom_out.triggered.connect(self.pdfview.zoomOut)
 
         # Rotate
-        self.rotate_anticlockwise = QtGui.QAction(QtGui.QIcon(":anticlockwise"), "Rotate left", self)
+        self.rotate_anticlockwise = QtGui.QAction(theme_icon_manager.get_icon(":anticlockwise"), "Rotate left", self)
         self.rotate_anticlockwise.setToolTip("Rotate anticlockwise")
         self.rotate_anticlockwise.triggered.connect(lambda: self.pdfview.setRotation(-90))
 
-        self.rotate_clockwise = QtGui.QAction(QtGui.QIcon(":clockwise"), "Rotate right", self)
+        self.rotate_clockwise = QtGui.QAction(theme_icon_manager.get_icon(":clockwise"), "Rotate right", self)
         self.rotate_clockwise.setToolTip("Rotate clockwise")
         self.rotate_clockwise.triggered.connect(lambda: self.pdfview.setRotation(90))
 
         # Citation
-        self.action_cite = QtGui.QAction(QtGui.QIcon(":double-quotes"), "Copy citation (Ctrl+Alt+C)", self)
+        self.action_cite = QtGui.QAction(theme_icon_manager.get_icon(":double-quotes"), "Copy citation (Ctrl+Alt+C)", self)
         self.action_cite.setShortcut(QtGui.QKeySequence("Ctrl+Alt+C"))
         self.action_cite.setToolTip("Copy citation (Ctrl+Alt+C)")
         self.action_cite.triggered.connect(lambda: self.cite(self.citation()))

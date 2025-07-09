@@ -4,6 +4,8 @@ from enum import Enum
 
 from qtpy import QtCore, QtGui, QtWidgets, Slot, Signal
 
+from qt_theme_manager import theme_icon_manager
+
 
 class ZoomSelector(QtWidgets.QWidget):
 
@@ -30,9 +32,9 @@ class ZoomSelector(QtWidgets.QWidget):
             self._selector.addItem(zoom_level)
         self._selector.currentTextChanged.connect(self.onCurrentTextChanged)
         self._selector.lineEdit().editingFinished.connect(self._editingFinished)
-        self.action_zoom_in = QtGui.QAction(QtGui.QIcon(":zoom-in"), "Zoom In", self)
+        self.action_zoom_in = QtGui.QAction(theme_icon_manager.get_icon(":zoom-in"), "Zoom In", self)
         self.action_zoom_in.setToolTip("Zoom In")
-        self.action_zoom_out = QtGui.QAction(QtGui.QIcon(":zoom-out"), "Zoom Out", self)
+        self.action_zoom_out = QtGui.QAction(theme_icon_manager.get_icon(":zoom-out"), "Zoom Out", self)
         self.action_zoom_out.setToolTip("Zoom Out")
         return self.action_zoom_in, self.action_zoom_out, self._selector
 
@@ -116,12 +118,12 @@ class PageNavigator(QtWidgets.QWidget):
         # self.pagecount_label.setFixedWidth(40)
 
         self.previous_btn = QtWidgets.QToolButton(parent)
-        self.previous_btn.setIcon(QtGui.QIcon(':arrow-up-s-line'))
+        self.previous_btn.setIcon(theme_icon_manager.get_icon(':arrow-up-s-line'))
         self.previous_btn.setIconSize(icon_size)
         self.previous_btn.clicked.connect(self.previous)
 
         self.next_btn = QtWidgets.QToolButton(parent)
-        self.next_btn.setIcon(QtGui.QIcon(':arrow-down-s-line'))
+        self.next_btn.setIcon(theme_icon_manager.get_icon(':arrow-down-s-line'))
         self.next_btn.setIconSize(icon_size)
         self.next_btn.clicked.connect(self.next)
 

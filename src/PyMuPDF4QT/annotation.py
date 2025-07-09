@@ -1,9 +1,11 @@
 import logging
-from qtpy import QtCore, QtSql, QtWidgets, QtGui
+from qtpy import QtCore, QtSql, QtWidgets
 
 from models.model import BaseRelationalTableModel, DatabaseField
 
 logger = logging.getLogger(__name__)
+
+from qt_theme_manager import theme_icon_manager
 
 
 class AnnotationModel(BaseRelationalTableModel):
@@ -75,6 +77,6 @@ class AnnotationDelegate(QtWidgets.QStyledItemDelegate):
             content = f"page {pno+1}" 
 
         option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-        option.icon = QtGui.QIcon(":text-block")
+        option.icon = theme_icon_manager.get_icon(":text-block")
         option.text = content
 

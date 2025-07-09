@@ -13,7 +13,7 @@ from delegates.delegate import (NoteColumnDelegate, ReadOnlyDelegate)
 
 from utilities.utils import (open_file, queryFileNameByID)
 
-from theme_manager import theme_icon_manager
+from qt_theme_manager import theme_icon_manager
 
 logger = logging.getLogger(__name__)
 

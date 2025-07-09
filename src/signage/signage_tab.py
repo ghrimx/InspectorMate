@@ -23,7 +23,7 @@ from widgets.waitingspinner import WaitingSpinner
 
 from utilities.config import settings
 
-from theme_manager import theme_icon_manager
+from qt_theme_manager import theme_icon_manager
 
 logger = logging.getLogger(__name__)
 
