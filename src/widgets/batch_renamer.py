@@ -225,11 +225,13 @@ class BatchRenameWidget(QWidget):
     def select_files(self):
         self.clear_form()
 
+        default_path = str(Path.home() / "Downloads")
+
         if (self.target_type == "folder" 
             or self.target_type == "both"
             or self.folder_only_checkbox.isChecked()):
 
-            dir_path = QFileDialog.getExistingDirectory(self, "Select Directory")
+            dir_path = QFileDialog.getExistingDirectory(self, "Select Directory", default_path)
 
             if dir_path:
                 base = Path(dir_path)
@@ -251,7 +253,7 @@ class BatchRenameWidget(QWidget):
             else:
                 return # no selection
         else:
-            file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Files")
+            file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Files", default_path)
             if file_paths:
                 self.files = [Path(p) for p in file_paths]
             else:
