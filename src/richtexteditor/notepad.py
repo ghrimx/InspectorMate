@@ -503,38 +503,6 @@ class TextEdit(QtWidgets.QTextEdit):
         cursor.endEditBlock()
 
     @Slot()
-    def addHorizontalLine2(self):
-        cursor = self._cursor
-
-        # Save the cursor position and selection
-        start = cursor.selectionStart()
-        end = cursor.selectionEnd()
-
-        if not cursor.hasSelection():
-            # Select the current line if no text is selected
-            cursor.select(QtGui.QTextCursor.SelectionType.LineUnderCursor)
-
-        selected_text = cursor.selectedText()
-
-        hr = r'<hr style="width=2px;"/>'
-
-        if selected_text == "":
-            underlined_text = hr
-        else:
-            underlined_text = f'<p>{selected_text}{hr}</p>'
-
-        cursor.beginEditBlock()
-        cursor.removeSelectedText()
-        cursor.insertHtml(underlined_text)
-        cursor.endEditBlock()
-
-        # Restore the cursor position
-        cursor.setPosition(start, QtGui.QTextCursor.MoveMode.MoveAnchor)
-        cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
-        self.setFocus()
-        self.setTextCursor(cursor)
-
-    @Slot()
     def addHorizontalLine(self):
         cursor = self._cursor
         if not cursor.hasSelection():
@@ -543,12 +511,14 @@ class TextEdit(QtWidgets.QTextEdit):
 
         selected_text = cursor.selectedText()
 
+        hr = '<hr style="height:0px; border:1px solid gray; border-width: 100%;" />'
+
         if selected_text.strip() == "":
-            cursor.insertHtml(r'<hr style="width=2px;"/>')
+            cursor.insertHtml(hr)
         else:
             cursor.movePosition(QtGui.QTextCursor.MoveOperation.EndOfLine, QtGui.QTextCursor.MoveMode.MoveAnchor, 1)
             cursor.movePosition(QtGui.QTextCursor.MoveOperation.Down, QtGui.QTextCursor.MoveMode.MoveAnchor, 1)
-            cursor.insertHtml(r'<hr style="width=2px;"/>')
+            cursor.insertHtml(hr)
 
     @Slot()
     def text_color(self):
