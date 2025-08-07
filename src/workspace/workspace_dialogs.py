@@ -250,6 +250,7 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         if self.onenote_manager is None:
             self.onenote_manager = OnenotePickerDialog(self)
 
+        self.onenote_manager.model.refresh()
         self.onenote_manager.show()
 
         if not isinstance(self.onenote_manager, Exception):

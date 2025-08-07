@@ -19,10 +19,28 @@ namespace = ON15_SCHEMA
 
 def executeScript(section_id: str) -> dict | None:
     ps1 = msconf.app_data_path.joinpath("onenotescrapper.ps1").as_posix()
+    outfile = ""
+
     try:
-        process = subprocess.run(["powershell", "-File", ps1, section_id], shell=True, check=True, capture_output=True, text=True)
+        process = subprocess.run(
+            ["powershell", 
+             "-File", ps1, 
+             "-SectionId", section_id, 
+             "-OutputJson", outfile],
+             shell=True,
+             check=True,
+             capture_output=True,
+             encoding="utf-8"
+             )
+    except subprocess.CalledProcessError as e:
+        logger.error(f"CalledProcessError={e}")
+        logger.error(f"Command: {e.cmd}")
+        logger.error(f"Return Code: {e.returncode}")
+        logger.error(f"Output: {e.output}")
+        logger.error(f"Error Output: {e.stderr}")
+        return
     except Exception as e:
-        logger.error(f"Fail to execute script. Error={e}")
+        logger.error(f"Unexepected error occured. Error: {e}")
         return
 
     try:

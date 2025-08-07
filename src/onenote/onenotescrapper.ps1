@@ -1,8 +1,12 @@
 # Params
-param ( [Parameter(Mandatory=$true)] [string]$SectionID ) 
+param (
+    [Parameter(Mandatory = $true)][string]$SectionID,
+    [string]$OutputJson
+)
 
 # ====== Global variables ======
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 $PSDefaultParameterValues['Get-Content:Encoding'] = 'utf8'
 
@@ -73,7 +77,7 @@ $OneNote.GetHierarchy($SectionID, [Microsoft.Office.InterOp.OneNote.HierarchySco
 
 # Fetch and process pages
 foreach($i in $Hierarchy.Section.Page){
-	  DebugPrint($i.ID)
+	  #DebugPrint($i.ID)
 
     $page = New-Object cPage
     $page.ID = $i.ID
@@ -127,4 +131,9 @@ foreach($i in $Hierarchy.Section.Page){
 }
 
 # Export
-$data | ConvertTo-Json -Depth 5
+$data | ConvertTo-Json -Depth 5 
+
+IF (![string]::IsNullOrWhitespace($OutputJson)) {
+  $utf8NoBOM = New-Object System.Text.UTF8Encoding $false
+  [System.IO.File]::WriteAllText($OutputJson, ($data | ConvertTo-Json -Depth 10), $utf8NoBOM)
+}
