@@ -1,3 +1,4 @@
+# version 2.0
 # Params
 param (
     [Parameter(Mandatory = $true)][string]$SectionID,
