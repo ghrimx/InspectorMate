@@ -132,9 +132,10 @@ class EvidenceModel(BaseRelationalTableModel):
         self.init_cache_files()
 
     def init_cache_files(self):
+        self.cache_files.clear()
         for row in range(self.rowCount()):
             filepath = self.index(row, self.Fields.Filepath.index).data(Qt.ItemDataRole.DisplayRole)
-            self.cache_files.add(WindowsPath(filepath))
+            self.cache_files.add(Path(filepath))
         
         logger.info(f"Success! - Cache's size={len(self.cache_files)}")
 
@@ -241,8 +242,15 @@ class EvidenceModel(BaseRelationalTableModel):
 
     def deleteRows(self, indexes: list[QtCore.QModelIndex]) -> bool:
         """Delete a row from the model and refresh the model"""
-        for index in indexes:
-            self.removeRow(index.row())
+        if not indexes:
+            return False
+
+        rows = sorted({index.row() for index in indexes}, reverse=True)
+        for row in rows:
+            filepath = self.index(row, self.Fields.Filepath.index).data(Qt.ItemDataRole.DisplayRole)
+            if filepath:
+                self.cache_files.discard(Path(filepath))
+            self.removeRow(row, QtCore.QModelIndex())
 
         self.refresh()
 
@@ -261,6 +269,12 @@ class EvidenceModel(BaseRelationalTableModel):
         return refkey
 
     def autoRefKey(self, rows: list[int]):
+        """
+            - Get filepath from the fileid
+            - Get the Refkey from the filepath
+            - Update the filepath and the refkey 
+        """
+
         regex = mconf.default_regex if mconf.settings.value("regex") is None else mconf.settings.value("regex")
 
         for row in rows:
@@ -275,12 +289,14 @@ class EvidenceModel(BaseRelationalTableModel):
             if refkey != "":
                 record = self.record(row)
                 record.setValue(self.Fields.Refkey.index, refkey)
+                record.setValue(self.Fields.Filepath.index, filepath)
                 self.setRecord(row, record)
 
         res = self.submitAll()
 
         if res:
             self.refresh()
+            self.init_cache_files()
 
     def updateRefKey(self, rows: list[int], refkey: str):
         if refkey != "":
@@ -340,7 +356,8 @@ class EvidenceModel(BaseRelationalTableModel):
         hheaders = ["Count"]
 
         # Init data table
-        data = [[0] * len(hheaders) for i in range(len(vheaders))] 
+        # data = [[0] * len(hheaders) for i in range(len(vheaders))] 
+        data = [[0] for _ in range(len(vheaders))] 
 
         # Populate data table
         for row in range(self.rowCount()):

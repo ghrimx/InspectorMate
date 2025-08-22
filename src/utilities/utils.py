@@ -7,8 +7,6 @@ import pandas as pd
 import fitz
 from zipfile import ZipFile
 
-from os import popen
-from pathlib import Path
 from base64 import (b64decode, b64encode)
 
 from qtpy import (QtWidgets, QtCore, QtGui)
@@ -24,7 +22,7 @@ def walkFolder(path: str | Path) -> set[Path]:
 
     for entry in Path(path).iterdir():
         if not entry.name.startswith('.') and not entry.name.startswith('~') and entry.is_file():
-            file_list.add(WindowsPath(entry))
+            file_list.add(Path(entry))
         elif entry.is_dir():
             file_list.update(walkFolder(entry))
 
@@ -140,13 +138,13 @@ def hex2image(img_str: str) -> tuple:
     
 def queryFileID(path: str) -> str:
     """Return the windows fileid from the filepath"""
-    fileid = popen(fr'fsutil file queryfileid "{path}"').read()
+    fileid = os.popen(fr'fsutil file queryfileid "{path}"').read()
     return fileid[11:].strip()
 
 def queryFileNameByID(fileid: str) -> str:
     """Return the path as string from a windows file id"""
     
-    path = popen(fr'fsutil file queryfilenamebyid C:\ {fileid}').read()
+    path = os.popen(fr'fsutil file queryfilenamebyid C:\ {fileid}').read()
     return path[39:].strip()
 
 def extractAll(archive: str, dest: str = ""):
