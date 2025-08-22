@@ -271,7 +271,6 @@ class EvidenceModel(BaseRelationalTableModel):
                 filepath = Path(utils.queryFileNameByID(fileid)).as_posix()
 
             refkey = self.findRefKeyFromPath(filepath, regex)
-            logger.debug(refkey)
 
             if refkey != "":
                 record = self.record(row)
