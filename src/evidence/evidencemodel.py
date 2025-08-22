@@ -266,7 +266,12 @@ class EvidenceModel(BaseRelationalTableModel):
         for row in rows:
             filepath = self.data(self.index(row, self.Fields.Filepath.index), Qt.ItemDataRole.DisplayRole)
 
+            if not Path(filepath).is_file():
+                fileid = self.data(self.index(row, self.Fields.FileID.index), Qt.ItemDataRole.DisplayRole)
+                filepath = Path(utils.queryFileNameByID(fileid)).as_posix()
+
             refkey = self.findRefKeyFromPath(filepath, regex)
+            logger.debug(refkey)
 
             if refkey != "":
                 record = self.record(row)
