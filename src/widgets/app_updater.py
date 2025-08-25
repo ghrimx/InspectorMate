@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 GITHUB_RELEASES = "https://api.github.com/repos/ghrimx/InspectorMate/releases"
-ALLOW_PRERELEASE = True
 
 def get_latest_release() -> str | None:
     try:
