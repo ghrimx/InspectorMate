@@ -86,6 +86,7 @@ def main() -> int:
     splash.finish(mainwindow)
 
     mainwindow.loadSettings()
+    mainwindow.checkUpdate()
 
     return sys.exit(app.exec())
 

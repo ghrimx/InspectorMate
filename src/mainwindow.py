@@ -33,12 +33,14 @@ from models.model import SummaryModel
 from listinsight import ListinsightWidget
 
 from utilities.decorators import status_message, status_signal
+from widgets.app_updater import Updater, get_latest_release
 
 
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.force_close = False
         self.signage_treemodel = SignageTreeModel()
         self.evidence_model = EvidenceModel()
         self.viewer_factory = ViewerFactory(self.evidence_model, self)
@@ -134,6 +136,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setStatusBar(self.status_bar)
         status_signal.status_message.connect(self.status_bar.showMessage)
         self.status_bar.showMessage('✔️ Ready!', 30000)
+
+    def checkUpdate(self):
+        release = get_latest_release()
+        if release:
+            self.updater = Updater(release, self)
+            self.updater.show()
 
     def setupDialogs(self):
         self.merge_excel_dialog: MergeExcelDialog = None
@@ -483,14 +491,45 @@ class MainWindow(QtWidgets.QMainWindow):
         self.signage_summary_model.loadData(s_data, s_vheaders, s_hheaders)
         self.evidence_summary_model.loadData(e_data, e_vheaders, e_hheaders)
 
+    # def closeEvent(self, event: QtCore.QEvent):
+    #     msg = "Are you sure you want to exit the program?"
+    #     reply = QtWidgets.QMessageBox.question(self,
+    #                                            f'Closing {mconf.config.app_name}',
+    #                                            msg,
+    #                                            QtWidgets.QMessageBox.StandardButton.Ok,
+    #                                            QtWidgets.QMessageBox.StandardButton.No)
+
+    #     if reply == QtWidgets.QMessageBox.StandardButton.Ok:
+    #         logging.shutdown()
+    #         self.evidence_tab.close()
+    #         self.signage_tree_tab.close()
+    #         self.notepad_tab.close_all()
+    #         AppDatabase.close()
+    #         event.accept()
+    #     else:
+    #         event.ignore()
 
     def closeEvent(self, event: QtCore.QEvent):
+        # If forced programmatic close, skip confirmation
+
+        if self.force_close:
+            logging.shutdown()
+            self.evidence_tab.close()
+            self.signage_tree_tab.close()
+            self.notepad_tab.close_all()
+            AppDatabase.close()
+            event.accept()
+            return
+
+        # Normal behavior: ask user for confirmation
         msg = "Are you sure you want to exit the program?"
-        reply = QtWidgets.QMessageBox.question(self,
-                                               f'Closing {mconf.config.app_name}',
-                                               msg,
-                                               QtWidgets.QMessageBox.StandardButton.Ok,
-                                               QtWidgets.QMessageBox.StandardButton.No)
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            f'Closing {mconf.config.app_name}',
+            msg,
+            QtWidgets.QMessageBox.StandardButton.Ok | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No
+        )
 
         if reply == QtWidgets.QMessageBox.StandardButton.Ok:
             logging.shutdown()
