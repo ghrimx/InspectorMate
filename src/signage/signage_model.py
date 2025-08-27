@@ -211,13 +211,6 @@ class SignageTreeModel(TreeModel):
         
         return True, "Data Loaded!"
 
-    # TEST #TODO
-    def printTitle(self):
-        for row in range(self.rowCount()):
-            index = self.index(row, self.Fields.Title.index)
-            item = self.getItem(index)
-            print(item.data(self.Fields.Title.index))
-
     def insertSignage(self, signage: Signage,
                       parent: QtCore.QModelIndex = QtCore.QModelIndex,
                       update_treemodel: bool = True) -> tuple[bool, str]:
@@ -422,6 +415,12 @@ class SignageTreeModel(TreeModel):
 
         id = self.data(treemodel_index.sibling(treemodel_index.row(), self.Fields.ID.index),
                        QtCore.Qt.ItemDataRole.DisplayRole)
+        source = self.data(treemodel_index.sibling(treemodel_index.row(), self.Fields.Source.index),
+                       QtCore.Qt.ItemDataRole.DisplayRole)
+        
+        oe_id = source.split(',')[-1].split(':')[-1][1:-2].strip()
+        if oe_id in self.cache_oe_signage:
+            self.cache_oe_signage.remove(oe_id)
 
         source_index = self.getSourceIndexById(id)
 
@@ -748,7 +747,7 @@ class SignageTreeModel(TreeModel):
             if application == "OneNote":
                 object_id = source.get("object_id")
                 self.cache_oe_signage.append(object_id)
-
+        
     def loadFromOnenote(self):
         """Get a list of tag from OneNote module"""
         oe_section_id = AppDatabase.activeWorkspace().OESectionID()
