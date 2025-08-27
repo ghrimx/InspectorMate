@@ -1,5 +1,6 @@
 import sys, os, requests, subprocess
 import logging
+from packaging.version import Version
 from PyQt6.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QLabel,
     QProgressBar, QMessageBox,
@@ -8,7 +9,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from utilities.config import config
-
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def get_latest_release() -> str | None:
 
         latest_version = latest_release["tag_name"]
 
-        if latest_version != config.app_version:
+        if Version(latest_version) > Version(config.app_version):
             logger.info(f"New release available. Version: {latest_version}")
             return latest_release
         else:
