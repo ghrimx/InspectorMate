@@ -139,13 +139,12 @@ def hex2image(img_str: str) -> tuple:
 def queryFileID(path: str) -> str:
     """Return the windows fileid from the filepath"""
     fileid = os.popen(fr'fsutil file queryfileid "{path}"').read()
-    return fileid[11:].strip()
+    return fileid.split(' ')[-1].strip()
 
 def queryFileNameByID(fileid: str) -> str:
-    """Return the path as string from a windows file id"""
-    
+    """Return the path as string from a windows file id"""  
     path = os.popen(fr'fsutil file queryfilenamebyid C:\ {fileid}').read()
-    return path[39:].strip()
+    return path.split('?')[-1][1:].strip()
 
 def extractAll(archive: str, dest: str = ""):
     
