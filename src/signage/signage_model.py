@@ -770,7 +770,7 @@ class SignageTreeModel(TreeModel):
                 continue
 
             signage = Signage()
-            signage.title = html2text(tag.text)
+            signage.title = html2text(tag.text).strip()
             signage.refkey = find_match(signage.title, regex)
             signage_type: SignageType = AppDatabase.cache_signage_type.get(tag.type.lower().strip())
 
