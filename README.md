@@ -108,9 +108,20 @@ Right-click within the "Explorer" or "Notebook" panel to open the context menu. 
 
 ![write-note]
 
-### Data Visualization and Data Analysis
+### Data Analysis with ListInsight
+
+***ListInsight*** makes it easy to explore and work with your data.
+You can load datasets from Excel, CSV, or Parquet files and quickly filter or shortlist records.
+
+Key features:
+* Saved filters → create filters once and reuse them anytime
+* Enable/disable filters → toggle filters on or off without losing your setup
+* Cross-dataset filtering → apply the same filter across multiple datasets for easy comparison
+* Shortlisting → quickly mark and focus on the records that matter most
 
 #### Load data
+
+
 
 ![load-data]
 
@@ -122,7 +133,7 @@ Right-click within the "Explorer" or "Notebook" panel to open the context menu. 
 
 ![filter-data]
 
-#### Shortlist
+#### Shortlisting
 
 ![shortlist-record]
 
