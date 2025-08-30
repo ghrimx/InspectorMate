@@ -108,6 +108,10 @@ Right-click within the "Explorer" or "Notebook" panel to open the context menu. 
 
 ![write-note]
 
+### Data Visualization and Data Analysis
+
+
+
 *For more examples, please refer to the [Documentation](wiki)*
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
