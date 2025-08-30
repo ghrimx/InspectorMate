@@ -110,7 +110,21 @@ Right-click within the "Explorer" or "Notebook" panel to open the context menu. 
 
 ### Data Visualization and Data Analysis
 
+#### Load data
 
+![load-data]
+
+#### Sync selection
+
+![sync-selection]
+
+#### Filtering data
+
+![filter-data]
+
+#### Shortlist
+
+![shortlist-record]
 
 *For more examples, please refer to the [Documentation](wiki)*
 
@@ -265,5 +279,8 @@ The best way to get in touch is to file an issue at https://github.com/ghrimx/In
 [project-status-maintanance]: https://img.shields.io/badge/Project--Status-Maintanance-blue?style=flat-square
 [create-workspace]: images/create-workspace.gif
 [documentation-url]: wiki
-
+[load-data]: images/load-data.gif
+[sync-selection]: images/sync-selection.gif
+[filter-data]: images/filter-data.gif
+[shortlist-record]: images/shortlist-record.gif
 
