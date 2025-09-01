@@ -7,6 +7,7 @@ from signage.signage_style import TABLE_STYLE, DARK_TABLE_STYLE
 from widgets.treeview import TreeView
 from qt_theme_manager import theme_icon_manager, Theme
 
+from signage.signage_model import SignageProxyModel
 from utilities import config as mconf
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,12 @@ class SignageTreeView(TreeView):
             self.setStyleSheet(DARK_TABLE_STYLE)
         else:
             self.setStyleSheet(TABLE_STYLE)
+    
+    def keyPressEvent(self, event: QtGui.QKeyEvent):
+        if event.matches(QtGui.QKeySequence.StandardKey.Copy):
+            self.copy_selected_cells()
+        else:
+            super().keyPressEvent(event)
 
     def focusOutEvent(self, a0):
         return super().focusOutEvent(a0)      
@@ -82,8 +89,50 @@ class SignageTreeView(TreeView):
         context_menu.addAction(theme_icon_manager.get_icon(":delete-bin2"),
                                "Delete",
                                self.signals.delete)
+        context_menu.addAction(theme_icon_manager.get_icon(":file-text-line"),
+                               "Copy",
+                               self.copy_selected_cells)
         
         context_menu.exec(QtGui.QCursor().pos())
+
+    def copy_selected_cells(self):
+        selection_model = self.selectionModel()
+        if not selection_model:
+            return
+
+        model = self.model()
+
+        selected_indexes = selection_model.selectedIndexes()
+        if not selected_indexes:
+            return
+
+        # Sort by row and column
+        selected_indexes.sort(key=lambda idx: (idx.row(), idx.column()))
+
+        # Group by row
+        rows = {}
+        for idx in selected_indexes:
+            rows.setdefault(idx.row(), []).append(idx)
+
+        text_lines = []
+        for row in sorted(rows.keys()):
+            row_indexes = sorted(rows[row], key=lambda x: x.column())
+            min_col, max_col = row_indexes[0].column(), row_indexes[-1].column()
+
+            values = []
+            for col in range(min_col, max_col + 1):
+                idx = model.index(row, col)
+                if idx in row_indexes:
+                    delegate = self.itemDelegateForColumn(col) or self.itemDelegate()
+                    option = QtWidgets.QStyleOptionViewItem()
+                    delegate.initStyleOption(option, idx)
+                    text = option.text  # what is actually drawn
+                    values.append(text)
+                else:
+                    values.append("")  # empty cell
+            text_lines.append("\t".join(values))
+
+        QtWidgets.QApplication.clipboard().setText("\n".join(text_lines))
 
     def selectedProxyIndexes(self) -> list[QtCore.QModelIndex]:
         """Return a list of all selected indexes mapped to the source model indexes"""

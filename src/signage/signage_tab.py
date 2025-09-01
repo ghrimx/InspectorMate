@@ -7,14 +7,9 @@ from qtpy import (QtCore, QtWidgets,QtGui, Slot, Signal)
 
 # Local application/library specific imports.
 from signage.signage_model import SignageTreeModel, SignageProxyModel
-from signage.signage_treeview import (SignageTreeView,
-                                   TitleDelegate,
-                                   TypeDelegate,
-                                   StatusDelegate,
-                                   EvidenceDelegate,
-                                   PublicNoteDelegate,
-                                   PrivateNoteDelegate,
-                                   ProgressBarDelegate)
+from signage.signage_treeview import (SignageTreeView, TitleDelegate, TypeDelegate,
+                                      StatusDelegate, EvidenceDelegate, PublicNoteDelegate,
+                                      PrivateNoteDelegate, ProgressBarDelegate)
 from signage.signage_rightpane_widgets import SignageInfoWidget
 from signage.signage_dialogs import CreateDialog, FilterDialog, ExportDialog, ImportDialog
 
@@ -96,6 +91,7 @@ class SignageTab(BaseTab):
         self.table.sortByColumn(self._model.Fields.ID.index, QtCore.Qt.SortOrder.AscendingOrder)
         self.table.setAutoScroll(False)
         self.table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectItems)
 
         # Hide columns
         for field in self._model.Fields.fields():
