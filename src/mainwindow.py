@@ -31,6 +31,7 @@ from database.dbstructure import SignageType
 from models.model import SummaryModel
 
 from listinsight import ListinsightWidget
+from listinsight.gui import status_signal as listinsight_status_signal
 
 from utilities.decorators import status_message, status_signal
 from widgets.app_updater import Updater, get_latest_release
@@ -136,6 +137,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setStatusBar(self.status_bar)
         status_signal.status_message.connect(self.status_bar.showMessage)
         self.status_bar.showMessage('✔️ Ready!', 30000)
+        listinsight_status_signal.status_message.connect(self.status_bar.showMessage)
 
     def checkUpdate(self):
         release = get_latest_release()
