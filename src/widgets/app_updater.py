@@ -21,7 +21,7 @@ def get_latest_release() -> str | None:
     try:
         
         headers = {"User-Agent": "MyApp/1.0"}  
-        resp = requests.get(feed_url, headers=headers)
+        resp = requests.get(feed_url, headers=headers, proxies={"https": None, "http": None})
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
 
@@ -54,7 +54,7 @@ class Downloader(QThread):
 
     def run(self):
         try:
-            r = requests.get(self.url, stream=True, timeout=10)
+            r = requests.get(self.url, stream=True, timeout=10, proxies={"https": None, "http": None})
             logger.info(f"url:{self.url} - response:{r.status_code}")
             total = int(r.headers.get("content-length", 0))
             downloaded = 0
@@ -66,7 +66,9 @@ class Downloader(QThread):
                         if total > 0:
                             self.progress.emit(int(downloaded * 100 / total))
             self.finished.emit(self.dest)
+
         except Exception as e:
+            logger.error(f"Error:{e}")
             self.finished.emit("ERROR:" + str(e))
 
 
