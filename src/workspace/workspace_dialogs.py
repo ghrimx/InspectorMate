@@ -106,14 +106,17 @@ class WorkspaceManagerDialog(QtWidgets.QDialog):
         else:
             workspace.notebook_path = self.edit_dialog.notebook_path_lineedit.text()
 
-        createFolder(workspace.evidence_path)
-        createFolder(workspace.notebook_path)
-        createFolder(f"{workspace.notebook_path}/.images")
-        createFolder(f"{workspace.rootpath}/ListInsight")
+        self.createChildFolder(workspace)
 
         ok, err = self._model.insertWorkspace(workspace)
 
         return ok, err
+    
+    def createChildFolder(self, workspace: Workspace):
+        createFolder(workspace.evidence_path)
+        createFolder(workspace.notebook_path)
+        createFolder(f"{workspace.notebook_path}/.images")
+        createFolder(f"{workspace.rootpath}/ListInsight")
             
     @Slot(bool)
     def openEditDialog(self, new: bool):
@@ -138,6 +141,7 @@ class WorkspaceManagerDialog(QtWidgets.QDialog):
                 self.edit_dialog.mapper.submit()
                 ok = self._model.refresh()
                 err = "Could not refresh workspace model"
+                self.createChildFolder(self._model.activeWorkspace())
 
             if not ok:
                 msg = QtWidgets.QMessageBox.critical(self,
