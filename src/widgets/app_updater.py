@@ -13,17 +13,20 @@ from utilities.config import config
 logger = logging.getLogger(__name__)
 
 
-GITHUB_RELEASES = "https://github.com/ghrimx/InspectorMate/releases/download/4.1.0a/inspectormate-4.1.0a.exe"
-
 OWNER = "ghrimx"
 REPO = "InspectorMate"
 feed_url = f"https://github.com/{OWNER}/{REPO}/releases.atom"
 
 def get_latest_release() -> str | None:
     try:
-        feed = feedparser.parse(feed_url)
+        
+        headers = {"User-Agent": "MyApp/1.0"}  
+        resp = requests.get(feed_url, headers=headers)
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+
         if not feed.entries:
-            logger.info("No releases found")
+            logger.info(f"No releases found at {feed_url}")
             return None
 
         latest = feed.entries[0]
@@ -33,9 +36,11 @@ def get_latest_release() -> str | None:
         if Version(tag) > Version(config.app_version):
             logger.info(f"\n\tCurrent version: {config.app_version}\n\tNew release available. Version: {tag}")
             return tag
+        
+        logger.info(f"Current version is latest")
 
     except Exception as e:
-        logger.warning("Error", f"Update check failed: {e}")
+        logger.warning(f"Update check failed: {e}")
 
 
 class Downloader(QThread):
