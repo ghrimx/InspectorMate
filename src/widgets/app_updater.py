@@ -50,6 +50,7 @@ class Downloader(QThread):
     def run(self):
         try:
             r = requests.get(self.url, stream=True, timeout=10)
+            logger.info(f"url:{self.url} - response:{r.status_code}")
             total = int(r.headers.get("content-length", 0))
             downloaded = 0
             with open(self.dest, "wb") as f:
