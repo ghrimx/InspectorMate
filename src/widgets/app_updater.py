@@ -1,4 +1,4 @@
-import sys, os, requests, subprocess
+import sys, os, requests, subprocess, feedparser
 import logging
 from packaging.version import Version
 from PyQt6.QtWidgets import (
@@ -13,23 +13,29 @@ from utilities.config import config
 logger = logging.getLogger(__name__)
 
 
-GITHUB_RELEASES = "https://api.github.com/repos/ghrimx/InspectorMate/releases"
+GITHUB_RELEASES = "https://github.com/ghrimx/InspectorMate/releases/download/4.1.0a/inspectormate-4.1.0a.exe"
+
+OWNER = "ghrimx"
+REPO = "InspectorMate"
+feed_url = f"https://github.com/{OWNER}/{REPO}/releases.atom"
 
 def get_latest_release() -> str | None:
     try:
-        releases = requests.get(GITHUB_RELEASES, timeout=5).json()
-        latest_release = releases[0]
-
-        latest_version = latest_release["tag_name"]
-
-        if Version(latest_version) > Version(config.app_version):
-            logger.info(f"New release available. Version: {latest_version}")
-            return latest_release
-        else:
+        feed = feedparser.parse(feed_url)
+        if not feed.entries:
+            logger.info("No releases found")
             return None
+
+        latest = feed.entries[0]
+        # Extract version/tag from the entry ID (last part of the URL)
+        tag = latest.id.rsplit("/", 1)[-1]
+
+        if Version(tag) > Version(config.app_version):
+            logger.info(f"\n\tCurrent version: {config.app_version}\n\tNew release available. Version: {tag}")
+            return tag
+
     except Exception as e:
         logger.warning("Error", f"Update check failed: {e}")
-        return None
 
 
 class Downloader(QThread):
@@ -68,7 +74,7 @@ class Updater(QDialog):
         self.setFixedSize(350, 150)
 
         vbox = QVBoxLayout(self)
-        self.label = QLabel(f"Version {release["tag_name"]} is available.\nDo you want to install it?")
+        self.label = QLabel(f"Version {release} is available.\nDo you want to install it?")
         vbox.addWidget(self.label)
 
         self.progress = QProgressBar()
@@ -84,20 +90,15 @@ class Updater(QDialog):
         vbox.addWidget(buttonBox)
 
     def start_update(self):
-        # find installer asset
-        assets = self.release.get("assets", [])
-        for a in assets:
-            if a["name"].endswith(".exe"):
-                url = a["browser_download_url"]
-                installer = os.path.join(os.getenv("TEMP"), a["name"])
-                self.progress.setVisible(True)
-                self.downloader = Downloader(url, installer)
-                self.downloader.progress.connect(self.progress.setValue)
-                self.downloader.finished.connect(self.run_installer)
-                self.downloader.start()
-                self.label.setText("Downloading update...")
-                return
-        QMessageBox.warning(self, "Error", "No installer found in release.")
+        url = f"https://github.com/{OWNER}/{REPO}/releases/download/{self.release}/inspectormate-{self.release}.exe"
+        installer = os.path.join(os.getenv("TEMP"),f"inspectormate-{self.release}.exe")
+        self.progress.setVisible(True)
+        self.downloader = Downloader(url, installer)
+        self.downloader.progress.connect(self.progress.setValue)
+        self.downloader.finished.connect(self.run_installer)
+        self.downloader.start()
+        self.label.setText("Downloading update...")
+
 
     def run_installer(self, path):
         if path.startswith("ERROR:"):
