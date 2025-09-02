@@ -697,7 +697,7 @@ class Notepad(QtWidgets.QWidget):
 
         # Link
         self.action_edit_link = QtGui.QAction(theme_icon_manager.get_icon(":link-m"),
-                                              "Insert/Edit link (Ctrl+Alt+K)",
+                                              "Insert link (Ctrl+Alt+K)",
                                               self,
                                               triggered=self.editLink)
 
