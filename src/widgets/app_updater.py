@@ -12,15 +12,19 @@ from utilities.config import config
 
 logger = logging.getLogger(__name__)
 
+os.environ["HTTP_PROXY"] = ""
+os.environ["HTTPS_PROXY"] = ""
+os.environ["ALL_PROXY"] = ""
+
 
 OWNER = "ghrimx"
 REPO = "InspectorMate"
 feed_url = f"https://github.com/{OWNER}/{REPO}/releases.atom"
+headers = {"User-Agent": "MyApp/1.0"}  
 
 def get_latest_release() -> str | None:
     try:
         
-        headers = {"User-Agent": "MyApp/1.0"}  
         resp = requests.get(feed_url, headers=headers, proxies={"https": None, "http": None})
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
@@ -54,8 +58,10 @@ class Downloader(QThread):
 
     def run(self):
         try:
-            r = requests.get(self.url, stream=True, timeout=10, proxies={"https": None, "http": None})
+            r = requests.get(self.url, stream=True, timeout=10, proxies={}, headers=headers)
             logger.info(f"url:{self.url} - response:{r.status_code}")
+            logger.debug(f"Proxy for 'https://github.com' = {requests.utils.get_environ_proxies("https://github.com")}")
+            logger.debug(f"Proxy for 'https://api.github.com' = {requests.utils.get_environ_proxies("https://api.github.com")}")
             total = int(r.headers.get("content-length", 0))
             downloaded = 0
             with open(self.dest, "wb") as f:
