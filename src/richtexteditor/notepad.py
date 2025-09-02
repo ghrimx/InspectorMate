@@ -1047,6 +1047,7 @@ class Notepad(QtWidgets.QWidget):
         form.addRow("Paragraph:", QtWidgets.QLabel("Ctrl+Alt+P"))
         form.addRow("Insert Bullet list:", QtWidgets.QLabel("Ctrl+;"))
         form.addRow("Insert Checkbox:", QtWidgets.QLabel("Ctrl+Alt+;"))
+        form.addRow("Insert Link:", QtWidgets.QLabel("Ctrl+Alt+K"))
 
         dlg.exec()
 
