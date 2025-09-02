@@ -51,6 +51,26 @@ class TableMimeType:
         html_table = '<table>\n' + '\n'.join(['  <tr>' + ''.join(f'<td>{item}</td>' for item in row) + '</tr>' for row in data_list]) + '\n</table>'
 
 
+class LinkEditor(QtWidgets.QDialog):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+        self.setWindowTitle("Link Editor")
+        formlayout = QtWidgets.QFormLayout()
+        self.setLayout(formlayout)
+
+        self.display_text = QtWidgets.QLineEdit()
+        self.url_link = QtWidgets.QLineEdit()
+
+        formlayout.addRow(QtWidgets.QLabel("Text"), self.display_text)
+        formlayout.addRow(QtWidgets.QLabel("Link"), self.url_link)
+
+        buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        self.buttonBox = QtWidgets.QDialogButtonBox(buttons)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        formlayout.addRow(QtWidgets.QLabel(), self.buttonBox)
+
 
 class TextEdit(QtWidgets.QTextEdit):
 
@@ -58,7 +78,7 @@ class TextEdit(QtWidgets.QTextEdit):
         super(TextEdit, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setAutoFormatting(QtWidgets.QTextEdit.AutoFormattingFlag.AutoAll)
-
+ 
         self.filename: str = filename
         base_url = QtCore.QUrl.fromLocalFile(AppDatabase.activeWorkspace().notebook_path + "/")
         self.document().setBaseUrl(base_url)
@@ -81,6 +101,21 @@ class TextEdit(QtWidgets.QTextEdit):
         self.setObjectName(self.userFriendlyFilename())
 
         self.connectSignals()
+
+    def mouseMoveEvent(self, e):
+        self.anchor = self.anchorAt(e.pos())
+        if self.anchor:
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        else:
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.ArrowCursor)
+        return super().mouseMoveEvent(e)
+    
+    def mouseReleaseEvent(self, e):
+        if e.button() == QtCore.Qt.MouseButton.LeftButton:
+            if self.anchor:
+                QtGui.QDesktopServices.openUrl(QtCore.QUrl(self.anchor))
+                self.anchor = None
+        return super().mouseReleaseEvent(e)
     
     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
         """Supplemented the standard context menu"""
@@ -660,6 +695,12 @@ class Notepad(QtWidgets.QWidget):
         self.action_line_spacing_1_5 = QtGui.QAction("1.5", self, triggered=lambda: self.setLineSpacing(LineSpacing.NORMAL_HALF))
         self.action_line_spacing_double = QtGui.QAction("2.0", self, triggered=lambda: self.setLineSpacing(LineSpacing.DOUBLE))
 
+        # Link
+        self.action_edit_link = QtGui.QAction(theme_icon_manager.get_icon(":link-m"),
+                                              "Insert/Edit link (Ctrl+Alt+K)",
+                                              self,
+                                              triggered=self.editLink)
+
         self.action_insertSignage = QtGui.QAction(theme_icon_manager.get_icon(':signpost-line'), "Insert Signage", self, triggered=self.createSignage)
 
         self.action_help = QtGui.QAction(theme_icon_manager.get_icon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
@@ -753,6 +794,7 @@ class Notepad(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_blockquote)
         self.toolbar.addAction(self.action_bullet)
         self.toolbar.addAction(self.action_checkbox)
+        self.toolbar.addAction(self.action_edit_link)
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.action_insertSignage)
 
@@ -784,6 +826,7 @@ class Notepad(QtWidgets.QWidget):
         self.shortcut_insertLine = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+L"), self, self.addHorizontalLine, ambiguousMember=self.addHorizontalLine, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_bulletList = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+;"), self, self.bulletList, ambiguousMember=self.bulletList, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_checkbox = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+;"), self, self.addCheckbox, ambiguousMember=self.addCheckbox, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_link = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+K"), self, self.editLink, ambiguousMember=self.editLink, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
     @Slot()
     def update_window_menu(self):
@@ -1006,6 +1049,23 @@ class Notepad(QtWidgets.QWidget):
         form.addRow("Insert Checkbox:", QtWidgets.QLabel("Ctrl+Alt+;"))
 
         dlg.exec()
+
+    @Slot()
+    def editLink(self):
+        dlg = LinkEditor()
+        if dlg.exec():
+            text = dlg.display_text.text().strip()
+            url = dlg.url_link.text().strip()
+
+            cursor = self.active_mdi_child().textCursor()
+            link = QtGui.QTextCharFormat()
+            link.setAnchor(True)
+            link.setAnchorHref(f"{url}")
+            link.setAnchorNames([f"{text}"])
+            link.setForeground(QtCore.Qt.GlobalColor.blue)
+            link.setFontUnderline(True)
+            cursor.insertText(text, link)
+
 
     @Slot()
     def createSignage(self):
