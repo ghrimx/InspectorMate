@@ -59,9 +59,17 @@ class Downloader(QThread):
     def run(self):
         try:
             r = requests.get(self.url, stream=True, timeout=10, proxies={}, headers=headers)
+            
             logger.info(f"url:{self.url} - response:{r.status_code}")
             logger.debug(f"Proxy for 'https://github.com' = {requests.utils.get_environ_proxies("https://github.com")}")
             logger.debug(f"Proxy for 'https://api.github.com' = {requests.utils.get_environ_proxies("https://api.github.com")}")
+
+            if r.status_code == 404:
+                err = "ERROR: 404 - File not found"
+                logger.error(err)
+                self.finished.emit(err)
+                return
+
             total = int(r.headers.get("content-length", 0))
             downloaded = 0
             with open(self.dest, "wb") as f:
@@ -71,11 +79,20 @@ class Downloader(QThread):
                         downloaded += len(chunk)
                         if total > 0:
                             self.progress.emit(int(downloaded * 100 / total))
+            
+            logger.info("Download completed")
+
+            if os.path.getsize(self.dest) < 500_000:
+                logger.error(f"ERROR: Downloaded file too small, probably not the installer\n\tfilepath:{self.dest}")
+                self.finished.emit("ERROR: Downloaded file too small, probably not the installer")
+                return
+
             self.finished.emit(self.dest)
 
         except Exception as e:
-            logger.error(f"Error:{e}")
-            self.finished.emit("ERROR:" + str(e))
+            err = f"ERROR: Download failed (HTTP {r.status_code}) - error = {e}"
+            logger.error(err)
+            self.finished.emit(err)
 
 
 class Updater(QDialog):
@@ -119,9 +136,17 @@ class Updater(QDialog):
             QMessageBox.critical(self, "Download Failed", path)
             self.close()
             return
+        
+        logger.info("Running installer...")
 
         self.label.setText("Running installer...")
-        subprocess.Popen([path])
+        try:
+            subprocess.Popen([path, "/VERYSILENT"],
+                             close_fds=True,)
+        except Exception as e:
+            logger.error(e)
+
+
         self.label.setText("The installer is running.\nThe app will now close.")
         self._parent.force_close = True
         self._parent.close()
