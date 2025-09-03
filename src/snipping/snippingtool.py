@@ -27,10 +27,12 @@ class Capture(QtWidgets.QWidget):
         self.rubber_band = QtWidgets.QRubberBand(QtWidgets.QRubberBand.Shape.Rectangle, self)
         self.origin = QtCore.QPoint()
 
-        self.setCursor(Qt.CursorShape.CrossCursor)
-
         # Delay the capture to ensure init
         QtCore.QTimer.singleShot(500, self.grabwindow)
+    
+    def showEvent(self, event):
+        self.setCursor(Qt.CursorShape.CrossCursor)
+        super().showEvent(event)
     
     def grabwindow(self):
         screen = self.screen()
@@ -91,6 +93,7 @@ class Capture(QtWidgets.QWidget):
 
             self.setCursor(Qt.CursorShape.ArrowCursor)
             self.close()
+        super().mouseReleaseEvent(event)
 
     def capturekey(self) -> int:
         return self._cache_key
