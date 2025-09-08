@@ -660,23 +660,24 @@ class SignageTreeModel(TreeModel):
 
         for _, df_row in df.iterrows():
             df_refkey = f'{df_row["Refkey"]:>{'0'}{3}}' # format rekey with leading '0'
-            df_type = df_row["Type"]
+            df_type = df_row["Type"].lower()
             df_title = df_row["Title"]
             df_owner = df_row["Owner"]
 
             for row in range(self.sourceModel().rowCount()):
                 index = self.sourceModel().index(row, 0)
                 refkey_index = self.sourceModel().index(row, self.Fields.Refkey.index)
-                refkey = self.sourceModel().data(refkey_index, QtCore.Qt.ItemDataRole.EditRole)
+                m_refkey = self.sourceModel().data(refkey_index, QtCore.Qt.ItemDataRole.EditRole)
                 type_index = self.sourceModel().index(row, self.Fields.Type.index)
-                signagetype = self.sourceModel().data(type_index, QtCore.Qt.ItemDataRole.EditRole)
+                m_signage_type = self.sourceModel().data(type_index, QtCore.Qt.ItemDataRole.EditRole)
 
-                if refkey == df_refkey and signagetype == self.cacheSignageType().get(df_type).uid:
-                    if update_title:
-                        res = self.sourceModel().setData(index.sibling(row, self.Fields.Title.index), df_title, Qt.ItemDataRole.EditRole)
-                        if res:
-                            self.sourceModel().submit()
-                    break
+                if self.cacheSignageType().get(df_type):
+                    if m_refkey == df_refkey and m_signage_type == self.cacheSignageType().get(df_type).uid:
+                        if update_title:
+                            res = self.sourceModel().setData(index.sibling(row, self.Fields.Title.index), df_title, Qt.ItemDataRole.EditRole)
+                            if res:
+                                self.sourceModel().submit()
+                        break
             else:  # Insert if not found
                 if df_refkey != "":
                     try:
@@ -689,7 +690,7 @@ class SignageTreeModel(TreeModel):
                                           workspace_id=self.activeWorkspace().id)
                         self.insertSignage(signage=signage, update_treemodel=False)
                     except Exception as e:
-                        err = f"Error importing Signage: refkey={df_refkey} -- Error: {e}"
+                        err = f"Error importing Signage: refkey={df_refkey} -- Error: {e}\nVerify the field 'Type'. Cannot import unknown signage type"
                         logger.error(err)
                         return False, err     
         
