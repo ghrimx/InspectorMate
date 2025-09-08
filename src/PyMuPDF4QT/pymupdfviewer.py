@@ -6,6 +6,7 @@ from enum import Enum
 
 from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
 from documentviewer.viewerwidget import ViewerWidget
+from models.model import ProxyModel
 from PyMuPDF4QT.QtPymuPdf import (OutlineModel, OutlineItem, PageNavigator, 
                                   ZoomSelector, SearchModel, SearchItem, MetaDataWidget, 
                                   TextSelection, RectItem, LinkBox)
@@ -381,6 +382,48 @@ class PdfView(QtWidgets.QGraphicsView):
                 except Exception as e:
                     logger.exception(e)
 
+class AnnotationWidget(QtWidgets.QWidget):
+    clicked = Signal(QtCore.QModelIndex)
+
+    def __init__(self, model: AnnotationModel, parent = None):
+        super().__init__(parent)
+
+        vbox = QtWidgets.QVBoxLayout()
+        self.setLayout(vbox)
+
+        button_box = QtWidgets.QHBoxLayout()
+        self.search_field = QtWidgets.QLineEdit()
+        self.remove_btn = QtWidgets.QPushButton()
+        self.remove_btn.setIcon(theme_icon_manager.get_icon(':delete-bin2'))
+        button_box.addWidget(self.search_field)
+        button_box.addWidget(self.remove_btn)
+
+        vbox.addLayout(button_box)
+
+        self.view = QtWidgets.QListView()
+        self.proxy = ProxyModel(model)
+        self.view.setModel(self.proxy)
+        self.view.setModelColumn(model.Fields.Text.index)
+        self.view.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.view.setAlternatingRowColors(True)
+        self.view.setStyleSheet("alternate-background-color: aliceblue;")
+
+        annotation_delegate = AnnotationDelegate()
+        self.view.setItemDelegate(annotation_delegate)
+
+        vbox.addWidget(self.view)
+
+        # Connection
+        self.view.clicked.connect(self.clicked)
+        self.search_field.textChanged.connect(self.searchFor)
+
+    def searchFor(self):
+        pattern = self.search_field.text()
+        model: AnnotationModel = self.proxy.sourceModel()
+        self.proxy.setUserFilter(pattern,
+                                 [model.Fields.Text.index])
+        self.proxy.invalidateFilter()
+
 
 class PdfViewer(ViewerWidget):
     def __init__(self, parent=None):
@@ -526,14 +569,7 @@ class PdfViewer(ViewerWidget):
         self.left_pane.addTab(self.metadata_tab, "Metadata")
 
         # Annotations pane
-        self.annotation_list = QtWidgets.QListView()
-        self.annotation_list.setAlternatingRowColors(True)
-        self.annotation_list.setStyleSheet("alternate-background-color: aliceblue;")
-        self.annotation_list.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Make ReadOnly
-        self.annotation_list.setModel(self.annotation_model)
-        self.annotation_list.setModelColumn(self.annotation_model.Fields.Text.index)
-        annotation_delegate = AnnotationDelegate()
-        self.annotation_list.setItemDelegate(annotation_delegate)
+        self.annotation_list = AnnotationWidget(self.annotation_model)
         self.left_pane.addTab(self.annotation_list, "Annotations")
 
         # Splitter
