@@ -431,8 +431,6 @@ class PdfViewer(ViewerWidget):
         self.text_selector.triggered.connect(self.triggerMouseAction)
 
         # Snipping tool
-        self.capture_area = QtGui.QAction(theme_icon_manager.get_icon(":capture_area"), "Capture Area (Ctrl+Alt+S)", self)
-        self.capture_area.setShortcut(QtGui.QKeySequence("Ctrl+Alt+S"))
         self.capture_area.triggered.connect(lambda: self.capture(self.citation()))
         
         # MarkPen
@@ -469,9 +467,6 @@ class PdfViewer(ViewerWidget):
         self.rotate_clockwise.triggered.connect(lambda: self.pdfview.setRotation(90))
 
         # Citation
-        self.action_cite = QtGui.QAction(theme_icon_manager.get_icon(":double-quotes"), "Copy citation (Ctrl+Alt+C)", self)
-        self.action_cite.setShortcut(QtGui.QKeySequence("Ctrl+Alt+C"))
-        self.action_cite.setToolTip("Copy citation (Ctrl+Alt+C)")
         self.action_cite.triggered.connect(lambda: self.cite(self.citation()))
 
         # Add Action/Widget to toolbar
@@ -623,7 +618,7 @@ class PdfViewer(ViewerWidget):
         refkey = "refkey=" + self.refKey.text() if self.refKey.text() != "" else None
         page = f"p. {self.page_navigator.currentPageLabel()}"
         title = f'"{self.title.toPlainText()}"'
-        citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), page] if x)
+        citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), "PDF", page] if x)
         return f"[{citation}]"
 
     def source(self) -> str:
