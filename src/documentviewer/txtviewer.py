@@ -30,20 +30,12 @@ class TxtViewer(ViewerWidget):
         self.scroll_area.setWidget(self._textreader)
 
         # Citation
-        self.action_cite = QtWidgets.QToolButton(self)
-        self.action_cite.setIcon(QtGui.QIcon(":double-quotes"))
-        self.action_cite.setShortcut(QtGui.QKeySequence("Ctrl+Alt+C"))
-        self.action_cite.setToolTip("Copy citation (Ctrl+Alt+C)")
-        self.action_cite.clicked.connect(lambda: self.cite(self.citation()))
-        self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_cite)
+        self.action_cite.triggered.connect(lambda: self.cite(self.citation()))
+        self._toolbar.insertAction(self.toolbarFreeSpace(), self.action_cite)
 
         # Snipping tool
-        self.action_snip = QtWidgets.QToolButton(self)
-        self.action_snip.setIcon(QtGui.QIcon(":capture_area"))
-        self.action_snip.setShortcut(QtGui.QKeySequence("Ctrl+Alt+S"))
-        self.action_snip.setToolTip("Capture Area (Ctrl+Alt+S)")
-        self.action_snip.clicked.connect(lambda: self.capture(self.citation()))
-        self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_snip)
+        self.capture_area.triggered.connect(lambda: self.capture(self.citation()))
+        self._toolbar.insertAction(self.toolbarFreeSpace(), self.capture_area)
 
         # Create Signage
         self._toolbar.insertAction(self._toolbar_spacer, self.action_create_child_signage)
@@ -51,6 +43,8 @@ class TxtViewer(ViewerWidget):
     def loadDocument(self, filepath: str = ""):
         if filepath == "":
             return
+        
+        self.extension = filepath.split('.')[-1]
         
         file = QtCore.QFile(filepath)
         try:
@@ -69,7 +63,7 @@ class TxtViewer(ViewerWidget):
     def citation(self) -> str:
         refkey =  "refkey: " + self.refKey.text() if self.refKey.text() != "" else None
         title = f'"{self.title.toPlainText()}"'
-        citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text()] if x)
+        citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"
     
     def source(self) -> str:
