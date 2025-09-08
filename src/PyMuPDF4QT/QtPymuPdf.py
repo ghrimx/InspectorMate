@@ -191,7 +191,7 @@ class PageNavigator(QtWidgets.QWidget):
             try:
                 pno = int(p) - 1
             except:
-                ...
+                pass
         
         if isinstance(pno, int):
             self.jump(pno)
@@ -514,17 +514,30 @@ class RectItem(QtWidgets.QGraphicsRectItem, BaseAnnotation):
         self.setFlags(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
 class LinkBox(QtWidgets.QGraphicsObject):
-    sigJumpTo = Signal(int)
+    sigJumpTo = Signal(int, QtCore.QPointF)
 
     def __init__(self, link: pymupdf.Link, pno: int, zfactor: float, parent=None):
         super(LinkBox, self).__init__(parent)
+        self._link = link
         self.pno = pno
         self.zfactor = zfactor
-        self.to_page: int = link["page"]
+        self.to_page: int|str = link["page"]
+
+        if isinstance(self.to_page, str):
+            try:
+                self.to_page = int(link["page"]) - 1 # assume the page label is the exact target
+            except:
+                pass
+
         rect: pymupdf.Rect = link["from"]
         a0 = QtCore.QPointF(rect.x0,rect.y0) * self.zfactor
         b1 = QtCore.QPointF(rect.x1,rect.y1) * self.zfactor
         self.rect = QtCore.QRectF(a0, b1)
+        self.to: QtCore.QPointF = QtCore.QPointF()
+        _to: pymupdf.Point = link.get("to")
+        if _to:
+            self.to.setX(_to.x)
+            self.to.setY(_to.y)
 
         self.setAcceptedMouseButtons(QtCore.Qt.MouseButton.LeftButton)
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
@@ -537,7 +550,7 @@ class LinkBox(QtWidgets.QGraphicsObject):
         painter.drawRect(self.rect)
 
     def mousePressEvent(self, event):
-        self.sigJumpTo.emit(self.to_page)
+        self.sigJumpTo.emit(self.to_page, self.to)
         event.accept()
     
 

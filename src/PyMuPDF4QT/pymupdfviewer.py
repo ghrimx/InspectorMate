@@ -6,16 +6,9 @@ from enum import Enum
 
 from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
 from documentviewer.viewerwidget import ViewerWidget
-from PyMuPDF4QT.QtPymuPdf import (OutlineModel,
-                                  OutlineItem,
-                                  PageNavigator,
-                                  ZoomSelector,
-                                  SearchModel,
-                                  SearchItem,
-                                  MetaDataWidget,
-                                  TextSelection,
-                                  RectItem,
-                                  LinkBox)
+from PyMuPDF4QT.QtPymuPdf import (OutlineModel, OutlineItem, PageNavigator, 
+                                  ZoomSelector, SearchModel, SearchItem, MetaDataWidget, 
+                                  TextSelection, RectItem, LinkBox)
 from PyMuPDF4QT.annotation import AnnotationModel, AnnotationDelegate
 
 from qt_theme_manager import theme_icon_manager
@@ -320,9 +313,9 @@ class PdfView(QtWidgets.QGraphicsView):
             location = location.toPoint().y()
         self.verticalScrollBar().setValue(location)
 
-    @Slot(int)
-    def onLinkClicked(self, pno: int):
-        self._page_navigator.jump(pno)
+    @Slot(int, QtCore.QPointF)
+    def onLinkClicked(self, pno: int, to: QtCore.QPointF):
+        self._page_navigator.jump(page=pno, location=to)
 
     def mousePressEvent(self, event):
         self.a0 = self.mapToScene(event.position().toPoint())
