@@ -1,4 +1,5 @@
 import logging
+from abc import abstractmethod
 from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot, Signal)
 from PyQt6.QtSql import QSqlRelationalDelegate
 
@@ -67,6 +68,8 @@ class ViewerWidget(QtWidgets.QWidget):
         
         self.onFoldRightSidebarTriggered()
 
+        self.createAction()
+
     @classmethod
     def viewerName(cls):
         return cls.__name__
@@ -82,7 +85,16 @@ class ViewerWidget(QtWidgets.QWidget):
     @document.setter
     def document(self, doc: Document):
         self._document = doc
+
+    def createAction(self):
+        self.capture_area = QtGui.QAction(theme_icon_manager.get_icon(":capture_area"), "Capture Area (Ctrl+Alt+S)", self)
+        self.capture_area.setCheckable(False)
+        self.capture_area.setShortcut(QtGui.QKeySequence("Ctrl+Alt+S"))
     
+        self.action_cite = QtGui.QAction(theme_icon_manager.get_icon(":double-quotes"), "Copy citation (Ctrl+Alt+C)", self)
+        self.action_cite.setShortcut(QtGui.QKeySequence("Ctrl+Alt+C"))
+        self.action_cite.setToolTip("Copy citation (Ctrl+Alt+C)")
+
     def createInfoTab(self):
         self.info_tab = QtWidgets.QWidget(self)
         formlayout = QtWidgets.QFormLayout(self.info_tab)
@@ -201,6 +213,10 @@ class ViewerWidget(QtWidgets.QWidget):
             self.right_pane.show()
             self.fold_right_pane.setIcon(theme_icon_manager.get_icon(':sidebar-unfold-line'))
 
+    @abstractmethod
+    def citation(self):
+        ...
+
     @Slot()
     def cite(self, citation):
         clipboard = QtWidgets.QApplication.clipboard()
@@ -208,7 +224,7 @@ class ViewerWidget(QtWidgets.QWidget):
 
     @Slot()
     def capture(self, citation):
-        self.capturer = Capture(source=citation, parent=self)
+        self.capturer = Capture(source=citation)
         self.capturer.show()
 
     def source(self) -> str:
