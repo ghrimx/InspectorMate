@@ -7,6 +7,7 @@ from PyMuPDF4QT.pymupdfviewer import PdfViewer
 from documentviewer.imageviewer import ImageViewer
 from documentviewer.officeviewer import OfficeViewer
 from documentviewer.txtviewer import TxtViewer
+from documentviewer.wordviewer import WordViewer
 
 from evidence.evidencemodel import EvidenceModel
 
@@ -55,8 +56,8 @@ class ViewerFactory:
         self._model = model
 
         # Register the classes
-        classViewer: PdfViewer | ImageViewer | OfficeViewer | TxtViewer
-        for classViewer in [PdfViewer, ImageViewer, OfficeViewer, TxtViewer]:
+        classViewer: PdfViewer | ImageViewer | WordViewer| OfficeViewer | TxtViewer
+        for classViewer in [PdfViewer, ImageViewer, WordViewer, OfficeViewer, TxtViewer]:
             self._viewers[classViewer.viewerName()] = classViewer
     
     def viewer(self, doc: Document, index: QtCore.QModelIndex):
@@ -64,7 +65,7 @@ class ViewerFactory:
         if not doc.exists():
             return None
             
-        viewer: PdfViewer | ImageViewer | OfficeViewer | TxtViewer = self.viewerFromExtension(doc.extension())
+        viewer: PdfViewer | ImageViewer | WordViewer | OfficeViewer | TxtViewer = self.viewerFromExtension(doc.extension())
 
         if not viewer:
             return None
@@ -84,7 +85,7 @@ class ViewerFactory:
         return viewer
 
     def viewerFromExtension(self, extension: str):
-        viewer: PdfViewer | ImageViewer | OfficeViewer | TxtViewer
+        viewer: PdfViewer | ImageViewer | WordViewer | OfficeViewer | TxtViewer
         for viewer in self._viewers.values():
             if extension in viewer.supportedFormats():
                 return viewer(self._mainWindow)
