@@ -6,11 +6,11 @@ from enum import Enum
 
 from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
 from documentviewer.viewerwidget import ViewerWidget
-from models.model import ProxyModel
+
 from PyMuPDF4QT.QtPymuPdf import (OutlineModel, OutlineItem, PageNavigator, 
                                   ZoomSelector, SearchModel, SearchItem, MetaDataWidget, 
                                   TextSelection, RectItem, LinkBox)
-from PyMuPDF4QT.annotation import AnnotationModel, AnnotationDelegate
+from PyMuPDF4QT.annotation import AnnotationModel, AnnotationPane
 
 from qt_theme_manager import theme_icon_manager
 
@@ -382,48 +382,6 @@ class PdfView(QtWidgets.QGraphicsView):
                 except Exception as e:
                     logger.exception(e)
 
-class AnnotationWidget(QtWidgets.QWidget):
-    clicked = Signal(QtCore.QModelIndex)
-
-    def __init__(self, model: AnnotationModel, parent = None):
-        super().__init__(parent)
-
-        vbox = QtWidgets.QVBoxLayout()
-        self.setLayout(vbox)
-
-        button_box = QtWidgets.QHBoxLayout()
-        self.search_field = QtWidgets.QLineEdit()
-        self.remove_btn = QtWidgets.QPushButton()
-        self.remove_btn.setIcon(theme_icon_manager.get_icon(':delete-bin2'))
-        button_box.addWidget(self.search_field)
-        button_box.addWidget(self.remove_btn)
-
-        vbox.addLayout(button_box)
-
-        self.view = QtWidgets.QListView()
-        self.proxy = ProxyModel(model)
-        self.view.setModel(self.proxy)
-        self.view.setModelColumn(model.Fields.Text.index)
-        self.view.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.view.setAlternatingRowColors(True)
-        self.view.setStyleSheet("alternate-background-color: aliceblue;")
-
-        annotation_delegate = AnnotationDelegate()
-        self.view.setItemDelegate(annotation_delegate)
-
-        vbox.addWidget(self.view)
-
-        # Connection
-        self.view.clicked.connect(self.clicked)
-        self.search_field.textChanged.connect(self.searchFor)
-
-    def searchFor(self):
-        pattern = self.search_field.text()
-        model: AnnotationModel = self.proxy.sourceModel()
-        self.proxy.setUserFilter(pattern,
-                                 [model.Fields.Text.index])
-        self.proxy.invalidateFilter()
-
 
 class PdfViewer(ViewerWidget):
     def __init__(self, parent=None):
@@ -569,8 +527,8 @@ class PdfViewer(ViewerWidget):
         self.left_pane.addTab(self.metadata_tab, "Metadata")
 
         # Annotations pane
-        self.annotation_list = AnnotationWidget(self.annotation_model)
-        self.left_pane.addTab(self.annotation_list, "Annotations")
+        self.annotation_pane = AnnotationPane(self.annotation_model)
+        self.left_pane.addTab(self.annotation_pane, "Annotations")
 
         # Splitter
         self.splitter.replaceWidget(1, self.pdfview)
@@ -581,7 +539,7 @@ class PdfViewer(ViewerWidget):
         self.search_model.sigTextFound.connect(self.onSearchFound)
         self.pdfview.sig_annotation_added.connect(self.onAnnotationAdded)
         self.pdfview.sig_annotation_removed.connect(self.onAnnotationRemoved)
-        self.annotation_list.clicked.connect(self.onAnnotationListClicked)
+        self.annotation_pane.clicked.connect(self.onAnnotationListClicked)
 
         self.installEventFilter(self.pdfview)
 
@@ -696,10 +654,19 @@ class PdfViewer(ViewerWidget):
     @Slot(QtCore.QModelIndex)
     def onAnnotationListClicked(self, index: QtCore.QModelIndex):
         pno = index.sibling(index.row(), self.annotation_model.Fields.PageNumber.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
-        
+        position = index.sibling(index.row(), self.annotation_model.Fields.Position.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        location = json.loads(position)
+
+        to = QtCore.QPointF()
+        rect: list = location.get("rect")
+        if rect:
+            ax, ay, aaw, aah = rect
+            to.setX(ax)
+            to.setY(ay)
+
         try:
             p = int(pno)
         except Exception as e:
             pass
         else:
-            self.page_navigator.jump(p)
+            self.page_navigator.jump(p, to)
