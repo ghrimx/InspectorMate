@@ -35,7 +35,7 @@ class WordViewer(ViewerWidget):
         self.viewer.setUndoRedoEnabled(False)
         self.viewer.setStyleSheet("QTextBrowser { background: #ffffff; }")
         self.viewer.document().setTextWidth(600)
-        self.viewer.document().setDocumentMargin(40)
+        self.viewer.document().setDocumentMargin(60)
         self.viewer.setFixedWidth(900)
 
         self.scroll_area.setWidget(self.viewer)
@@ -95,11 +95,30 @@ class WordViewer(ViewerWidget):
             logger.error("Only .docx files are supported.")
             return
         
+        custom_css = """
+        <style>
+            h1, h2, h3, h4, h5, h6 { 
+                color: #0d6efd; 
+            }
+            .btn { 
+                background-color: #198754; color: white; padding: .5rem 1rem; border-radius: .25rem; 
+            }
+            table, th, td {
+                border: 1px solid black;
+                padding: 5px;
+            }
+            table {
+                border-collapse: collapse;
+            }
+        </style>
+        """
+
         with open(filepath, "rb") as docx_file:
             result = convert_to_html(docx_file)
             html = result.value
+            styled_html = custom_css + html
         try:
-            self.viewer.setHtml(html)
+            self.viewer.setHtml(styled_html)
             self.zoom_factor = 3
             self.viewer.zoomIn(self.zoom_factor)
         except Exception as e:
