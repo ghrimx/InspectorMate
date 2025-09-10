@@ -76,8 +76,7 @@ class AnnotationModel(BaseRelationalTableModel):
             m_uid = idx.data(QtCore.Qt.ItemDataRole.DisplayRole)
             if m_uid == uid:
                 self.removeRow(row, QtCore.QModelIndex())
-                self.select()
-                
+                self.select()    
 
 
 class AnnotationDelegate(QtWidgets.QStyledItemDelegate):
@@ -98,6 +97,7 @@ class AnnotationDelegate(QtWidgets.QStyledItemDelegate):
             option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
             option.icon = theme_icon_manager.get_icon(":text-block")
             option.text = content
+
 
 class AnnotationWidget(QtWidgets.QWidget):
     sigAnnotationChanged = Signal(Annotation, QtCore.QModelIndex)
@@ -120,6 +120,9 @@ class AnnotationWidget(QtWidgets.QWidget):
         formlayout.addRow("page", QtWidgets.QLabel(str(self._annotation.pno)))
         formlayout.addRow("text", self.text)
         formlayout.addRow("comment", self.comment)
+
+        spacer = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        formlayout.addItem(spacer)
 
         buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
 
