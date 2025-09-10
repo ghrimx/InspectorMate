@@ -25,7 +25,7 @@ headers = {"User-Agent": "MyApp/1.0"}
 def get_latest_release() -> str | None:
     try:
         
-        resp = requests.get(feed_url, headers=headers, proxies={"https": None, "http": None})
+        resp = requests.get(feed_url, headers=headers, proxies={})
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
 
