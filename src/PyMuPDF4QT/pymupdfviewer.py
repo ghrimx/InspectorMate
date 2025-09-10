@@ -14,7 +14,6 @@ from PyMuPDF4QT.annotation import AnnotationModel, AnnotationPane
 
 from qt_theme_manager import theme_icon_manager
 
-from utilities.utils import timeuuid
 
 SUPPORTED_FORMART = (".pdf", ".epub")
 
@@ -45,7 +44,7 @@ class MouseInteraction:
 class PdfView(QtWidgets.QGraphicsView):
     sig_mouse_position = Signal(QtCore.QPointF)
     sig_annotation_added = Signal(object)
-    sig_annotation_removed = Signal(int)
+    sigRemoveAnnotation = Signal('qint64')
     sig_annotation_selected = Signal(object)
 
     def __init__(self, parent=None):
@@ -280,13 +279,15 @@ class PdfView(QtWidgets.QGraphicsView):
         
         annot: dict
         for annot in cache:
-            rect = RectItem()
+            rect = RectItem(annot.get("uid"))
             rect.setPen(QtGui.QPen(QtCore.Qt.GlobalColor.red))
             rect.textSelection = annot.get("text")
+
             try:
                 position: dict = json.loads(annot.get("position"))
             except:
                 continue
+
             coord: list = position.get("rect")
             r = QtCore.QRectF(coord[0], coord[1], coord[2], coord[3])
             rect.setRect(r)
@@ -358,13 +359,7 @@ class PdfView(QtWidgets.QGraphicsView):
         # Put text into clipboard
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(self._current_graphic_item.textSelection.text)
-
-        # save graphics
-        if self._page_navigator.currentPno() in self.graphic_items:
-            self.graphic_items[self._page_navigator.currentPno()].update({id(self._current_graphic_item) : self._current_graphic_item})
-        else:
-            self.graphic_items[self._page_navigator.currentPno()] = {id(self._current_graphic_item) : self._current_graphic_item}
-            
+        
         self.sig_annotation_added.emit(self._current_graphic_item)
 
         self._current_graphic_item = None
@@ -375,12 +370,23 @@ class PdfView(QtWidgets.QGraphicsView):
             items = self.doc_scene.selectedItems()
             item: RectItem
             for item in items:
-                try:
-                    self.graphic_items[self._page_navigator.currentPno()].pop(id(item))
-                    self.sig_annotation_removed.emit(id(item))
-                    self.doc_scene.removeItem(item)
-                except Exception as e:
-                    logger.exception(e)
+                if isinstance(item, RectItem):
+                    result = self.removeAnnotation(item.uid)
+                    if result:
+                        self.sigRemoveAnnotation.emit(item.uid)
+
+    @Slot('qint64')
+    def removeAnnotation(self, uid: int) -> bool:
+        items = self.doc_scene.items()
+        for item in items:
+            if isinstance(item, RectItem):
+                if item.uid == uid:
+                    try:
+                        self.doc_scene.removeItem(item)
+                    except Exception as e:
+                        logger.exception(e)
+                        return False  
+        return True
 
 
 class PdfViewer(ViewerWidget):
@@ -538,8 +544,9 @@ class PdfViewer(ViewerWidget):
         self.page_navigator.currentLocationChanged.connect(self.pdfview.scrollTo)
         self.search_model.sigTextFound.connect(self.onSearchFound)
         self.pdfview.sig_annotation_added.connect(self.onAnnotationAdded)
-        self.pdfview.sig_annotation_removed.connect(self.onAnnotationRemoved)
+        self.pdfview.sigRemoveAnnotation.connect(self.annotation_model.removeById)
         self.annotation_pane.clicked.connect(self.onAnnotationListClicked)
+        self.annotation_pane.sigRemoveAnnotation.connect(self.pdfview.removeAnnotation)
 
         self.installEventFilter(self.pdfview)
 
@@ -635,7 +642,7 @@ class PdfViewer(ViewerWidget):
         json_position = json.dumps(position)
         record.setValue(self.annotation_model.Fields.Position.index, json_position)
         record.setValue(self.annotation_model.Fields.Text.index, annot.textSelection.text)
-        record.setValue(self.annotation_model.Fields.Uid.index, timeuuid())
+        record.setValue(self.annotation_model.Fields.Uid.index, annot.uid)
         self.annotation_model.beginInsertRows(QtCore.QModelIndex(), self.annotation_model.rowCount(), self.annotation_model.rowCount() + 1)
         inserted = self.annotation_model.insertRecord(-1, record)
         self.annotation_model.endInsertRows()
@@ -647,10 +654,6 @@ class PdfViewer(ViewerWidget):
         self.annotation_model.select()
         self.annotation_model.setFilter(f"document_id={self.document.id}")
     
-    @Slot(int)
-    def onAnnotationRemoved(item_id:int):
-        ...
-
     @Slot(QtCore.QModelIndex)
     def onAnnotationListClicked(self, index: QtCore.QModelIndex):
         pno = index.sibling(index.row(), self.annotation_model.Fields.PageNumber.index).data(QtCore.Qt.ItemDataRole.DisplayRole)

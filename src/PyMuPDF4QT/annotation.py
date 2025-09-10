@@ -55,7 +55,8 @@ class AnnotationModel(BaseRelationalTableModel):
     def initCache(self, doc_id: str):
         query = QtSql.QSqlQuery()
         query.prepare("""SELECT text,
-                                position
+                                position,
+                                uid
                             FROM annotations
                             WHERE document_id = :doc_id;
                             """)
@@ -65,11 +66,18 @@ class AnnotationModel(BaseRelationalTableModel):
             return False
         else:
             while query.next():
-                self._cache_annotations.append({"text":query.value(0), "position":query.value(1)})
+                self._cache_annotations.append({"text":query.value(0), "position":query.value(1), "uid":query.value(2)})
             return True
 
-    def remove(self):
-        ...
+    @Slot('qint64')
+    def removeById(self, uid):
+        for row in range(self.rowCount()):
+            idx = self.index(row, AnnotationModel.Fields.Uid.index, QtCore.QModelIndex())
+            m_uid = idx.data(QtCore.Qt.ItemDataRole.DisplayRole)
+            if m_uid == uid:
+                self.removeRow(row, QtCore.QModelIndex())
+                self.select()
+                
 
 
 class AnnotationDelegate(QtWidgets.QStyledItemDelegate):
@@ -78,25 +86,27 @@ class AnnotationDelegate(QtWidgets.QStyledItemDelegate):
 
     def initStyleOption(self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex) -> None:
         super().initStyleOption(option, index)
-        pno = index.sibling(index.row(), AnnotationModel.Fields.PageNumber.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
-        text: str = index.sibling(index.row(), AnnotationModel.Fields.Text.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        if index.isValid():
+            pno = index.sibling(index.row(), AnnotationModel.Fields.PageNumber.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+            text: str = index.sibling(index.row(), AnnotationModel.Fields.Text.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
 
-        if text.strip() != "":
-            content = f"{text.strip()}, page {pno+1}"   
-        else:
-            content = f"page {pno+1}" 
+            if text.strip() != "":
+                content = f"{text.strip()}, page {pno+1}"   
+            else:
+                content = f"page {pno+1}" 
 
-        option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
-        option.icon = theme_icon_manager.get_icon(":text-block")
-        option.text = content
+            option.features |= QtWidgets.QStyleOptionViewItem.ViewItemFeature.HasDecoration
+            option.icon = theme_icon_manager.get_icon(":text-block")
+            option.text = content
 
 class AnnotationWidget(QtWidgets.QWidget):
-    sigAnnotationChanged = Signal(Annotation)
+    sigAnnotationChanged = Signal(Annotation, QtCore.QModelIndex)
     
-    def __init__(self, annot: Annotation, parent = None):
+    def __init__(self, annot: Annotation, index, parent = None):
         super().__init__(parent)
         self.setWindowTitle("Annotation Viewer")
         self._annotation = annot
+        self._index = index
         formlayout = QtWidgets.QFormLayout()
         self.setLayout(formlayout)
 
@@ -127,7 +137,7 @@ class AnnotationWidget(QtWidgets.QWidget):
         self._annotation.comment = text
 
     def accept(self):
-        self.sigAnnotationChanged.emit(self._annotation)
+        self.sigAnnotationChanged.emit(self._annotation, self._index)
         self.close()
 
     def reject(self):
@@ -136,9 +146,12 @@ class AnnotationWidget(QtWidgets.QWidget):
 
 class AnnotationPane(QtWidgets.QWidget):
     clicked = Signal(QtCore.QModelIndex)
+    sigRemoveAnnotation = Signal('qint64')
 
     def __init__(self, model: AnnotationModel, parent = None):
         super().__init__(parent)
+
+        self._model = model
 
         vbox = QtWidgets.QVBoxLayout()
         self.setLayout(vbox)
@@ -153,9 +166,9 @@ class AnnotationPane(QtWidgets.QWidget):
         vbox.addLayout(button_box)
 
         self.view = QtWidgets.QListView()
-        self.proxy = ProxyModel(model)
+        self.proxy = ProxyModel(self._model)
         self.view.setModel(self.proxy)
-        self.view.setModelColumn(model.Fields.Text.index)
+        self.view.setModelColumn(self._model.Fields.Text.index)
         self.view.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.view.setAlternatingRowColors(True)
         self.view.setStyleSheet("alternate-background-color: aliceblue;")
@@ -169,12 +182,13 @@ class AnnotationPane(QtWidgets.QWidget):
         self.view.clicked.connect(self.clicked)
         self.search_field.textChanged.connect(self.searchFor)
         self.view.doubleClicked.connect(self.onAnnotationOpen)
+        self.remove_btn.clicked.connect(self.onRemoveAnnotation)
 
     def searchFor(self):
         pattern = self.search_field.text()
-        model: AnnotationModel = self.proxy.sourceModel()
         self.proxy.setUserFilter(pattern,
-                                 [model.Fields.Text.index])
+                                 [self._model.Fields.Text.index,
+                                  self._model.Fields.Comment.index])
         self.proxy.invalidateFilter()
 
     @Slot(QtCore.QModelIndex)
@@ -182,6 +196,36 @@ class AnnotationPane(QtWidgets.QWidget):
         pno = index.sibling(index.row(), AnnotationModel.Fields.PageNumber.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
         text = index.sibling(index.row(), AnnotationModel.Fields.Text.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
         comment = index.sibling(index.row(), AnnotationModel.Fields.Comment.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
-        annot = Annotation(text=text, pno=pno+1, comment=comment)
-        self.annot_popup = AnnotationWidget(annot)
+        uid = index.sibling(index.row(), AnnotationModel.Fields.Uid.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        annot = Annotation(text=text, pno=pno+1, comment=comment, uid=uid)
+        self.annot_popup = AnnotationWidget(annot, index)
+        self.annot_popup.sigAnnotationChanged.connect(self.onAnnotationChanged)
         self.annot_popup.show()
+
+    @Slot(Annotation, QtCore.QModelIndex)
+    def onAnnotationChanged(self, annot: Annotation, index: QtCore.QModelIndex):
+        if not index.isValid():
+            return
+        
+        record = self._model.record(index.row())
+        record.setValue(self._model.Fields.Comment.index, annot.comment)
+        result = self._model.setRecord(index.row(), record)
+
+        if not result:
+            logger.error(f"Failed to update the annotation. Error:{self._model.lastError().text()} ")
+
+    def onRemoveAnnotation(self):
+        index = self.view.selectionModel().currentIndex()
+        uid = index.sibling(index.row(), AnnotationModel.Fields.Uid.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+
+        if not index.isValid():
+            return
+
+        result = self._model.removeRow(index.row(), QtCore.QModelIndex())
+
+        if not result:
+            logger.error(f"Failed to remove the annotation. Error:{self._model.lastError().text()} ")
+            return
+
+        self._model.select()
+        self.sigRemoveAnnotation.emit(uid)

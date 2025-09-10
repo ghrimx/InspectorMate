@@ -2,9 +2,10 @@ import pymupdf
 from dataclasses import dataclass, InitVar
 from enum import Enum
 
-from qtpy import QtCore, QtGui, QtWidgets, Slot, Signal
-
 from qt_theme_manager import theme_icon_manager
+from qtpy import QtCore, QtGui, QtWidgets, Slot, Signal
+from utilities.utils import timeuuid
+
 
 
 class ZoomSelector(QtWidgets.QWidget):
@@ -472,10 +473,11 @@ class TextSelection:
 class BaseAnnotation:
     """Base class for annotation"""
 
-    def __init__(self):
+    def __init__(self, dbid = None):
         self._pno: int = -1
         self._text_selection: TextSelection = None
         self._zfactor = 1.0
+        self._uid: int = dbid if dbid else timeuuid()
 
     @property
     def textSelection(self):
@@ -506,10 +508,16 @@ class BaseAnnotation:
     def zfactor(self, z: float):
         self._zfactor = z
 
+    @property
+    def uid(self):
+        return self._uid
+    
+
 
 class RectItem(QtWidgets.QGraphicsRectItem, BaseAnnotation):
-    def __init__(self, parent=None):
-        super(RectItem, self).__init__(parent)
+    def __init__(self, dbid = None, parent = None):
+        QtWidgets.QGraphicsRectItem.__init__(self, parent)
+        BaseAnnotation.__init__(self, dbid)
 
         self.setFlags(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
