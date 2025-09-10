@@ -113,16 +113,21 @@ class WordViewer(ViewerWidget):
         </style>
         """
 
-        with open(filepath, "rb") as docx_file:
-            result = convert_to_html(docx_file)
-            html = result.value
-            styled_html = custom_css + html
+        try:
+            with open(filepath, "rb") as docx_file:
+                result = convert_to_html(docx_file)
+                html = result.value
+                styled_html = custom_css + html
+        except Exception as e:
+            logger.error(self, "Fail to open", str(e))
+            return 
+        
         try:
             self.viewer.setHtml(styled_html)
             self.zoom_factor = 3
             self.viewer.zoomIn(self.zoom_factor)
         except Exception as e:
-            logger.error(self, "Failed to open", str(e))
+            logger.error(self, "Failed to render html", str(e))
 
     Slot()
     def citation(self) -> str:

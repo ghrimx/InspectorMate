@@ -141,7 +141,7 @@ class Updater(QDialog):
 
         self.label.setText("Running installer...")
         try:
-            subprocess.Popen([path, "/VERYSILENT"],
+            subprocess.Popen([path],
                              close_fds=True,)
         except Exception as e:
             logger.error(e)
