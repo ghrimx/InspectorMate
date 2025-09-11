@@ -169,9 +169,9 @@ class UnzipDialog(QtWidgets.QDialog):
             err = unpackZip(files, self.destination.text())
             if isinstance(err, Exception):
                 logger.error(err)
-                dlg = QtWidgets.QMessageBox.critical(self,
-                                                     "Error unzipping archive",
-                                                     f"{err}",
-                                                     buttons=QtWidgets.QMessageBox.StandardButton.Ok)
+                QtWidgets.QMessageBox.critical(self,
+                                               "Error unzipping archive",
+                                               f"{err}",
+                                               buttons=QtWidgets.QMessageBox.StandardButton.Ok)
                 return
         super().accept()

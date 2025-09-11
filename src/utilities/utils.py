@@ -171,11 +171,15 @@ def unpackZip(zippedFile: str, dest: str = "") -> None | Exception:
     if x is None and dest != "":
         dest = f"{dest}/{zpath.stem}"  
 
-    with ZipFile(zippedFile, 'r') as zfile:
-        try:
-            zfile.extractall(path=dest)
-        except Exception as err:
-            return err
+    try:
+        with ZipFile(zippedFile, 'r') as zfile:
+            try:
+                zfile.extractall(path=dest)
+            except Exception as err:
+                return err
+    except Exception as e:
+        return e
+    
     os.remove(zippedFile)
     for root, dirs, files in os.walk(dest):
         for filename in files:
