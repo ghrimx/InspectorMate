@@ -5,12 +5,12 @@ from qtpy import (QtCore,
                   Slot)
 
 from widgets.fitcontenteditor import FitContentTextEdit
-
 from utilities import (utils, config as mconf)
-
 from signage.signage_model import Signage, SignageType, SignageStatus
-
 from widgets.combobox import CheckableComboBox
+
+from qt_theme_manager import theme_icon_manager
+
 
 
 class CreateDialog(QtWidgets.QDialog):
@@ -45,7 +45,8 @@ class CreateDialog(QtWidgets.QDialog):
 
         self.signage_refkey_lineedit = QtWidgets.QLineEdit()
 
-        self.owner_editbutton = QtWidgets.QPushButton("...")
+        self.owner_editbutton = QtWidgets.QPushButton()
+        self.owner_editbutton.setIcon(theme_icon_manager.get_icon(":user-line"))
         self.owner_editbutton.clicked.connect(self.editOwner)
         self.owner_editbutton.setMaximumWidth(25)
         self.owner_combobox = QtWidgets.QComboBox()

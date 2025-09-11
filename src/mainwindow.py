@@ -184,10 +184,12 @@ class MainWindow(QtWidgets.QMainWindow):
                                                "OneNote Test connection",
                                                self,
                                                triggered=self.open_onenote_picker))
-        self.edit_menu.addAction(QtGui.QAction("Edit Refkey Detection Pattern",
+        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":key-2-line"),
+                                               "Edit Refkey Detection Pattern",
                                                self.menubar,
                                                triggered=self.onEditRefkeyRegexTriggered))
-        self.edit_menu.addAction(QtGui.QAction("Add/Remove Owner",
+        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":user-line"),
+                                               "Add/Remove Owner",
                                                self.menubar,
                                                triggered=self.addRemoveOwner))
 
