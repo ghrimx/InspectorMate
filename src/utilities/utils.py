@@ -84,13 +84,16 @@ def increment_refKey(refKey: str|int) -> str:
         
 def find_match(text: str, pattern: str = r"^(([a-zA-Z]{0,3})\d{1,3})") -> str:
     """
-    Find pattern in the 10 first char of a string and return the match
+    Find pattern in a string and return the match
     
     Note: Mainly used to infer the refKey from the title of a document request and document title
     """
+    print(pattern)
     try:
-        match = re.search(pattern, text[:10])
+        match = re.search(pattern, text)
+        print(match)
     except Exception as e:
+        print(e)
         return ""
     else:
         return match.group(0) if match else ""
