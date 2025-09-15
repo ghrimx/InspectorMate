@@ -89,12 +89,9 @@ def find_match(text: str, pattern: str = r"^(([a-zA-Z]{0,3})\d{1,3})") -> str:
     
     Note: Mainly used to infer the refKey from the title of a document request and document title
     """
-    print(pattern)
     try:
         match = re.search(pattern, text)
-        print(match)
     except Exception as e:
-        print(e)
         return ""
     else:
         return match.group(0) if match else ""
@@ -258,13 +255,17 @@ def readJson(json_file: str) -> tuple[dict, str]:
                 err = f"Error: {json_file} not found."
                 return {}, err
 
-def extract_hash_lines(docx_path) -> list[str]:
+def extract_hash_lines(docx_path):
     """
     Extract all lines starting with '#' from a Word (.docx) document using mammoth.
     """
-    with open(docx_path, "rb") as docx_file:
-        result = extract_raw_text(docx_file)
-        text = result.value  # The raw text extracted
+    try:
+        with open(docx_path, "rb") as docx_file:
+            result = extract_raw_text(docx_file)
+            text = result.value  # The raw text extracted
+
+    except Exception as e:
+        return False, e
 
     lines = [line.strip() for line in text.splitlines() if line.strip().startswith("#")]
-    return lines
+    return True, lines

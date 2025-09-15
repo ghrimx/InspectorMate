@@ -6,6 +6,7 @@ from signage.signage_model import SignageTreeModel
 from signage.signage_tab import SignageTab as SignageTreeTab
 from signage.signage_dialogs import OwnerDialog
 from signage.connector_widget import ConnectorManagerDialog
+from signage.connector_model import ConnectorModel
 
 from evidence.evidencemodel import EvidenceModel
 from evidence.evidencetab import EvidenceTab, Document
@@ -47,6 +48,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.evidence_model = EvidenceModel()
         self.viewer_factory = ViewerFactory(self.evidence_model, self)
         self.workspace_manager =  None
+        self.connector_model = ConnectorModel()
         self.doc_viewers = {}
 
     def initUI(self):
@@ -295,7 +297,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @Slot()
     def manageConnectors(self):
-        dlg = ConnectorManagerDialog()
+        dlg = ConnectorManagerDialog(self.connector_model)
         dlg.exec()
 
     @Slot()
@@ -457,6 +459,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def onWorkspaceChanged(self):
         self.evidence_tab.refresh()
         self.signage_tree_tab.refresh()
+        self.connector_model.reset()
         self.workspace_explorer.set_root_path(AppDatabase.activeWorkspace().rootpath)
         self.notebook_explorer.set_root_path(AppDatabase.activeWorkspace().notebook_path)
         self.set_window_title(AppDatabase.activeWorkspace().name)
@@ -466,8 +469,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Close all viewer tabs
         dockwidget: QtAds.CDockWidget
         for dockwidget in self.doc_viewers.copy().values():
-            dockwidget.closeDockWidget()
-        
+            dockwidget.closeDockWidget()  
 
     @status_message('Importing from OneNote...')
     @Slot()

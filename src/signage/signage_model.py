@@ -1,5 +1,6 @@
 # Standard library imports.
 import logging
+from pathlib import Path
 from pandas import DataFrame
 from datetime import datetime, timezone
 
@@ -15,9 +16,10 @@ from html2text import html2text
 from database.database import AppDatabase, Signage, SignageType, SignageStatus, Cache
 from models.model import DatabaseField, ProxyModel
 from models.treemodel import (TreeItem, TreeModel)
+from signage.connector_model import ConnectorModel, Connector
 
 from utilities import config as mconf
-from utilities.utils import mergeExcelFiles, find_match
+from utilities.utils import mergeExcelFiles, find_match, extract_hash_lines
 
 from onenote.msonenote import OnenoteModel, OE
 
@@ -348,7 +350,7 @@ class SignageTreeModel(TreeModel):
 
         return last_refkey
     
-    # TEST
+    #TODO
     def getLastInsertSignageId(self) -> str:
         query = QtSql.QSqlQuery()
         query.exec("SELECT last_insert_rowid();")  # SQLite-specific query for last inserted ID
@@ -477,6 +479,7 @@ class SignageTreeModel(TreeModel):
                 if self.rowCount(child) > 0:
                     stack.append(child)
     
+    #TODO
     def getTreeModelIndexById(self, id: int) -> QtCore.QModelIndex|None:
         """Return the TreeModel index of the signage id"""
         treemodel_index = None
@@ -502,6 +505,27 @@ class SignageTreeModel(TreeModel):
                 continue
 
         return treemodel_index
+    
+    #TODO
+    def findItemByRefkeyType(self, parent=QtCore.QModelIndex(), refkey=None, type_=None):
+
+        for row in range(self.rowCount(parent)):
+            index = self.index(row, 0, parent)
+            
+            # refkey = index.sibling(index.row(), self.Fields.Refkey.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+            # signage_type = index.sibling(index.row(), self.Fields.Type.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+            ref_val = self.data(self.index(row, self.Fields.Refkey.index, parent))  # column 0 = refkey
+            type_val = self.data(self.index(row, self.Fields.Type.index, parent))
+
+            if ref_val == refkey and type_val == type_:
+                return index
+            
+            child = self.findItemByRefkeyType(index, refkey, type_)
+            if child.isValid():
+                return child
+
+        return QtCore.QModelIndex()
+
     
     def updateField(self, treemodel_index: QtCore.QModelIndex, column: int, new_value: int|str, update_treemodel: bool = True):
         """Update the source model field"""
@@ -736,9 +760,6 @@ class SignageTreeModel(TreeModel):
     def cacheOESignage(self):
         """Cache OneNote signage"""
         self.cache_oe_signage.clear()
-        if AppDatabase.activeWorkspace().OESectionID() is None:
-            return
-
         import json
 
         for row in range(self.sourceModel().rowCount()):
@@ -748,51 +769,97 @@ class SignageTreeModel(TreeModel):
             if application == "OneNote":
                 object_id = source.get("object_id")
                 self.cache_oe_signage.append(object_id)
-        
-    def loadFromOnenote(self):
-        """Get a list of tag from OneNote module"""
-        oe_section_id = AppDatabase.activeWorkspace().OESectionID()
-        oe_section_name = AppDatabase.activeWorkspace().OESectionName()
 
-        if oe_section_id is None:
-            return True, "OneNote Section not defined"
-                
-        tags = OnenoteModel.fetch_onenote(oe_section_id)
-
-        if len(tags) == 0:
-            return True, "Nothing new to import"
+    def loadFromDocx(self):
+        connectors: dict = ConnectorModel.cache().get('docx')
+        if connectors is None:
+            return True, "Docx connector not defined"
 
         regex = mconf.default_regex if mconf.settings.value("regex") is None or mconf.settings.value("regex") == "" else mconf.settings.value("regex")
 
-        tag: OE.Tag
-        n = 0
-        for tag in tags:
-            if tag.object_id in self.cache_oe_signage:
-                continue
+        connector: Connector
+        for connector in connectors.values():
+            last_modified = Path(connector.value).stat().st_mtime_ns
+            if connector.last_modified != last_modified:
+                connector.last_modified = last_modified
+                ok, lines = extract_hash_lines(connector.value)
+                
+                for line in lines:
+                    text = line[1:]
+                    signage = Signage()
+                    signage.title = html2text(text).strip()
+                    signage.refkey = find_match(text, regex)
+                    idx: QtCore.QModelIndex = self.findItemByRefkeyType(refkey=signage.refkey, type_=0)
+                    logger.debug(idx.sibling(idx.row(), self.Fields.Title.index).data(Qt.ItemDataRole.DisplayRole))
 
-            signage = Signage()
-            signage.title = html2text(tag.text).strip()
-            signage.refkey = find_match(signage.title, regex)
-            signage_type: SignageType = AppDatabase.cache_signage_type.get(tag.type.lower().strip())
+                    if idx != QtCore.QModelIndex():
+                        continue
 
-            # Ignore unknown signage
-            if signage_type is None:
-                continue
-            signage_type_id = signage_type.uid
+                    signage.workspace_id = AppDatabase.activeWorkspace().id
+                    src = f'{{"application":"Docx", "module":"loadFromDocx", "file":"{connector.value}"}}'
+                    signage.source = src
+                    signage.creation_datetime = datetime.now().strftime("%Y-%m-%d")
 
-            signage.type = signage_type_id
-            signage.workspace_id = AppDatabase.activeWorkspace().id
-            src = f'{{"application":"OneNote", "module":"loadFromOnenote", "section":"{oe_section_name}", "page":"{tag.page_name}", "object_id":"{tag.object_id}"}}'
-            signage.source = src
-            signage.creation_datetime = datetime.fromisoformat(tag.creationTime[:-1]).astimezone(timezone.utc).strftime('%Y-%m-%d')
-            signage.modification_datetime = tag.lastModifiedTime
-
-            ok, err = self.insertSignage(signage=signage, update_treemodel=False)
-            if not ok:
-                return False, err
+                    ok, err = self.insertSignage(signage=signage, update_treemodel=False)
+                    if not ok:
+                        return False, err
+                
+        ok, err = self.refreshTreeModel()
+        if not ok:
+            return False, err
             
-            n += 1
-            self.cache_oe_signage.append(tag.object_id)
+        return True, f"Import from Docx successfull!"
+
+    def loadFromOnenote(self):
+        """Get a list of tag from OneNote module"""
+        connectors: dict = ConnectorModel.cache().get('onenote')
+
+        if connectors is None or len(connectors.values()) == 0:
+            return True, "OneNote connector not defined"
+
+        connector: Connector
+        for connector in connectors.values():
+            connector_object = connector.from_json(connector.value)
+
+            oe_section_id = connector_object.get('section_id')
+            oe_section_name = connector_object.get('section_name')
+
+            tags = OnenoteModel.fetch_onenote(oe_section_id)
+
+            if len(tags) == 0:
+                return True, "Nothing new to import"
+
+            regex = mconf.default_regex if mconf.settings.value("regex") is None or mconf.settings.value("regex") == "" else mconf.settings.value("regex")
+
+            tag: OE.Tag
+            n = 0
+            for tag in tags:
+                if tag.object_id in self.cache_oe_signage:
+                    continue
+
+                signage = Signage()
+                signage.title = html2text(tag.text).strip()
+                signage.refkey = find_match(signage.title, regex)
+                signage_type: SignageType = AppDatabase.cache_signage_type.get(tag.type.lower().strip())
+
+                # Ignore unknown signage
+                if signage_type is None:
+                    continue
+                signage_type_id = signage_type.uid
+
+                signage.type = signage_type_id
+                signage.workspace_id = AppDatabase.activeWorkspace().id
+                src = f'{{"application":"OneNote", "module":"loadFromOnenote", "section":"{oe_section_name}", "page":"{tag.page_name}", "object_id":"{tag.object_id}"}}'
+                signage.source = src
+                signage.creation_datetime = datetime.fromisoformat(tag.creationTime[:-1]).astimezone(timezone.utc).strftime('%Y-%m-%d')
+                signage.modification_datetime = tag.lastModifiedTime
+
+                ok, err = self.insertSignage(signage=signage, update_treemodel=False)
+                if not ok:
+                    return False, err
+                
+                n += 1
+                self.cache_oe_signage.append(tag.object_id)
 
         ok, err = self.refreshTreeModel()
         if not ok:

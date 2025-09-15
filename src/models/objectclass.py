@@ -38,14 +38,14 @@ class Connector:
     uid: int = -1
     type: str = ""
     value: str = ""
+    last_modified: str = ""
 
     @classmethod
-    def from_json(cls):
+    def from_json(cls, value):
         try:
-            return json.loads(cls.value)
+            return json.loads(value)
         except:
             return
-
         
 @dataclass
 class DatabaseField:

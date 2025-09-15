@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 
 # Related third party imports.
-from qtpy import (QtCore, QtWidgets,QtGui, Slot, Signal)
+from qtpy import (QtCore, QtWidgets, QtGui, Qt, Slot, Signal)
 
 # Local application/library specific imports.
 from signage.signage_model import SignageTreeModel, SignageProxyModel
@@ -43,6 +43,21 @@ class OneNoteWorker(QtCore.QRunnable):
     def run(self):
         try:
             ok, msg = self.model.loadFromOnenote()
+        except Exception as e:
+            self.signals.error.emit()
+        finally:
+            self.signals.finished.emit(ok, msg)
+
+class DocxWorker(QtCore.QRunnable):
+    def __init__(self, model: SignageTreeModel):
+        super().__init__()
+        self.model = model
+        self.signals = LoadWorkerSignals()
+    
+    @Slot()
+    def run(self):
+        try:
+            ok, msg = self.model.loadFromDocx()
         except Exception as e:
             self.signals.error.emit()
         finally:
@@ -176,8 +191,24 @@ class SignageTab(BaseTab):
                                                 triggered=self.table.collapseAll)
         self.toolbar.insertAction(self.action_separator, self.action_collapseAll)
 
-        self.action_load_onenote = QtGui.QAction(theme_icon_manager.get_icon(":onenote"), "Import signage from OneNote", self, triggered=self.loadFromOnenote)
-        self.toolbar.insertAction(self.action_separator, self.action_load_onenote)
+        action_load_onenote = QtGui.QAction(theme_icon_manager.get_icon(":onenote"), "OneNote connector", self, triggered=self.loadFromOnenote)
+        # self.toolbar.insertAction(self.action_separator, action_load_onenote)
+
+        action_import_connector = QtGui.QAction(theme_icon_manager.get_icon(":file-text-line"), "Docx connector", self, triggered=self.importFromConnector)
+        # self.toolbar.insertAction(self.action_separator, action_import_connector)
+
+        connector_menu_btn = QtWidgets.QToolButton(self)
+        connector_menu_btn.setIcon(theme_icon_manager.get_icon(':links-line'))
+        connector_menu_btn.setText("Import from Connector")
+        connector_menu_btn.setToolTip("Import from Connector")
+        connector_menu_btn.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
+        connector_menu_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+        connector_menu = QtWidgets.QMenu()
+        connector_menu.addAction(action_load_onenote)
+        connector_menu.addAction(action_import_connector)
+        connector_menu_btn.setMenu(connector_menu)
+        self.toolbar.insertWidget(self.action_separator, connector_menu_btn)
     
     def createShortcuts(self):
         self.shortcut_create_childsignage = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+N"),
@@ -623,11 +654,18 @@ class SignageTab(BaseTab):
         self.oeloadspinner = WaitingSpinner(self, True, True, QtCore.Qt.WindowModality.WindowModal)
         self.oeloadspinner.start()
         worker = OneNoteWorker(self._model)
-        worker.signals.finished.connect(self.handleOELoadEnded)
+        worker.signals.finished.connect(self.handleWorkerEnded)
+        self.threadpool.tryStart(worker)
+    
+    def importFromConnector(self):
+        self.oeloadspinner = WaitingSpinner(self, True, True, QtCore.Qt.WindowModality.WindowModal)
+        self.oeloadspinner.start()
+        worker = DocxWorker(self._model)
+        worker.signals.finished.connect(self.handleWorkerEnded)
         self.threadpool.tryStart(worker)
 
     @Slot(bool,str)
-    def handleOELoadEnded(self, ok, msg):
+    def handleWorkerEnded(self, ok, msg):
         self.oeloadspinner.stop()
 
         if not ok:
@@ -636,7 +674,7 @@ class SignageTab(BaseTab):
             message_type = QtWidgets.QMessageBox.Icon.Information
 
         msg = QtWidgets.QMessageBox(message_type,
-                                    "Importing Signage from OneNote",
+                                    "Importing Signage Ended",
                                     msg,
                                     QtWidgets.QMessageBox.StandardButton.Ok, self)
         msg.exec()
@@ -660,6 +698,8 @@ class SignageTab(BaseTab):
                                         err,
                                         QtWidgets.QMessageBox.StandardButton.Ok, self)
             msg.exec()
+        
+        self._model.cacheOESignage()
 
     def closeEvent(self, a0):
         self.saveTableColumnWidth()

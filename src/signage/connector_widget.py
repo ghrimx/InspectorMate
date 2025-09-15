@@ -1,6 +1,5 @@
 import logging
-
-from qtpy import QtWidgets, Qt
+from qtpy import QtWidgets
 
 from signage.connector_model import ConnectorModel, Connector, AppDatabase, CONNECTORS
 from widgets.tableview import TableView
@@ -12,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 class ConnectorManagerDialog(QtWidgets.QDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, model: ConnectorModel, parent=None):
         super().__init__(parent=parent)
-        self._model = ConnectorModel()
+        self._model = ConnectorModel() if model is None else model
         self.initUI()
         self.initConnection()
 
@@ -54,6 +53,7 @@ class ConnectorManagerDialog(QtWidgets.QDialog):
 
     def initConnection(self):
         self.add_button.clicked.connect(self.onEditTriggered)
+        self.delete_button.clicked.connect(self.removeConnector)
     
     def onEditTriggered(self):
         edit_dialog = ConnectorEditDialog(self)
@@ -66,6 +66,14 @@ class ConnectorManagerDialog(QtWidgets.QDialog):
                                                "Connector Manager",
                                                err)
                 return
+            
+    def removeConnector(self):
+        index = self.connector_table.selectionModel().currentIndex()
+
+        if not index.isValid():
+            return
+        
+        self._model.removeConnector(index)
 
 
 class ConnectorEditDialog(QtWidgets.QDialog):
