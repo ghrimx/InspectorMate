@@ -83,6 +83,7 @@ class TextEdit(QtWidgets.QTextEdit):
         base_url = QtCore.QUrl.fromLocalFile(AppDatabase.activeWorkspace().notebook_path + "/")
         self.document().setBaseUrl(base_url)
 
+        self.search_text: str = ""
         self.zoom_factor = 0 #TEST
 
         # Initialize default font size.
@@ -606,6 +607,53 @@ class TextEdit(QtWidgets.QTextEdit):
         self.document().setDefaultFont(font)
         self._update_font_sizes()
 
+    def findNext(self):
+        self.findText(forward=True)
+
+    def findPrev(self):
+        self.findText(forward=False)
+
+    def findText(self, forward=True):
+        text = self.search_text
+        if not text:
+            return
+
+        flags = self.document().FindFlag(0)
+        if not forward:
+            flags |= QtGui.QTextDocument.FindFlag.FindBackward
+
+        found = self.find(text, flags)
+        if not found:
+            # wrap around
+            cursor = self.textCursor()
+            if forward:
+                cursor.movePosition(QtGui.QTextCursor.MoveOperation.Start)
+            else:
+                cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
+            self.setTextCursor(cursor)
+            found = self.find(text, flags)
+
+    def highlightFoundAll(self):
+        """Highlight all occurrences of the search term."""
+        text = self.search_text
+        extra_selections = []
+
+        if text:
+            # Highlight format
+            fmt = QtGui.QTextCharFormat()
+            fmt.setBackground(QtGui.QColor("yellow"))
+            fmt.setForeground(theme_icon_manager.get_theme_color())
+
+            cursor = self.document().find(text, 0)
+            while not cursor.isNull():
+                selection = QtWidgets.QTextEdit.ExtraSelection()
+                selection.cursor = cursor
+                selection.format = fmt
+                extra_selections.append(selection)
+                cursor = self.document().find(text, cursor)
+
+        self.setExtraSelections(extra_selections)
+
 
 class Notepad(QtWidgets.QWidget):
     sigCreateSignage = Signal(str, str, str)
@@ -637,6 +685,8 @@ class Notepad(QtWidgets.QWidget):
 
         QtCore.QTimer.singleShot(0, self.loadFiles)
         self.loadSettings()
+
+        self.mdi.subWindowActivated.connect(self.onSubWindowActivated)
 
     def createActions(self):
         self.action_addnote = QtGui.QAction(theme_icon_manager.get_icon(':file_add'), "Add note (Ctrl+N)", self, triggered=self.addNote)
@@ -803,6 +853,13 @@ class Notepad(QtWidgets.QWidget):
         spacer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         self.action_spacer = self.toolbar.addWidget(spacer)
 
+        # Search widget
+        self.search_widget = QtWidgets.QLineEdit()
+        self.search_widget.setPlaceholderText("Search...")
+        self.search_widget.setFixedWidth(180)
+        self.search_widget.textChanged.connect(self.searchText)
+
+        self.toolbar.addWidget(self.search_widget)
         self.toolbar.addAction(self.action_help)
     
     def createShortcuts(self):
@@ -827,6 +884,17 @@ class Notepad(QtWidgets.QWidget):
         self.shortcut_bulletList = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+;"), self, self.bulletList, ambiguousMember=self.bulletList, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_checkbox = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+;"), self, self.addCheckbox, ambiguousMember=self.addCheckbox, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_link = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+K"), self, self.editLink, ambiguousMember=self.editLink, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+    @Slot()
+    def onSubWindowActivated(self):
+        active_sub_window = self.mdi.activeSubWindow()
+        
+        if active_sub_window is None:
+            return
+        
+        current_textedit: TextEdit = active_sub_window.widget()
+
+        self.search_widget.setText(current_textedit.search_text)
 
     @Slot()
     def update_window_menu(self):
@@ -1067,7 +1135,6 @@ class Notepad(QtWidgets.QWidget):
             link.setFontUnderline(True)
             cursor.insertText(text, link)
 
-
     @Slot()
     def createSignage(self):
         title = self.active_mdi_child().textCursor().selectedText()
@@ -1176,4 +1243,8 @@ class Notepad(QtWidgets.QWidget):
         for subwindow in self.mdi.subWindowList():
             subwindow.showMaximized()
 
-    
+    @Slot(str)
+    def searchText(self, text):
+        if self.active_mdi_child():
+            self.active_mdi_child().search_text = text
+            self.active_mdi_child().highlightFoundAll()
