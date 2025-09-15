@@ -6,6 +6,7 @@ import uuid
 import pandas as pd
 import fitz
 from zipfile import ZipFile
+from mammoth import extract_raw_text
 
 from base64 import (b64decode, b64encode)
 
@@ -257,3 +258,13 @@ def readJson(json_file: str) -> tuple[dict, str]:
                 err = f"Error: {json_file} not found."
                 return {}, err
 
+def extract_hash_lines(docx_path) -> list[str]:
+    """
+    Extract all lines starting with '#' from a Word (.docx) document using mammoth.
+    """
+    with open(docx_path, "rb") as docx_file:
+        result = extract_raw_text(docx_file)
+        text = result.value  # The raw text extracted
+
+    lines = [line.strip() for line in text.splitlines() if line.strip().startswith("#")]
+    return lines

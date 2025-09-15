@@ -59,6 +59,10 @@ class Cache:
     def d2(self, d: dict):
         self._d2 = d
 
+    def clear(self):
+        self._key_dict.clear()
+        self._d2.clear()
+
 
 class AppDatabase(QtSql.QSqlDatabase):
     _instance = None # Singleton

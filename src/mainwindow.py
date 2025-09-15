@@ -5,6 +5,7 @@ import logging
 from signage.signage_model import SignageTreeModel
 from signage.signage_tab import SignageTab as SignageTreeTab
 from signage.signage_dialogs import OwnerDialog
+from signage.connector_widget import ConnectorManagerDialog
 
 from evidence.evidencemodel import EvidenceModel
 from evidence.evidencetab import EvidenceTab, Document
@@ -192,6 +193,10 @@ class MainWindow(QtWidgets.QMainWindow):
                                                "Add/Remove Owner",
                                                self.menubar,
                                                triggered=self.addRemoveOwner))
+        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":links-line"),
+                                               "Manage Signage Connectors",
+                                               self.menubar,
+                                               triggered=self.manageConnectors))
 
         # View Menu
         self.view_menu = self.menubar.addMenu("View")
@@ -286,6 +291,11 @@ class MainWindow(QtWidgets.QMainWindow):
     @Slot()
     def addRemoveOwner(self):
         dlg = OwnerDialog()
+        dlg.exec()
+
+    @Slot()
+    def manageConnectors(self):
+        dlg = ConnectorManagerDialog()
         dlg.exec()
 
     @Slot()

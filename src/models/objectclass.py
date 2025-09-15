@@ -8,7 +8,6 @@ class User:
     name: str | None = None
 
 
-
 @dataclass
 class Workspace:
     id: int = 0
@@ -33,6 +32,20 @@ class Workspace:
             return json.dumps(onenote_section)
         except:
             return
+        
+@dataclass
+class Connector:
+    uid: int = -1
+    type: str = ""
+    value: str = ""
+
+    @classmethod
+    def from_json(cls):
+        try:
+            return json.loads(cls.value)
+        except:
+            return
+
         
 @dataclass
 class DatabaseField:
