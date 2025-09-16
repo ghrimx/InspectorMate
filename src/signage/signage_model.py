@@ -819,7 +819,7 @@ class SignageTreeModel(TreeModel):
 
         connector: Connector
         for connector in connectors.values():
-            connector_object = connector.from_json(connector.value)
+            connector_object = connector.from_json(connector.value) # json {section_id:{...}, section_name:{...}}
 
             oe_section_id = connector_object.get('section_id')
             oe_section_name = connector_object.get('section_name')

@@ -98,12 +98,3 @@ class ConnectorModel(BaseRelationalTableModel):
         self.endRemoveRows()
         self.refresh()
 
-    def updateConnector(self, connector: Connector):
-        for row in range(self.rowCount()):
-            record = self.record(row)
-            if record.value("id") == connector.uid:
-                record.setValue("last_modified", connector.last_modified)
-                self.setRecord(row, record)       
-                break
-        
-        self.submitAll()

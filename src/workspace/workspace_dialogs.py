@@ -7,8 +7,6 @@ from PyQt6.QtSql import QSqlRelationalDelegate
 # Local application/library specific imports.
 from workspace.workspacemodel import WorkspaceModel
 from database.dbstructure import Workspace
-# from onenote.onenotepickerdlg import OnenotePickerDialog
-from onenote.msonenote import OnenotePickerDialog
 from workspace.workspacetable import WorkspaceTable
 
 from utilities.utils import createFolder
@@ -95,7 +93,6 @@ class WorkspaceManagerDialog(QtWidgets.QDialog):
         workspace.reference = self.edit_dialog.workspace_reference_lineedit.text()
         workspace.rootpath = self.edit_dialog.workspace_path_lineedit.text()
         workspace.state = self.edit_dialog.activate_workspace.isChecked()
-        workspace.onenote_section = self.edit_dialog.onenote_path_lineedit.text()
 
         if self.edit_dialog.evidence_path_lineedit.text() == "":
             workspace.evidence_path = self.edit_dialog.workspace_path_lineedit.text()
@@ -219,11 +216,6 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         self.notebook_path_lineedit.setReadOnly(True)
         self.notebook_path_lineedit.setPlaceholderText("Select the notebook folder")
 
-        self.onenote_path_button = QtWidgets.QPushButton("OneNote")
-        self.onenote_path_lineedit = QtWidgets.QLineEdit()
-        self.onenote_path_lineedit.setReadOnly(True)
-        self.onenote_path_lineedit.setPlaceholderText("Select the onenote section to monitor")
-
         self.activate_workspace = QtWidgets.QCheckBox("Activate workspace")
         self.activate_workspace.setChecked(True)
 
@@ -232,14 +224,11 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         form.addRow(self.workspace_path_button, self.workspace_path_lineedit)
         form.addRow(self.evidence_path_button, self.evidence_path_lineedit)
         form.addRow(self.notebook_path_button, self.notebook_path_lineedit)
-        form.addRow(self.onenote_path_button, self.onenote_path_lineedit)
         form.addRow("", self.activate_workspace)
         form.addWidget(self.buttonBox)
 
         self.setLayout(form)
         self.updateButtonState()
-
-        self.onenote_manager: OnenotePickerDialog = None
 
     def connectSignals(self):
         self.workspace_name_lineedit.textChanged.connect(self.updateButtonState)
@@ -247,25 +236,6 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         self.workspace_path_lineedit.textChanged.connect(self.onRootPathChanged)
         self.evidence_path_button.clicked.connect(lambda: self.selectFolder(self.evidence_path_lineedit))
         self.notebook_path_button.clicked.connect(lambda: self.selectFolder(self.notebook_path_lineedit))
-        self.onenote_path_button.clicked.connect(self.onenoteButtonClicked)
-
-    @Slot()
-    def onenoteButtonClicked(self):
-        if self.onenote_manager is None:
-            self.onenote_manager = OnenotePickerDialog(self)
-
-        self.onenote_manager.model.refresh()
-        self.onenote_manager.show()
-
-        if not isinstance(self.onenote_manager, Exception):
-            if self.onenote_manager.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-                self.onenote_path_lineedit.setText(self.onenote_manager.oeSection())
-        else:
-            msg = QtWidgets.QMessageBox.critical(self,
-                                                 "Error",
-                                                 "",
-                                                 buttons=QtWidgets.QMessageBox.StandardButton.Ok)
-            msg.exec()
 
     @Slot()
     def onRootPathChanged(self):
@@ -298,7 +268,6 @@ class WorkspaceEditDialog(QtWidgets.QDialog):
         self.mapper.addMapping(self.workspace_path_lineedit, model.Fields.Rootpath.index)
         self.mapper.addMapping(self.evidence_path_lineedit, model.Fields.EvidencePath.index)
         self.mapper.addMapping(self.notebook_path_lineedit, model.Fields.NotebookPath.index)
-        self.mapper.addMapping(self.onenote_path_lineedit, model.Fields.OneNoteSection.index)
         self.mapper.addMapping(self.activate_workspace, model.Fields.State.index)
 
         self.updateButtonState()

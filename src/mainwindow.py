@@ -160,24 +160,27 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # File Menu
         self.file_menu = self.menubar.addMenu("File")
-        self.file_menu.addAction(QtGui.QAction("Manage Workspace",
+        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":archive-2-line"),"Manage Workspace",
                                                self.menubar,
                                                triggered=self.openWorkspaceManager))
-        self.file_menu.addAction(QtGui.QAction("Create Signage",
+        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":signpost-line"),
+                                               "Create Signage",
                                                self.menubar,
                                                shortcut=QtGui.QKeySequence("Ctrl+R"),
                                                triggered=lambda: self.signage_tree_tab.createSignage("", '{"application":"InspectorMate", "module":"MainWindow"}')))
-        self.file_menu.addAction(QtGui.QAction("Export Signage",
+        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":share-forward-2-line"),
+                                               "Export Signage",
                                                self.menubar,
                                                triggered=self.signage_tree_tab.onExportTriggered))
-        self.file_menu.addAction(QtGui.QAction("Import Signage",
+        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":download-2-line"),
+                                               "Import Signage",
                                                self.menubar,
                                                triggered=self.signage_tree_tab.onImportTriggered))
 
         # Edit Menu
         self.file_open_option = QtGui.QAction("Open document with system application",
-                                                  self.menubar,
-                                                  triggered=self.saveSettings)
+                                              self.menubar,
+                                              triggered=self.saveSettings)
         self.edit_menu = self.menubar.addMenu("Edit")
         self.file_open_option.setCheckable(True)
         self.file_open_option.setChecked(True)
@@ -217,16 +220,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Tools Menu
         self.tools_menu = self.menubar.addMenu("Tools")
-        self.tools_menu.addAction(QtGui.QAction("Merge Excel files",
+        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":git-merge-line"),
+                                                "Merge Excel files",
                                                 self.menubar,
                                                 triggered=self.handleMergeExcelFiles))
-        self.tools_menu.addAction(QtGui.QAction("Unzip archive",
+        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":inbox-unarchive-line"),
+                                                "Unzip archive",
                                                 self.menubar,
                                                 triggered=self.handleUnzipArchive))
         self.tools_menu.addAction(QtGui.QAction("Unpack PDF",
                                                 self.menubar,
                                                 triggered=self.handleUnpackPDF))
-        self.tools_menu.addAction(QtGui.QAction("Batch Rename file",
+        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":input-field"),
+                                                "Batch Rename file",
                                                 self.menubar,
                                                 triggered=self.handleBatchRenameFile))
         

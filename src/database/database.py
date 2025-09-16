@@ -144,7 +144,6 @@ class AppDatabase(QtSql.QSqlDatabase):
                    root,
                    attachments_path,
                    notebook_path,
-                   onenote_section,
                    state,
                    reference 
                    FROM workspace 
@@ -159,7 +158,6 @@ class AppDatabase(QtSql.QSqlDatabase):
             cls._active_workspace.rootpath = query.value(2)
             cls._active_workspace.evidence_path = query.value(3)
             cls._active_workspace.notebook_path = query.value(4)
-            cls._active_workspace.onenote_section = query.value(5)
             cls._active_workspace.state = query.value(6)
             cls._active_workspace.reference = query.value(7)
             wk_info = (

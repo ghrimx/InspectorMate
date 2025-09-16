@@ -49,7 +49,9 @@ class ConnectorManagerDialog(QtWidgets.QDialog):
         self.vlayout.addWidget(self.connector_table)
         self.setLayout(self.vlayout)
 
-        self.setMinimumWidth(500)
+    def showEvent(self, a0):
+        self.setMinimumWidth(600)
+        return super().showEvent(a0)
 
     def initConnection(self):
         self.add_button.clicked.connect(self.onEditTriggered)
@@ -66,6 +68,7 @@ class ConnectorManagerDialog(QtWidgets.QDialog):
                                                "Connector Manager",
                                                err)
                 return
+            self.connector_table.resizeColumnsToContents()
             
     def removeConnector(self):
         index = self.connector_table.selectionModel().currentIndex()
@@ -74,6 +77,7 @@ class ConnectorManagerDialog(QtWidgets.QDialog):
             return
         
         self._model.removeConnector(index)
+        self.connector_table.resizeColumnsToContents()
 
 
 class ConnectorEditDialog(QtWidgets.QDialog):

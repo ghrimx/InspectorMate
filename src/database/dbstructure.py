@@ -70,22 +70,7 @@ class Workspace:
     rootpath: str = ""
     evidence_path: str = ""
     notebook_path: str = ""
-    onenote_section: str = "" # json {section_id:{...}, section_name:{...}}
     state: bool = True
-
-    def OESectionID(self) -> str | None:
-        try:
-            _onenote: dict = json.loads(self.onenote_section)
-            return _onenote["section_id"]
-        except:
-            return
-        
-    def OESectionName(self) -> str | None:
-        try:
-            _onenote: dict = json.loads(self.onenote_section)
-            return _onenote["section_name"]
-        except:
-            return
         
 @dataclass
 class SignageType:

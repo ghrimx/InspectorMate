@@ -19,7 +19,6 @@ class WorkspaceModel(BaseRelationalTableModel):
         Rootpath = DatabaseField
         EvidencePath = DatabaseField
         NotebookPath = DatabaseField
-        OneNoteSection = DatabaseField
         CreationDate = DatabaseField
         ModificationDate = DatabaseField
         Reference = DatabaseField    
@@ -57,7 +56,6 @@ class WorkspaceModel(BaseRelationalTableModel):
         WorkspaceModel.Fields.Rootpath = DatabaseField("root", self.fieldIndex('root'), False)
         WorkspaceModel.Fields.EvidencePath = DatabaseField("attachments_path", self.fieldIndex('attachments_path'), False)
         WorkspaceModel.Fields.NotebookPath = DatabaseField("notebook_path", self.fieldIndex('notebook_path'), False)
-        WorkspaceModel.Fields.OneNoteSection = DatabaseField("onenote_section", self.fieldIndex('onenote_section'), False)
         WorkspaceModel.Fields.CreationDate = DatabaseField("creation_date", self.fieldIndex('creation_date'), False)
         WorkspaceModel.Fields.ModificationDate = DatabaseField("modification_date", self.fieldIndex('modification_date'), False)
         WorkspaceModel.Fields.Reference = DatabaseField("reference", self.fieldIndex('reference'), True)
@@ -70,7 +68,6 @@ class WorkspaceModel(BaseRelationalTableModel):
         record.setValue('state', workspace.state)
         record.setValue('attachments_path', workspace.evidence_path)
         record.setValue('notebook_path', workspace.notebook_path)
-        record.setValue('onenote_section', workspace.onenote_section)
         record.setValue('creation_date', datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
         record.setValue('modification_date', datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
@@ -79,12 +76,12 @@ class WorkspaceModel(BaseRelationalTableModel):
         self.endInsertRows()
 
         if not inserted:
-            err = f"insertWorkspace > Cannot insert new workspace - Error:{self.lastError().text()}"
+            err = f"Cannot insert new workspace - Error:{self.lastError().text()}"
             logger.info(err)
             return False, err
        
         if not self.refresh():
-            err = f"insertWorkspace > Cannot refresh workspace model - Error:{self.lastError().text()}"
+            err = f"Cannot refresh workspace model - Error:{self.lastError().text()}"
             logger.info(err)
             return False, err
 
