@@ -265,7 +265,7 @@ def extract_hash_lines(docx_path):
             text = result.value  # The raw text extracted
 
     except Exception as e:
-        return False, e
+        return False, str(e)
 
     lines = [line.strip() for line in text.splitlines() if line.strip().startswith("#")]
     return True, lines

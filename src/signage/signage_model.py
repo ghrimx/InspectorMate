@@ -779,12 +779,19 @@ class SignageTreeModel(TreeModel):
 
         connector: Connector
         for connector in connectors.values():
-            last_modified = Path(connector.value).stat().st_mtime_ns
+            fpath = Path(connector.value)
+
+            if not fpath.is_file():
+                return False, f"Connector file '{connector.value}' not found"
+
+            last_modified = fpath.stat().st_mtime_ns
             if connector.last_modified != last_modified:
                 connector.last_modified = last_modified
-                ok, lines = extract_hash_lines(connector.value)
+                ok, result = extract_hash_lines(connector.value)
+                if not ok:
+                    return False, result
                 
-                for line in lines:
+                for line in result:
                     text = line[1:]
                     signage = Signage()
                     signage.title = html2text(text).strip()

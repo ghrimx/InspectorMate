@@ -192,10 +192,7 @@ class SignageTab(BaseTab):
         self.toolbar.insertAction(self.action_separator, self.action_collapseAll)
 
         action_load_onenote = QtGui.QAction(theme_icon_manager.get_icon(":onenote"), "OneNote connector", self, triggered=self.loadFromOnenote)
-        # self.toolbar.insertAction(self.action_separator, action_load_onenote)
-
         action_import_connector = QtGui.QAction(theme_icon_manager.get_icon(":file-text-line"), "Docx connector", self, triggered=self.importFromConnector)
-        # self.toolbar.insertAction(self.action_separator, action_import_connector)
 
         connector_menu_btn = QtWidgets.QToolButton(self)
         connector_menu_btn.setIcon(theme_icon_manager.get_icon(':links-line'))
