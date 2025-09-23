@@ -73,6 +73,7 @@ class SignageTreeView(TreeView):
             slot_func = partial(self.updateOwner, owner)
             action.triggered.connect(slot_func)
 
+        #TODO
         # context_menu.addAction(theme_icon_manager.get_icon(":link-m"),
         #                        "Open Link",
         #                        self.openLink)

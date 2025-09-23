@@ -116,7 +116,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.evidence_tab.createRefKeyFilterPane(self.signage_treemodel)
 
         # Listinsight widget
-        self.listinsight = ListinsightWidget(f"{AppDatabase.activeWorkspace().rootpath}/ListInsight", AppDatabase.activeWorkspace().name, self)
+        self.listinsight = ListinsightWidget(f"{AppDatabase.activeWorkspace().rootpath}/ListInsight", self)
         self.listinsight_tab_dock_widget = QtAds.CDockWidget("ListInsight")
         self.listinsight_tab_dock_widget.setWidget(self.listinsight)
         self.listinsight_tab_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
