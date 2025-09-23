@@ -14,7 +14,7 @@ from signage.signage_rightpane_widgets import SignageInfoWidget
 from signage.signage_dialogs import CreateDialog, FilterDialog, ExportDialog, ImportDialog
 
 from widgets.basetab import BaseTab
-from widgets.waitingspinner import WaitingSpinner
+from pyqtspinner import WaitingSpinner
 
 from utilities.config import settings
 from utilities.decorators import status_signal

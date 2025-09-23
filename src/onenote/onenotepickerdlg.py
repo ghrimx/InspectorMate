@@ -3,7 +3,7 @@ from qtpy import (QtCore, Slot, Signal, QtWidgets)
 from onenote.onenotemodel import OnenoteModel
 
 from widgets.treeview import TreeView
-from widgets.waitingspinner import WaitingSpinner
+from pyqtspinner import WaitingSpinner
 
 from delegates.delegate import ReadOnlyDelegate 
 

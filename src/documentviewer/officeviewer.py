@@ -4,7 +4,7 @@ from qtpy import (QtWidgets, Slot)
 from PyMuPDF4QT.pymupdfviewer import PdfViewer
 from evidence.evidencemodel import Document
 
-from widgets.waitingspinner import WaitingSpinner
+from pyqtspinner import WaitingSpinner
 
 
 logger = logging.getLogger(__name__)

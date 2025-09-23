@@ -18,10 +18,10 @@ from database.dbstructure import Document
 
 from widgets.basetab import BaseTab
 from widgets.treeview import TreeView
-from widgets.waitingspinner import WaitingSpinner
 
 from utilities.config import settings
 
+from pyqtspinner import WaitingSpinner
 from qt_theme_manager import theme_icon_manager
 
 logger = logging.getLogger(__name__)
