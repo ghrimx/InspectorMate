@@ -74,7 +74,7 @@ class WorkspaceManagerDialog(QtWidgets.QDialog):
 
         margins = self.vlayout.contentsMargins()
 
-        width = margins.left() + margins.right() + self.workspace_table.horizontalHeader().length() + self.workspace_table.verticalHeader().width() + self.workspace_table.frameWidth() * 2
+        width = 50 + margins.left() + margins.right() + self.workspace_table.horizontalHeader().length() + self.workspace_table.verticalHeader().width() + self.workspace_table.frameWidth() * 2
         height = margins.top() + margins.bottom() + self.workspace_table.horizontalHeader().height() * 2 + table_height + self.edit_container.frameGeometry().height()
 
         self.resize(width, height)

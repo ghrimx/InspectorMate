@@ -1,12 +1,38 @@
 import logging
 
-from qtpy import (QtWidgets, Slot)
+from qtpy import (QtWidgets, Slot, Signal, QtCore)
 from database.database import AppDatabase
 from utilities.utils import (mergeExcelFiles, unpackZip)
+from utilities.decorators import status_signal
 
 from widgets.fileselectiondialog import selectFilesDialog
 
 logger = logging.getLogger(__name__)
+
+class WorkerSignals(QtCore.QObject):
+    result = Signal(object)
+    error = Signal(Exception)
+    finished = Signal(str)
+    status = Signal(str)
+
+
+class Runnable(QtCore.QRunnable):
+    def __init__(self, func):
+        super().__init__()
+        self.func = func
+        self.signals = WorkerSignals()
+
+    def run(self):
+        try:
+            self.func()
+        except Exception as e:
+            msg = "an error occured!"
+            self.signals.error.emit(e)
+        else:
+            msg = "done!"
+        finally:
+            self.signals.finished.emit(msg)
+
 
 class MergeExcelDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -104,13 +130,15 @@ class MergeExcelDialog(QtWidgets.QDialog):
         self._duplicate_option = option
 
     def accept(self):
-        mergeExcelFiles(self._files, self._duplicate_option, f"{self.destination.text()}/{self.filename.text()}.xlsx" )
+        mergeExcelFiles(self._files, self._duplicate_option, f"{self.destination.text()}/{self.filename.text()}.xlsx")
         super().accept()
 
 
 class UnzipDialog(QtWidgets.QDialog):
-    def __init__(self, source: str = None, dest: str = None, parent=None):
+    def __init__(self, source: str = None, dest: str = None, start_process: callable=None, process_ended: callable=None, parent=None):
         super().__init__(parent)
+        self.start_process = start_process
+        self.process_ended = process_ended
 
         self._files = []
 
@@ -165,13 +193,18 @@ class UnzipDialog(QtWidgets.QDialog):
             self.updateButtonState()
 
     def accept(self):
-        for files in self._files:
-            err = unpackZip(files, self.destination.text())
-            if isinstance(err, Exception):
-                logger.error(err)
-                QtWidgets.QMessageBox.critical(self,
-                                               "Error unzipping archive",
-                                               f"{err}",
-                                               buttons=QtWidgets.QMessageBox.StandardButton.Ok)
-                return
+        pool = QtCore.QThreadPool().globalInstance()
+        destination = self.destination.text()
+
+        def unzip():
+            for files in self._files:
+                unpackZip(files, destination)
+        
+        self.start_process("Unzipping...")
+        runnable = Runnable(unzip)
+        runnable.signals.error.connect(lambda e: logger.error(e))
+        runnable.signals.finished.connect(lambda msg: self.process_ended(msg))
+
+        pool.start(runnable)
+
         super().accept()

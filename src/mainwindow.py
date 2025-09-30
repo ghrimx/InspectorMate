@@ -37,6 +37,7 @@ from listinsight.gui import status_signal as listinsight_status_signal
 
 from utilities.decorators import status_message, status_signal
 from widgets.app_updater import Updater, get_latest_release
+from pyqtspinner import WaitingSpinner
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -141,6 +142,17 @@ class MainWindow(QtWidgets.QMainWindow):
         status_signal.status_message.connect(self.status_bar.showMessage)
         self.status_bar.showMessage('✔️ Ready!', 30000)
         listinsight_status_signal.status_message.connect(self.status_bar.showMessage)
+
+        self.spinner = WaitingSpinner(self, True, True)
+
+    def startSpinner(self, msg = ""):
+        self.spinner.start()
+        status_signal.status_message.emit(msg, 5000)
+        QtWidgets.QApplication.processEvents()
+
+    def stopSpinner(self, msg = ""):
+        self.spinner.stop()
+        status_signal.status_message.emit(msg, 5000)
 
     def checkUpdate(self):
         release = get_latest_release()
@@ -440,7 +452,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @Slot()
     def handleUnzipArchive(self):
-        self.unzip_dialog = UnzipDialog(source=AppDatabase.activeWorkspace().rootpath, dest=AppDatabase.activeWorkspace().evidence_path)
+        self.unzip_dialog = UnzipDialog(source=AppDatabase.activeWorkspace().rootpath,
+                                        dest=AppDatabase.activeWorkspace().evidence_path,
+                                        start_process=self.startSpinner,
+                                        process_ended=self.stopSpinner)
         self.unzip_dialog.exec()
 
     @Slot()
