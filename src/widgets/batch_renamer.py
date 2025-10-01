@@ -49,8 +49,6 @@ class BatchRenameWidget(QWidget):
         self.rename_pairs = []
         self.target_type: Literal['file', 'foler', 'both'] = 'file'
 
-        self.threadpool = QThreadPool()
-
         layout = QVBoxLayout(self)
 
         # File selection       
@@ -336,11 +334,12 @@ class BatchRenameWidget(QWidget):
         self.progress_dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.progress_dialog.setMinimumDuration(0)
 
+        pool = QThreadPool.globalInstance()
         worker = RenameWorker(self.rename_pairs)
         worker.signals.progress.connect(self.progress_dialog.setValue)
         worker.signals.finished.connect(self.onRenameFinished)
         worker.signals.finished.connect(self.progress_dialog.cancel)
-        self.threadpool.tryStart(worker)
+        pool.start(worker)
 
     @Slot(list, int, int)
     def onRenameFinished(self, errors: list, to_rename, renamed_count):
