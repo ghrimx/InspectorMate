@@ -452,7 +452,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @Slot()
     def concatExcelFiles(self):
         self.concat_excel_dialog = ConcatExcelDialog(start_process=self.startSpinner,
-                                                    process_ended=self.stopSpinner)     
+                                                     process_ended=self.stopSpinner)     
         self.concat_excel_dialog.exec()
 
     @Slot()
