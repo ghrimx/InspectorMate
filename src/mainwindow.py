@@ -404,7 +404,7 @@ class MainWindow(QtWidgets.QMainWindow):
             icon = None
             signage_type: SignageType
             for signage_type in AppDatabase.cache_signage_type.values():
-                if signage_type.type_id == signage.type_id:
+                if signage_type.uid == signage.type_id:
                     icon = signage_type.icon
 
             if icon != "":

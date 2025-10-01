@@ -521,19 +521,22 @@ class RectItem(QtWidgets.QGraphicsRectItem, BaseAnnotation):
 
         self.setFlags(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
+
 class LinkBox(QtWidgets.QGraphicsObject):
     sigJumpTo = Signal(int, QtCore.QPointF)
+    sigToUri = Signal(str)
 
-    def __init__(self, link: pymupdf.Link, pno: int, zfactor: float, parent=None):
+    def __init__(self, link: dict, pno: int, zfactor: float, parent=None):
         super(LinkBox, self).__init__(parent)
         self._link = link
         self.pno = pno
         self.zfactor = zfactor
-        self.to_page: int|str = link["page"]
+        self.to_page: int|str = link.get("page")
+        self.uri = link.get("uri")
 
         if isinstance(self.to_page, str):
             try:
-                self.to_page = int(link["page"]) - 1 # assume the page label is the exact target
+                self.to_page = int(self.to_page) - 1 # assume the page label is the exact target
             except:
                 pass
 
@@ -558,7 +561,10 @@ class LinkBox(QtWidgets.QGraphicsObject):
         painter.drawRect(self.rect)
 
     def mousePressEvent(self, event):
-        self.sigJumpTo.emit(self.to_page, self.to)
+        if self.to_page is not None:
+            self.sigJumpTo.emit(self.to_page, self.to)
+        elif self.uri is not None:
+            self.sigToUri.emit(self.uri)
         event.accept()
     
 
