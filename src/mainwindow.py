@@ -161,7 +161,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.updater.show()
 
     def setupDialogs(self):
-        self.merge_excel_dialog: MergeExcelDialog = None
+        self.concat_excel_dialog: ConcatExcelDialog = None
         self.onenote_manager: OnenotePickerDialog = None
         self.summary_dialogs: SummaryDialog = None
 
