@@ -26,17 +26,20 @@ class Runnable(QtCore.QRunnable):
         try:
             self.func()
         except Exception as e:
-            msg = "an error occured!"
+            msg = "❌ An error occured!"
             self.signals.error.emit(e)
         else:
-            msg = "done!"
+            msg = "✔️ Done!"
         finally:
             self.signals.finished.emit(msg)
 
 
-class MergeExcelDialog(QtWidgets.QDialog):
-    def __init__(self, parent=None):
+class ConcatExcelDialog(QtWidgets.QDialog):
+    def __init__(self, start_process: callable=None, process_ended: callable=None, parent=None):
         super().__init__(parent)
+        self.setWindowTitle("Concatenate Excel files")
+        self.start_process = start_process
+        self.process_ended = process_ended
 
         self._files = []
         self._duplicate_option: str | bool = "first"
@@ -130,13 +133,28 @@ class MergeExcelDialog(QtWidgets.QDialog):
         self._duplicate_option = option
 
     def accept(self):
-        mergeExcelFiles(self._files, self._duplicate_option, f"{self.destination.text()}/{self.filename.text()}.xlsx")
+        pool = QtCore.QThreadPool().globalInstance()
+
+        outfile = f"{self.destination.text()}/{self.filename.text()}.xlsx"
+
+        def merge():
+            mergeExcelFiles(self._files,
+                            self._duplicate_option,
+                            outfile)
+        
+        self.start_process("Merging...")
+        runnable = Runnable(merge)
+        runnable.signals.error.connect(lambda e: logger.error(e))
+        runnable.signals.finished.connect(lambda msg: self.process_ended(msg))
+        pool.start(runnable)
+
         super().accept()
 
 
 class UnzipDialog(QtWidgets.QDialog):
     def __init__(self, source: str = None, dest: str = None, start_process: callable=None, process_ended: callable=None, parent=None):
         super().__init__(parent)
+        self.setWindowTitle("Unzip archive")
         self.start_process = start_process
         self.process_ended = process_ended
 
