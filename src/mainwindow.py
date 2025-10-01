@@ -20,7 +20,7 @@ from richtexteditor.notepad import Notepad
 
 from widgets.filesystem import FileSystem
 from widgets.richtexteditor import RichTextEditor
-from widgets.filedialog import (MergeExcelDialog, UnzipDialog)
+from widgets.filedialog import (ConcatExcelDialog, UnzipDialog)
 from widgets.summarydialog import SummaryDialog
 from widgets.aboutdialog import About
 from widgets.debuglogviewer import DebugLogViewer
@@ -233,33 +233,37 @@ class MainWindow(QtWidgets.QMainWindow):
         # Tools Menu
         self.tools_menu = self.menubar.addMenu("Tools")
         self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":git-merge-line"),
-                                                "Merge Excel files",
+                                                "Concatenate Excel files",
                                                 self.menubar,
-                                                triggered=self.handleMergeExcelFiles))
+                                                triggered=self.concatExcelFiles))
         self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":inbox-unarchive-line"),
                                                 "Unzip archive",
                                                 self.menubar,
-                                                triggered=self.handleUnzipArchive))
+                                                triggered=self.unzipArchive))
         self.tools_menu.addAction(QtGui.QAction("Unpack PDF",
                                                 self.menubar,
-                                                triggered=self.handleUnpackPDF))
+                                                triggered=self.unpackPDF))
         self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":input-field"),
                                                 "Batch Rename file",
                                                 self.menubar,
-                                                triggered=self.handleBatchRenameFile))
+                                                triggered=self.batchRenameFile))
         
         # Help menu
         self.help_menu = self.menubar.addMenu("Help")
-        self.help_menu.addAction(QtGui.QAction("Summary",
+        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":table-2"),
+                                               "Summary",
                                                 self.menubar,
                                                 triggered=self.showSummary))
-        self.help_menu.addAction(QtGui.QAction("About InspectorMate",
+        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":information-2-line"),
+                                               "About InspectorMate",
                                                 self.menubar,
                                                 triggered=self.showAbout))
-        self.help_menu.addAction(QtGui.QAction("View Debug Output",
+        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":bug-line"),
+                                               "View Debug Output",
                                                 self.menubar,
                                                 triggered=self.showDebugOutput))
-        self.help_menu.addAction(QtGui.QAction("Open App folder",
+        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":folder-open-line"),
+                                               "Open App folder",
                                                 self.menubar,
                                                 triggered=self.openAppFolder))
 
@@ -446,12 +450,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_manager.exec()
 
     @Slot()
-    def handleMergeExcelFiles(self):
-        self.merge_excel_dialog = MergeExcelDialog()
-        self.merge_excel_dialog.exec()
+    def concatExcelFiles(self):
+        self.concat_excel_dialog = ConcatExcelDialog(start_process=self.startSpinner,
+                                                    process_ended=self.stopSpinner)     
+        self.concat_excel_dialog.exec()
 
     @Slot()
-    def handleUnzipArchive(self):
+    def unzipArchive(self):
         self.unzip_dialog = UnzipDialog(source=AppDatabase.activeWorkspace().rootpath,
                                         dest=AppDatabase.activeWorkspace().evidence_path,
                                         start_process=self.startSpinner,
@@ -459,12 +464,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.unzip_dialog.exec()
 
     @Slot()
-    def handleBatchRenameFile(self):
+    def batchRenameFile(self):
         self.dlg = BatchRenameWidget()
         self.dlg.show()
 
     @Slot()
-    def handleUnpackPDF(self):
+    def unpackPDF(self):
         file = QtWidgets.QFileDialog.getOpenFileName(caption="Select file", directory=AppDatabase.activeWorkspace().evidence_path, filter="*.pdf")
 
         if file[0] != "":
