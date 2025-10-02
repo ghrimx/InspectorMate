@@ -147,7 +147,7 @@ class SignageTab(BaseTab):
         self.toolbar.insertAction(self.action_separator, self.action_create_signage)
 
         self.action_create_child_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line-child"),
-                                                         "Create Child Signage (Ctrl + N)",
+                                                         "Create Child Signage (Ctrl + H)",
                                                          self,
                                                          triggered = lambda: self.createChildSignage(source=self.signageSource()))
         self.toolbar.insertAction(self.action_separator, self.action_create_child_signage)
@@ -208,7 +208,7 @@ class SignageTab(BaseTab):
         self.toolbar.insertWidget(self.action_separator, connector_menu_btn)
     
     def createShortcuts(self):
-        self.shortcut_create_childsignage = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+N"),
+        self.shortcut_create_childsignage = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+H"),
                                                             self,
                                                             lambda: self.createChildSignage(source=self.signageSource()),
                                                             context=QtCore.Qt.ShortcutContext.WindowShortcut)

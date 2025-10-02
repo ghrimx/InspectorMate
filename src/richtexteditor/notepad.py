@@ -863,7 +863,7 @@ class Notepad(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_help)
     
     def createShortcuts(self):
-        self.shortcut_add_note = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+N"), self, self.addNote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_add_note = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+N"), self, self.addNote, ambiguousMember=self.addNote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_edit_note = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+E"), self, self.editNote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_quick_highlight = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+H"), self, self.quickHighlight, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_date = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+D"), self, self.insertDate, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
