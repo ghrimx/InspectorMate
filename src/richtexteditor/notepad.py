@@ -122,8 +122,8 @@ class TextEdit(QtWidgets.QTextEdit):
         """Supplemented the standard context menu"""
         menu = self.createStandardContextMenu()
         menu.addSeparator()
-        self.action_paste_table = QtGui.QAction(QtGui.QIcon(), "Paste as Table", self, triggered=self.pasteTable)
-        menu.addAction(self.action_paste_table)
+        menu.addAction(QtGui.QAction(QtGui.QIcon(), "Paste as Table", self, triggered=self.pasteTable))
+        menu.addAction(QtGui.QAction(QtGui.QIcon(), "Paste Text Only", self, triggered=self.pasteTextOnly))
         menu.exec(event.globalPos())
 
     def userFriendlyFilename(self):
@@ -152,20 +152,53 @@ class TextEdit(QtWidgets.QTextEdit):
         """Insert table from Clipboard"""
         cursor = self.textCursor()
         source = QtWidgets.QApplication.clipboard().text()
-        table_content = self.convertBiff12(source)
-        if table_content != "":
-            table_fmt = QtGui.QTextTableFormat()
-            table_fmt.setCellPadding(3.0)
-            table_fmt.setCellSpacing(0) # Avoid double border
-            table_fmt.setBorder(0.5)
-            table_fmt.setBorderStyle(QtGui.QTextFrameFormat.BorderStyle.BorderStyle_Solid)
-            table_fmt.setBorderBrush(QtCore.Qt.GlobalColor.black)
-            cursor.insertTable(len(table_content) - 1, len(table_content[0]), table_fmt)
 
-            for row in table_content:
-                for value in row:
-                    cursor.insertText(value)
-                    cursor.movePosition(QtGui.QTextCursor.MoveOperation.NextCell)
+        # Normalize line endings and strip trailing spaces
+        source = source.replace('\r\n', '\n').replace('\r', '\n').strip()
+        if not source:
+            return  # Nothing to paste
+
+        # Convert the clipboard text into a 2D list
+        table_content = self.convertBiff12(source)  # You already have this function
+        if not table_content:
+            return
+        
+        while table_content and all(not cell.strip() for cell in table_content[-1]):
+            table_content.pop()
+        
+        if not table_content:
+            return
+
+        # Ensure all rows have the same number of columns (pad empty cells)
+        max_cols = max(len(row) for row in table_content)
+        for row in table_content:
+            while len(row) < max_cols:
+                row.append("")  # Fill missing cells with empty string
+
+        rows, cols = len(table_content), max_cols
+
+        # Create the table format
+        table_fmt = QtGui.QTextTableFormat()
+        table_fmt.setCellPadding(3.0)
+        table_fmt.setCellSpacing(0)
+        table_fmt.setBorder(0.5)
+        table_fmt.setBorderStyle(QtGui.QTextFrameFormat.BorderStyle.BorderStyle_Solid)
+        table_fmt.setBorderBrush(QtCore.Qt.GlobalColor.black)
+        table_fmt.setBorderCollapse(False)
+
+        # Insert table
+        table = cursor.insertTable(rows, cols, table_fmt)
+
+        # Fill table cells
+        for r, row in enumerate(table_content):
+            for c, value in enumerate(row):
+                cell_cursor = table.cellAt(r, c).firstCursorPosition()
+                cell_cursor.insertText(str(value))
+
+    def pasteTextOnly(self):
+        clipboard = QtWidgets.QApplication.clipboard()
+        text = clipboard.text()  # Plain text only
+        self.insertPlainText(text)
     
     def canInsertFromMimeData(self, source: QtCore.QMimeData):
         if source.hasImage():
