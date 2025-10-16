@@ -20,7 +20,7 @@ class TxtViewer(ViewerWidget):
     
     @classmethod
     def supportedFormats(cls) -> list[str]:
-        return [".txt", ".md"]
+        return [".txt", ".md", ".json"]
     
     def initViewer(self):
         self.left_pane.hide()

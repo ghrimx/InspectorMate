@@ -1,8 +1,10 @@
 import logging
 from dataclasses import dataclass
-from qtpy import QtCore, QtSql, QtWidgets, QtCore, Signal, Slot
+from qtpy import QtCore, QtSql, QtWidgets, QtCore, Signal, Slot, QSqlRelationalTableModel
 
-from models.model import BaseRelationalTableModel, DatabaseField, ProxyModel
+
+from common import DatabaseField
+from base_models import ProxyModel
 from qt_theme_manager import theme_icon_manager
 
 from widgets.fitcontenteditor import FitContentTextEdit
@@ -17,7 +19,7 @@ class Annotation:
     pagelabel: str = ""
     pno: int = -1
 
-class AnnotationModel(BaseRelationalTableModel):
+class AnnotationModel(QSqlRelationalTableModel):
 
     class Fields:
         Uid: DatabaseField
@@ -115,7 +117,7 @@ class AnnotationWidget(QtWidgets.QWidget):
 
         self.text = FitContentTextEdit(True)
         self.text.setPlainText(self._annotation.text)
-        self.text.setStyleSheet("QTextEdit { background: #f2f2f2; }")
+        # self.text.setStyleSheet("QTextEdit { background: #f2f2f2; }")
         
         formlayout.addRow("page", QtWidgets.QLabel(str(self._annotation.pno)))
         formlayout.addRow("text", self.text)

@@ -1,5 +1,32 @@
-from qtpy import QtGui, QtCore, QtWidgets, Slot
+import logging
+from qtpy import QtGui, QtCore, QtWidgets, Slot, Signal
 from onenote import onenote_api as OE
+from pyqtspinner import WaitingSpinner
+
+logger = logging.getLogger(__name__)
+
+class WorkerSignals(QtCore.QObject):
+    finished = Signal()
+    error = Signal(Exception)
+    result = Signal(object)
+    progress = Signal(int)
+
+
+class Worker(QtCore.QRunnable):
+    def __init__(self):
+        super().__init__()
+        self.signals = WorkerSignals()
+
+    def run(self):
+        try:
+            xml = OE.getHierarchy()
+            hierarchy = OE.Hierarchy(xml) if xml else []
+        except Exception as e:
+            self.signals.error.emit(e)
+        else:
+            self.signals.result.emit(hierarchy)
+        finally:
+            self.signals.finished.emit()
 
 
 class TreeStandardItem(QtGui.QStandardItem):
@@ -16,24 +43,16 @@ class TreeStandardItem(QtGui.QStandardItem):
         self.name = onenote_node.name
         self.id = onenote_node.id
 
+
 class OnenoteModel(QtGui.QStandardItemModel):
     cache_pages: dict[OE.Page] = {}
 
     def __init__(self):
         super().__init__()
-        self.hierarchy = None
-        self.buildModel()
 
-    def buildModel(self):
+    def buildModel(self, hierarchy):
         self.setHorizontalHeaderLabels(['Name'])
-
-        xml = OE.getHierarchy()
-
-        if xml is None:
-            return
-        
-        hierarchy = OE.Hierarchy(xml)
-        
+      
         for notebook in hierarchy:
             notebook_node = TreeStandardItem(notebook)
             notebook_node.setSelectable(False)
@@ -126,13 +145,9 @@ class OnenotePickerDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.model = OnenoteModel()
-
         self.onenote_section = ""
         self.selected_item = None
 
-        self.initUI()       
-
-    def initUI(self):
         self.setWindowTitle("OneNote Picker")
         vbox = QtWidgets.QVBoxLayout(self)
 
@@ -144,15 +159,28 @@ class OnenotePickerDialog(QtWidgets.QDialog):
         self.oe_treeview = QtWidgets.QTreeView()
         self.oe_treeview.resizeColumnToContents(0)
         self.oe_treeview.setModel(self.model)
+        
         self.oe_treeview.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
         vbox.addWidget(self.oe_treeview)
         vbox.addWidget(self.buttonBox)
-        self.connectSignals()
+        self.spinner = WaitingSpinner(self.oe_treeview)
 
-    def connectSignals(self):
+    def on_hierarchy_ready(self, hierarchy):
+        self.model.buildModel(hierarchy)
         self.oe_treeview.selectionModel().selectionChanged.connect(self.onRowSelected)
 
+    def connect(self):
+        self.spinner.start()
+        QtWidgets.QApplication.processEvents()
+        
+        worker = Worker()
+        pool = QtCore.QThreadPool().globalInstance()
+        worker.signals.result.connect(self.on_hierarchy_ready)
+        worker.signals.error.connect(lambda e: logger.error(e))
+        worker.signals.finished.connect(self.spinner.stop)
+        pool.start(worker)
+      
     @Slot()
     def onRowSelected(self):
         selected_index = self.oe_treeview.selectionModel().currentIndex()

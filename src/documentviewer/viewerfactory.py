@@ -9,9 +9,9 @@ from documentviewer.officeviewer import OfficeViewer
 from documentviewer.txtviewer import TxtViewer
 from documentviewer.wordviewer import WordViewer
 
-from evidence.evidencemodel import EvidenceModel
+from evidence.model import EvidenceModel
 
-from database.dbstructure import Document
+from common import Document
 
 import utilities.msoffice2pdf as ms
 

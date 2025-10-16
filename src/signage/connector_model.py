@@ -1,34 +1,35 @@
 import logging
-from enum import Enum
-from qtpy import Qt, QtCore
+from qtpy import Qt, QtCore, QtSql, QSqlRelationalTableModel
 from database.database import AppDatabase
-from models.objectclass import Connector, DatabaseField
-from models.model import BaseRelationalTableModel
+from common import Connector, DatabaseField
+
 
 logger = logging.getLogger(__name__)
 
 
-class ConnectorType(Enum):
-    ONENOTE = 'onenote'
-    DOCX = 'docx'
-
-
-CONNECTORS = [ConnectorType.ONENOTE, ConnectorType.DOCX]
-
-
-class ConnectorModel(BaseRelationalTableModel):
-    cache_connectors = {}
+class ConnectorModel(QSqlRelationalTableModel):
+    _connectors = {}
 
     class Fields:
-        ID = DatabaseField
-        TYPE = DatabaseField
-        VALUE = DatabaseField
-        LASTMODIFIED = DatabaseField
+        ID: DatabaseField
+        TYPE: DatabaseField
+        VALUE: DatabaseField
+        LASTMODIFIED: DatabaseField
+        WorkspaceID: DatabaseField
 
-    def __init__(self) -> None:
-        super().__init__()
+        @classmethod
+        def fields(self) -> list["DatabaseField"]:
+            """Return all defined DatabaseField instances."""
+            return [
+                value for name, value in self.__dict__.items()
+                if isinstance(value, DatabaseField)
+            ]
+
+    def __init__(self, parent = None):
+        super(ConnectorModel, self).__init__(parent)
 
         self.setTable('connectors')
+        self.setEditStrategy(QtSql.QSqlTableModel.EditStrategy.OnFieldChange)
         self.initFields()
         self.refresh()
 
@@ -38,6 +39,10 @@ class ConnectorModel(BaseRelationalTableModel):
         self.setHeaderData(self.fieldIndex('value'),
                            Qt.Orientation.Horizontal,
                            "Value")
+
+    def refresh(self):
+        self.select()
+        self.setFilter(f"workspace_id={AppDatabase.activeWorkspace().id}")
         self.initCache()
 
     def initFields(self):
@@ -45,25 +50,26 @@ class ConnectorModel(BaseRelationalTableModel):
         ConnectorModel.Fields.TYPE = DatabaseField("type", self.fieldIndex('type'), True)
         ConnectorModel.Fields.VALUE = DatabaseField("value", self.fieldIndex('value'), True)
         ConnectorModel.Fields.LASTMODIFIED = DatabaseField("last_modified", self.fieldIndex('last_modified'), False)
-
-    def initCache(cls):
-        cls.cache_connectors.clear()
-        for row in range(cls.rowCount()):
-            uid = cls.index(row, cls.Fields.ID.index).data(Qt.ItemDataRole.DisplayRole)
-            value = cls.index(row, cls.Fields.VALUE.index).data(Qt.ItemDataRole.DisplayRole)
-            connector_type = cls.index(row, cls.Fields.TYPE.index).data(Qt.ItemDataRole.DisplayRole)
-            last_modified = cls.index(row, cls.Fields.LASTMODIFIED.index).data(Qt.ItemDataRole.DisplayRole)
-            connnector = Connector(uid, connector_type, value, last_modified)
-            cls.cache_connectors.setdefault(connector_type, {}).update({uid:connnector})
-
-    def reset(self):
-        self.refresh()
-        self.initCache()
+        ConnectorModel.Fields.WorkspaceID = DatabaseField("workspace_id", self.fieldIndex('workspace_id'), False)
 
     @classmethod
-    def cache(cls):
-        return cls.cache_connectors
+    def connectors(cls) -> dict[str,dict[Connector]]:
+        """Return dictionary of connector organized by types
+        
+        e.g. {"docx": {uid1:connector1, uid2:connector2}}
+        """
+        return cls._connectors
     
+    def initCache(self):
+        self._connectors.clear()
+        for row in range(self.rowCount()):
+            uid = self.index(row, self.Fields.ID.index).data(Qt.ItemDataRole.DisplayRole)
+            value = self.index(row, self.Fields.VALUE.index).data(Qt.ItemDataRole.DisplayRole)
+            connector_type = self.index(row, self.Fields.TYPE.index).data(Qt.ItemDataRole.DisplayRole)
+            last_modified = self.index(row, self.Fields.LASTMODIFIED.index).data(Qt.ItemDataRole.DisplayRole)
+            connnector = Connector(uid, connector_type, value, last_modified)
+            self._connectors.setdefault(connector_type, {}).update({uid:connnector})
+
     def addConnector(self, connector: Connector):
         if not connector:
             return
@@ -72,29 +78,19 @@ class ConnectorModel(BaseRelationalTableModel):
         record.setValue('value', connector.value)
         record.setValue('type', connector.type)
         record.setValue('workspace_id', AppDatabase.activeWorkspace().id)
-        inserted = self.insertRecord(-1, record)
 
-        if not inserted:
+        if not self.insertRecord(-1, record):
             err = f"Cannot insert new connector - Error:{self.lastError().text()}"
-            logger.info(err)
-            return False, err
+            logger.error(err)
+            return False
        
-        if not self.refresh():
-            err = f"Cannot refresh connector model - Error:{self.lastError().text()}"
-            logger.info(err)
-            return False, err
-
-        self.initCache()
-
-        return True, "Connector inserted successfully !"
+        self.refresh()
+        return True
     
     def removeConnector(self, index: QtCore.QModelIndex):
-        uid = self.index(index.row(), self.Fields.ID.index).data(Qt.ItemDataRole.DisplayRole)
-        connector_type = self.index(index.row(), self.Fields.TYPE.index).data(Qt.ItemDataRole.DisplayRole)
-        self.cache_connectors.get(connector_type).pop(uid)
-
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
         self.removeRow(index.row(), QtCore.QModelIndex())
         self.endRemoveRows()
+
         self.refresh()
 

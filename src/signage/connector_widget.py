@@ -1,8 +1,9 @@
 import logging
 from qtpy import QtWidgets
 
-from signage.connector_model import ConnectorModel, Connector, AppDatabase, CONNECTORS
-from widgets.tableview import TableView
+from signage.connector_model import ConnectorModel, Connector, AppDatabase
+from common import ConnectorType
+
 from onenote.msonenote import OnenotePickerDialog
 from qt_theme_manager import theme_icon_manager
 
@@ -38,15 +39,19 @@ class ConnectorManagerDialog(QtWidgets.QDialog):
         self.edit_container = QtWidgets.QWidget()
         self.edit_container.setLayout(button_layout)
 
-        self.connector_table = TableView()
-        self.connector_table.setModel(self._model)
-        self.connector_table.read_only()
-        self.connector_table.resizeColumnsToContents()
-        self.connector_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
-        self.connector_table.hide_columns(self._model.hidden_fields())
+        self.table = QtWidgets.QTableView()
+        self.table.setModel(self._model)
+        self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers) # ReadOnly
+        self.table.resizeColumnsToContents()
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+
+        for field in ConnectorModel.Fields.fields():
+            if not field.visible:
+                self.table.hideColumn(field.index)
 
         self.vlayout.addWidget(self.edit_container)
-        self.vlayout.addWidget(self.connector_table)
+        self.vlayout.addWidget(self.table)
         self.setLayout(self.vlayout)
 
     def showEvent(self, a0):
@@ -61,23 +66,23 @@ class ConnectorManagerDialog(QtWidgets.QDialog):
         edit_dialog = ConnectorEditDialog(self)
 
         if edit_dialog.exec():
-            ok, err = self._model.addConnector(edit_dialog.connector())
+            ok = self._model.addConnector(edit_dialog.connector())
 
             if not ok:
                 QtWidgets.QMessageBox.critical(self,
                                                "Connector Manager",
-                                               err)
+                                               "Failed to add connector")
                 return
-            self.connector_table.resizeColumnsToContents()
+            self.table.resizeColumnsToContents()
             
     def removeConnector(self):
-        index = self.connector_table.selectionModel().currentIndex()
+        index = self.table.selectionModel().currentIndex()
 
         if not index.isValid():
             return
         
         self._model.removeConnector(index)
-        self.connector_table.resizeColumnsToContents()
+        self.table.resizeColumnsToContents()
 
 
 class ConnectorEditDialog(QtWidgets.QDialog):
@@ -100,7 +105,7 @@ class ConnectorEditDialog(QtWidgets.QDialog):
         self.buttonBox.rejected.connect(self.reject)
 
         self.connector_type = QtWidgets.QComboBox()
-        for connector_type in CONNECTORS:
+        for connector_type in ConnectorType:
             self.connector_type.addItem(connector_type.value)
         self.source_btn = QtWidgets.QPushButton("Source")
         self.value_lineedit = QtWidgets.QLineEdit()
@@ -122,9 +127,8 @@ class ConnectorEditDialog(QtWidgets.QDialog):
 
     def showOneNoteDialog(self) -> str:
         onenote_manager = OnenotePickerDialog(self)
-
-        onenote_manager.model.refresh()
         onenote_manager.show()
+        onenote_manager.connect()
 
         if not isinstance(onenote_manager, Exception):
             if onenote_manager.exec() == QtWidgets.QDialog.DialogCode.Accepted:

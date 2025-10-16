@@ -5,7 +5,7 @@ from onenote.onenotemodel import OnenoteModel
 from widgets.treeview import TreeView
 from pyqtspinner import WaitingSpinner
 
-from delegates.delegate import ReadOnlyDelegate 
+from base_delegates import ReadOnlyDelegate 
 
 class ConnectionThread(QtCore.QThread):
     sig_connected = Signal()
@@ -48,7 +48,7 @@ class OnenotePickerDialog(QtWidgets.QDialog):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
-        self.onenote_tree = TreeView()
+        self.onenote_tree = QtWidgets.QTreeView()
         self.onenote_tree.resizeColumnToContents(0)
         self.onenote_tree.setModel(self.model)
 

@@ -6,6 +6,7 @@ from qtpy import (QtWidgets, QtGui, Qt)
 from database.database import AppDatabase
 from mainwindow import MainWindow
 from utilities import config as mconf
+from utilities.utils import trim_file
 from qt_theme_manager import theme_icon_manager, Theme
 
 
@@ -30,6 +31,8 @@ def main() -> int:
     if (mconf.settings.value("InstanceId") is None 
         or mconf.settings.value("InstanceId") == ""):
         mconf.settings.setValue("InstanceId", str(uuid4()))
+
+    trim_file(mconf.config.log_path.as_posix())
 
     app_fontsize = mconf.settings.value("app_fontsize")
     if app_fontsize is not None:
@@ -74,9 +77,8 @@ def main() -> int:
     logger.info(f"Starting InspectorMate...")
 
     # Connect to database
-    db = AppDatabase()
-    db.connect(mconf.config.db_path.as_posix())
-    db.setup()
+    AppDatabase.connect(mconf.config.db_path.as_posix())
+    AppDatabase.setup()
 
     # Initialize the main window
     mainwindow: MainWindow = MainWindow()
