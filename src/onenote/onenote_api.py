@@ -1,6 +1,8 @@
-import logging
-import subprocess
 import json
+import logging
+import tempfile
+import subprocess
+from pathlib import Path
 from ctypes import windll
 from xml.etree import ElementTree as ET
 from dataclasses import dataclass, field
@@ -17,9 +19,20 @@ ON_APP = 'OneNote.Application'
 
 namespace = ON15_SCHEMA
 
+def get_safe_temp_path(fallback: Path | None = None) -> Path:
+    """Return a valid temporary directory path, falling back if needed."""
+    temp = Path(tempfile.gettempdir())
+    if temp.exists():
+        return temp
+
+    # fallback: use provided path or user's home directory
+    fallback = fallback or Path.home() / "temp_fallback"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
 def executeScript(section_id: str) -> dict | None:
     ps1 = msconf.app_data_path.joinpath("onenotescrapper.ps1").as_posix()
-    outfile = ""
+    outfile = get_safe_temp_path().joinpath("OneNote_scrapper_output.json").as_posix()
 
     try:
         process = subprocess.run(
@@ -42,12 +55,13 @@ def executeScript(section_id: str) -> dict | None:
     except Exception as e:
         logger.error(f"Unexepected error occured. Error: {e}")
         return
-
+    
     try:
-        output = json.loads(process.stdout)
+        with open(outfile, 'r', encoding="utf-8") as file:
+            output = json.load(file)
     except Exception as e:
         logger.error(f"Cannot parse data into dict using json. Error={e}")
-        return         
+        return    
 
     return output
 

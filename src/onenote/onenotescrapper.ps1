@@ -1,4 +1,4 @@
-# version 2.0
+# version 2.1
 # Params
 param (
     [Parameter(Mandatory = $true)][string]$SectionID,
@@ -7,7 +7,24 @@ param (
 
 # ====== Global variables ======
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[bool]$global:debug = $false
+
+
+function DebugPrint {
+    param ([string]$what)
+    if($global:debug -eq $true) {
+        Write-Host $what
+    }
+}
+
+
+try {
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+} catch {
+    DebugPrint "Console output encoding could not be set: $_"
+}
+
+
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 $PSDefaultParameterValues['Get-Content:Encoding'] = 'utf8'
 
@@ -36,6 +53,7 @@ Class cTag {
     write-host "Page ID:" $this.pageID
   }
 } # End of Class 'cTag'
+
 
 Class cPage {
   # Define variables
@@ -69,17 +87,29 @@ $data = @{}
 [string]$sLink = ""
 
 # Init OneNote object
-$OneNote = New-Object -ComObject OneNote.Application
+try {
+    $OneNote = New-Object -ComObject OneNote.Application
+} catch {
+    DebugPrint "Fail to init ComObject"
+}
+
 
 # ====== Main ======
 
 [xml]$Hierarchy = ""
-$OneNote.GetHierarchy($SectionID, [Microsoft.Office.InterOp.OneNote.HierarchyScope]::hsPages, [ref]$Hierarchy)
+try {
+    $OneNote.GetHierarchy($SectionID, [Microsoft.Office.InterOp.OneNote.HierarchyScope]::hsPages, [ref]$Hierarchy)
+} catch {
+    DebugPrint "Fail to get Hierarchy"
+}
+
+
 
 # Fetch and process pages
 foreach($i in $Hierarchy.Section.Page){
-	  #DebugPrint($i.ID)
 
+    DebugPrint "Page_id: $($i.Name)"
+	
     $page = New-Object cPage
     $page.ID = $i.ID
     $page.Name = $i.name
@@ -91,7 +121,8 @@ foreach($i in $Hierarchy.Section.Page){
     $OneNote.GetPageContent($i.ID,[ref]$NewPageXML,[Microsoft.Office.Interop.OneNote.PageInfo]::piAll)
     $xDoc = New-Object -TypeName System.Xml.XmlDocument
     $xDoc.LoadXml($NewPageXML)
-   
+    
+
     $namespaceManager = [System.Xml.XmlNamespaceManager]::new($xDoc.NameTable)
     $namespaceManager.AddNamespace('one', 'http://schemas.microsoft.com/office/onenote/2013/onenote')
     
@@ -115,7 +146,24 @@ foreach($i in $Hierarchy.Section.Page){
                 $tag = New-Object cTag
                 $tag.ID = $node.objectID
                 $tag.Name = $hashtable[$node.Tag.index]
-                $tag.Cdata = $node.T.InnerText
+                
+                
+                try {
+                    $rawText = $node.T.InnerText
+                    
+                    if ($rawText -match '\\u[0-9A-Fa-f]{4}') {
+                        DebugPrint "Escaped Unicode found in page '$($i.name)'"
+                    }
+
+                    $normalizedText = [System.Text.NormalizationForm]::FormC
+                    $rawText.Normalize($normalizedText)
+                    $decodedText = [System.Text.RegularExpressions.Regex]::Unescape($rawText)
+                    $cleanText = $rawText -replace '[^\u0000-\uFFFF]', ''  # Removes characters outside valid
+                    $tag.Cdata = $cleanText
+                } catch {
+                    DebugPrint "Invalid characters in page '$($i.name)' (ID: $($i.ID))"
+                }
+
                 $tag.Link = $sLink
                 $tag.PageName = $i.name
                 $tag.PageID = $i.ID
@@ -132,9 +180,12 @@ foreach($i in $Hierarchy.Section.Page){
 }
 
 # Export
-$data | ConvertTo-Json -Depth 5 
 
-IF (![string]::IsNullOrWhitespace($OutputJson)) {
-  $utf8NoBOM = New-Object System.Text.UTF8Encoding $false
-  [System.IO.File]::WriteAllText($OutputJson, ($data | ConvertTo-Json -Depth 10), $utf8NoBOM)
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmssfff"
+try {
+    $json = $data | ConvertTo-Json -Depth 10
+    [System.IO.File]::WriteAllText($OutputJson, $json, $utf8NoBom)
+} catch {
+    DebugPrint "Failed to export JSON: $_"
 }
+

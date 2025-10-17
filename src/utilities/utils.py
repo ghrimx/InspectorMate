@@ -176,7 +176,7 @@ def extractAll(archive: str, dest: str = ""):
 
     return err
 
-def unpackZip(zippedFile: str, dest: str = "") -> None | Exception:
+def unpackZip(zippedFile: str, dest: str = "", max_name_length: int | None = None) -> None | Exception:
     """ Extract a zip file including any nested zip files
         Delete the zip file(s) after extraction
     """
@@ -292,7 +292,6 @@ def extract_hash_lines(docx_path) -> dict:
     except Exception as e:
         return False, str(e)
 
-    # lines = [line.strip() for line in text.splitlines() if line.strip().startswith(("#", "!"))]
     lines = {}
     for line in text.splitlines():
         if line.strip().startswith(("#", "!")):
@@ -301,10 +300,16 @@ def extract_hash_lines(docx_path) -> dict:
     return lines
 
 def trim_file(filepath, keep_lines=10000):
-    """Trim a text file to keep only the last `keep_lines` lines."""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-
+    """Trim a text file to keep only the last n lines"""
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except Exception as e:
+        return e
+    
     if len(lines) > keep_lines:
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.writelines(lines[-keep_lines:])
+        try:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.writelines(lines[-keep_lines])
+        except Exception as e:
+            return e

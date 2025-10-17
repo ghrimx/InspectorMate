@@ -69,7 +69,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.set_window_title(AppDatabase.activeWorkspace().name)
 
         # Workspace FileSystem Sidebar
-        self.workspace_explorer_dock_widget = QtAds.CDockWidget("Explorer", self)
+        self.workspace_explorer_dock_widget = QtAds.CDockWidget("Workspace", self)
         self.workspace_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
         self.workspace_explorer = FileSystem(AppDatabase.activeWorkspace().rootpath)
         self.workspace_explorer.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
@@ -78,6 +78,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
         self.workspace_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.workspace_explorer_dock_widget)
         self.workspace_doc_widget_container.setMinimumWidth(250)
+
+        # Evidence Explorer FileSystem Sidebar
+        self.evidence_explorer_dock_widget = QtAds.CDockWidget("Evidence", self)
+        self.evidence_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
+        self.evidence_explorer = FileSystem(AppDatabase.activeWorkspace().evidence_path)
+        self.evidence_explorer_dock_widget.setWidget(self.evidence_explorer)
+        self.evidence_explorer_dock_widget.setMinimumSize(200, 150)
+        self.evidence_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
+        self.evidence_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.evidence_explorer_dock_widget)
+        self.evidence_doc_widget_container.setMinimumWidth(250)
 
         # Notebook Explorer FileSystem Sidebar
         self.notebook_explorer_dock_widget = QtAds.CDockWidget("Notebook", self)
@@ -295,6 +305,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notebook_explorer.sigOpenNote.connect(self.onOpenNoteTriggered)
         self.workspace_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
         self.workspace_explorer.sigOpenNote.connect(self.onOpenNoteTriggered)
+        self.evidence_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
 
     @Slot()
     def showAbout(self):
@@ -507,6 +518,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.signage_treemodel.updateReviewProgess()
         self.connector_model.refresh()
         self.workspace_explorer.set_root_path(AppDatabase.activeWorkspace().rootpath)
+        self.evidence_explorer.set_root_path(AppDatabase.activeWorkspace().evidence_path)
         self.notebook_explorer.set_root_path(AppDatabase.activeWorkspace().notebook_path)
         self.set_window_title(AppDatabase.activeWorkspace().name)
         self.notepad_tab.close_all()
@@ -521,8 +533,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def open_onenote_picker(self):
         onenote_warning = QtWidgets.QMessageBox.warning(self,
                                                         "Warning",
-                                                        "Establishing a connection to OneNote before opening the application may put the application in a hang state\n\nIt's recommended to open OneNote app before establishing a connection",
-                                                        buttons=QtWidgets.QMessageBox.StandardButton.Ignore | QtWidgets.QMessageBox.StandardButton.Cancel)
+                                                        (f"Establishing a connection to OneNote before opening " 
+                                                        f"the application may put the application in a hang state"
+                                                        f"\n\nIt's recommended to open OneNote app "
+                                                        f"before establishing a connection"),
+                                                        buttons=(QtWidgets.QMessageBox.StandardButton.Ignore | 
+                                                                 QtWidgets.QMessageBox.StandardButton.Cancel))
 
         if onenote_warning == QtWidgets.QMessageBox.StandardButton.Cancel:
             return

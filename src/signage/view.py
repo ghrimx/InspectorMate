@@ -97,7 +97,14 @@ class VirtualProgressBarDelegate(QtWidgets.QStyledItemDelegate):
             
     def paint(self, painter, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex):
         percentage = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
-        if percentage:
+        total = index.sibling(index.row(), SignageSqlModel.Fields.DocCount.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+
+        try:
+            progress = int(percentage)
+        except (ValueError, TypeError):
+            return  # skip invalid values
+        
+        if percentage >= 0 and total > 0:
             progress = int(percentage)
             progressBarOption = QtWidgets.QStyleOptionProgressBar()
             progressBarOption.rect = option.rect
@@ -112,7 +119,12 @@ class VirtualProgressBarDelegate(QtWidgets.QStyledItemDelegate):
                                                         progressBarOption,
                                                         painter)
         else:
-            option.text = "n/a"
+            opt = QtWidgets.QStyleOptionViewItem(option)
+            self.initStyleOption(opt, index)
+            opt.text = ""  
+            style = QtWidgets.QApplication.style() if opt.widget is None else opt.widget.style()
+            style.drawControl(QtWidgets.QStyle.ControlElement.CE_ItemViewItem, opt, painter)
+
 
 
 #################################################################
@@ -145,12 +157,13 @@ class SignageTab(BaseTab):
         self.toolbar.removeAction(self.fold_left_pane)
 
         # --- Table ---
-        self.table = QtWidgets.QTreeView()
+        self.table = QtWidgets.QTreeView(self)
         self.table.setModel(self.proxymodel)
         # self.table.header().sortIndicatorChanged.connect(self.table.model().sortTree)
         self.table.setSortingEnabled(True)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers) # ReadOnly
         self.table.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+
         self.table.customContextMenuRequested.connect(self.show_table_context_menu)
         self.table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectItems)

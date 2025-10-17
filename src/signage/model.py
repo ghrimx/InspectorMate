@@ -316,10 +316,10 @@ class DataService:
 
                 oe_section_id = connector_object.get('section_id')
                 oe_section_name = connector_object.get('section_name')
-
                 tags = OnenoteModel.fetch_onenote(oe_section_id)
 
                 tag: OE.Tag
+
                 for tag in tags:
                     if tag.object_id in cache.get("OneNote"):
                         continue
@@ -327,7 +327,7 @@ class DataService:
                     signage.title = html2text(tag.text).strip()
                     signage.refkey = find_match(signage.title, regex)
                     signage_type: SignageType = AppDatabase.cache_signage_type.get(tag.type.capitalize().strip())
-                    
+
                     # Ignore unknown signage
                     if signage_type is None:
                         logger.debug(f'Unknown signage type: {signage}')
@@ -821,21 +821,21 @@ class SignageModel(TreeModel):
         self._sync_enabled = False
         for index in self.iter_model_rows():
             refkey = index.sibling(index.row(), SignageSqlModel.Fields.Refkey.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+            signage_type = index.sibling(index.row(), SignageSqlModel.Fields.Type.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
             doc_index =  index.sibling(index.row(), SignageSqlModel.Fields.DocCount.index)
             progress_index = index.sibling(index.row(), SignageSqlModel.Fields.Progress.index)
 
-            if refkey == "":
-                self.setData(doc_index, 0, QtCore.Qt.ItemDataRole.EditRole)
-                self.setData(progress_index, 0, QtCore.Qt.ItemDataRole.EditRole)
-                continue
-
-            progress = cache.get(refkey)
-            if progress:
-                percentage = progress.get('percentage')
-                total = progress.get('total')
-                logger.debug(f'refkey: {refkey}, progress:{percentage}, total:{total}')
-                self.setData(doc_index, total, QtCore.Qt.ItemDataRole.EditRole)
-                self.setData(progress_index, percentage, QtCore.Qt.ItemDataRole.EditRole)
+            if signage_type == "Request" :
+                progress = cache.get(refkey, 0)
+                if progress:
+                    percentage = progress.get('percentage')
+                    total = progress.get('total')
+                    logger.debug(f'refkey: {refkey}, progress:{percentage}, total:{total}')
+                    self.setData(doc_index, total, QtCore.Qt.ItemDataRole.EditRole)
+                    self.setData(progress_index, percentage, QtCore.Qt.ItemDataRole.EditRole)
+            else:
+                self.setData(doc_index, "", QtCore.Qt.ItemDataRole.EditRole)
+                self.setData(progress_index, "", QtCore.Qt.ItemDataRole.EditRole)
         self._sync_enabled = True
 
  

@@ -126,6 +126,18 @@ class ConnectorEditDialog(QtWidgets.QDialog):
             self.connector_type.addItem(name, type_id)
 
     def showOneNoteDialog(self) -> str:
+        onenote_warning = QtWidgets.QMessageBox.warning(self,
+                                                        "Warning",
+                                                        (f"Establishing a connection to OneNote before opening " 
+                                                        f"the application may put the application in a hang state"
+                                                        f"\n\nIt's recommended to open OneNote app "
+                                                        f"before establishing a connection"),
+                                                        buttons=(QtWidgets.QMessageBox.StandardButton.Ignore | 
+                                                                 QtWidgets.QMessageBox.StandardButton.Cancel))
+
+        if onenote_warning == QtWidgets.QMessageBox.StandardButton.Cancel:
+            return
+        
         onenote_manager = OnenotePickerDialog(self)
         onenote_manager.show()
         onenote_manager.connect()

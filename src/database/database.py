@@ -255,6 +255,7 @@ class AppDatabase:
                         FROM signage
                         WHERE signage.workspace_id = :workspace_id
                             AND signage.refkey != ''
+                            AND signage.type = 0
                         ) AS s
                     LEFT JOIN docs AS d ON s.refkey = d.refkey
                     ORDER BY s.refkey;
@@ -273,9 +274,9 @@ class AppDatabase:
             closed = query.value(3)
 
             result[refkey] = {
-                "total": total,
-                "percentage": percentage,
-                "closed": closed
+                "total": int(total),
+                "percentage": int(percentage),
+                "closed": int(closed)
             }
 
         return result

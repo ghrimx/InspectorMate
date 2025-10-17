@@ -1,5 +1,8 @@
 import sys, os, requests, subprocess, feedparser
 import logging
+from pathlib import Path
+import shutil
+import datetime
 from packaging.version import Version
 from PyQt6.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QLabel,
@@ -45,6 +48,19 @@ def get_latest_release() -> str | None:
 
     except Exception as e:
         logger.warning(f"Update check failed: {e}")
+
+def backup_file(file_path: Path, backup_dir: Path):
+    """
+    Backup a single file to backup_dir with a timestamp.
+    """
+    if not file_path.exists():
+        return  # nothing to backup
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = backup_dir / f"{file_path.name}.{timestamp}.bak"
+    shutil.copy2(file_path, backup_file)
+    logger.error(f"Backed up {file_path} >>> {backup_file}")
 
 
 class Downloader(QThread):
@@ -130,13 +146,14 @@ class Updater(QDialog):
         self.downloader.start()
         self.label.setText("Downloading update...")
 
-
     def run_installer(self, path):
         if path.startswith("ERROR:"):
             QMessageBox.critical(self, "Download Failed", path)
             self.close()
             return
         
+        backup_file(config.db_path, config.app_data_path)
+
         logger.info("Running installer...")
 
         self.label.setText("Running installer...")
@@ -145,7 +162,6 @@ class Updater(QDialog):
                              close_fds=True,)
         except Exception as e:
             logger.error(e)
-
 
         self.label.setText("The installer is running.\nThe app will now close.")
         self._parent.force_close = True
