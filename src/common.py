@@ -90,6 +90,19 @@ class Signage:
 
 
 @dataclass
+class OETag:
+    TypeName: str
+    Text: str
+    Link: str  
+    ID: str
+    PageID: str
+    PageName: str
+    CreationTime: str
+    LastModifiedTime: str
+    TypeIndex:  int
+
+
+@dataclass
 class SignageType:
     uid: int
     name: str
@@ -132,6 +145,7 @@ class ConnectorType(Enum):
 class Connector:
     uid: int = -1
     type: str = ""
+    name: str= ""
     value: str = ""
     last_modified: str = ""
 

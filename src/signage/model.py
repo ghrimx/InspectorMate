@@ -1,4 +1,5 @@
 import logging
+import json
 from datetime import datetime, timezone
 from qtpy import QtCore, Signal, Slot, QtSql, QSqlRelationalTableModel
 from pathlib import Path
@@ -6,7 +7,7 @@ from pathlib import Path
 from functools import partial
 from database.database import AppDatabase
 
-from common import DatabaseField, Signage, Connector, SignageType, SignageStatus, UpdateItem
+from common import DatabaseField, Signage, Connector, SignageType, SignageStatus, UpdateItem, OETag
 
 from base_models import TreeItem, TreeModel, ProxyModel
 from openpyxl import Workbook
@@ -16,8 +17,9 @@ from openpyxl.formatting.rule import CellIsRule
 from html2text import html2text
 from utilities.utils import mergeExcelFiles, find_match, extract_hash_lines
 
+from onenote.model import getTags
 
-from onenote.msonenote import OnenoteModel, OE
+from utilities.config import config as mconf
 
 logger = logging.getLogger(__name__)
 
@@ -310,39 +312,39 @@ class DataService:
         pool = QtCore.QThreadPool().globalInstance()
 
         def func(connectors: dict, regex: str, cache: dict):
+
             connector: Connector
             for connector in connectors.values():
-                connector_object: dict = connector.from_json(connector.value) # json {section_id:{...}, section_name:{...}}
+                section_id = connector.value
+                section_name = connector.name
+                
+                ps_script = mconf.app_data_path.joinpath("onenotescrapper.ps1").as_posix()
+                tags = getTags(ps_script, section_id)                
 
-                oe_section_id = connector_object.get('section_id')
-                oe_section_name = connector_object.get('section_name')
-                tags = OnenoteModel.fetch_onenote(oe_section_id)
-
-                tag: OE.Tag
-
+                tag: OETag
                 for tag in tags:
-                    if tag.object_id in cache.get("OneNote"):
+                    if tag.ID in cache.get("OneNote"):
                         continue
                     signage = Signage()
-                    signage.title = html2text(tag.text).strip()
-                    signage.refkey = find_match(signage.title, regex)
-                    signage_type: SignageType = AppDatabase.cache_signage_type.get(tag.type.capitalize().strip())
+                    signage.title = tag.Text
+                    signage.refkey = find_match(tag.Text, regex)
+                    signage_type: SignageType = AppDatabase.cache_signage_type.get(tag.TypeName.capitalize().strip())
 
                     # Ignore unknown signage
                     if signage_type is None:
-                        logger.debug(f'Unknown signage type: {signage}')
+                        logger.debug(f"Unknown tag's type: {tag}")
                         continue
 
                     signage.type = signage_type.uid
                     signage.workspace_id = AppDatabase.activeWorkspace().id
                     src = (f'{{"application":"OneNote", "module":"loadFromOnenote",'
-                           f'"section":"{oe_section_name}", "page":"{tag.page_name}",'
-                           f'"object_id":"{tag.object_id}"}}')
+                           f'"section":"{section_name}", "page":"{tag.PageName}",'
+                           f'"object_id":"{tag.ID}"}}')
                     signage.source = src
-                    signage.creation_datetime = (datetime.fromisoformat(tag.creationTime[:-1])
+                    signage.creation_datetime = (datetime.fromisoformat(tag.CreationTime[:-1])
                                                  .astimezone(timezone.utc).strftime('%Y-%m-%d'))
-                    signage.modification_datetime = tag.lastModifiedTime
-                    cache.get("OneNote").add(tag.object_id)
+                    signage.modification_datetime = tag.LastModifiedTime
+                    cache.get("OneNote").add(tag.ID)
                     yield signage
   
         worker = LoadWorker(partial(func, connectors, regex, cache), cache=cache)
@@ -684,19 +686,21 @@ class SignageModel(TreeModel):
         self.connector_cache.setdefault("OneNote", set())
         self.connector_cache.setdefault("Docx", set())
 
-        import json
         for row in range(self.rootModel().rowCount()):
-                source_json = (self.rootModel().index(row,
-                                                      SignageSqlModel.Fields.Source.index)
-                                                      .data(QtCore.Qt.ItemDataRole.DisplayRole))
-                source: dict = json.loads(source_json)
-                application = source.get("application")
-                if application == "OneNote":
-                    object_id = source.get("object_id")
-                    self.connector_cache.setdefault("OneNote", set()).add(object_id)
-                elif application == "Docx":
-                    object_id = source.get("object_id")
-                    self.connector_cache.setdefault("Docx", set()).add(object_id)
+            source_json = (self.rootModel().index(row,
+                                                    SignageSqlModel.Fields.Source.index)
+                                                    .data(QtCore.Qt.ItemDataRole.DisplayRole))
+            source: dict = json.loads(source_json)
+            application = source.get("application")
+            if application == "OneNote":
+                object_id = source.get("object_id")
+                self.connector_cache.setdefault("OneNote", set()).add(object_id)
+            elif application == "Docx":
+                object_id = source.get("object_id")
+                self.connector_cache.setdefault("Docx", set()).add(object_id)
+        
+        logger.debug(f"Connector cache's size: {len(self.connector_cache)}")
+        
 
     def insertSignage(self, signage: Signage):
         """Insert new signage into the database"""

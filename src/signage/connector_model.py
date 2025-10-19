@@ -14,6 +14,7 @@ class ConnectorModel(QSqlRelationalTableModel):
         ID: DatabaseField
         TYPE: DatabaseField
         VALUE: DatabaseField
+        NAME: DatabaseField
         LASTMODIFIED: DatabaseField
         WorkspaceID: DatabaseField
 
@@ -36,6 +37,9 @@ class ConnectorModel(QSqlRelationalTableModel):
         self.setHeaderData(self.fieldIndex('type'),
                            Qt.Orientation.Horizontal,
                            "Type")
+        self.setHeaderData(self.fieldIndex('name'),
+                           Qt.Orientation.Horizontal,
+                           "Name")
         self.setHeaderData(self.fieldIndex('value'),
                            Qt.Orientation.Horizontal,
                            "Value")
@@ -48,6 +52,7 @@ class ConnectorModel(QSqlRelationalTableModel):
     def initFields(self):
         ConnectorModel.Fields.ID = DatabaseField("id", self.fieldIndex('id'), False)
         ConnectorModel.Fields.TYPE = DatabaseField("type", self.fieldIndex('type'), True)
+        ConnectorModel.Fields.NAME = DatabaseField("name", self.fieldIndex('name'), True)
         ConnectorModel.Fields.VALUE = DatabaseField("value", self.fieldIndex('value'), True)
         ConnectorModel.Fields.LASTMODIFIED = DatabaseField("last_modified", self.fieldIndex('last_modified'), False)
         ConnectorModel.Fields.WorkspaceID = DatabaseField("workspace_id", self.fieldIndex('workspace_id'), False)
@@ -64,10 +69,11 @@ class ConnectorModel(QSqlRelationalTableModel):
         self._connectors.clear()
         for row in range(self.rowCount()):
             uid = self.index(row, self.Fields.ID.index).data(Qt.ItemDataRole.DisplayRole)
+            name = self.index(row, self.Fields.NAME.index).data(Qt.ItemDataRole.DisplayRole)
             value = self.index(row, self.Fields.VALUE.index).data(Qt.ItemDataRole.DisplayRole)
             connector_type = self.index(row, self.Fields.TYPE.index).data(Qt.ItemDataRole.DisplayRole)
             last_modified = self.index(row, self.Fields.LASTMODIFIED.index).data(Qt.ItemDataRole.DisplayRole)
-            connnector = Connector(uid, connector_type, value, last_modified)
+            connnector = Connector(uid, connector_type, name, value, last_modified)
             self._connectors.setdefault(connector_type, {}).update({uid:connnector})
 
     def addConnector(self, connector: Connector):
@@ -75,7 +81,8 @@ class ConnectorModel(QSqlRelationalTableModel):
             return
                 
         record = self.record()
-        record.setValue('value', connector.value)
+        record.setValue('name', connector.name)
+        record.setValue('value', connector.value) # section_id for OneNote, filepath for Word
         record.setValue('type', connector.type)
         record.setValue('workspace_id', AppDatabase.activeWorkspace().id)
 

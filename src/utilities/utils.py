@@ -10,6 +10,7 @@ from zipfile import ZipFile
 from mammoth import extract_raw_text
 from typing import Literal
 from base64 import (b64decode, b64encode)
+from tempfile import gettempdir
 
 from qtpy import (QtWidgets, QtCore, QtGui)
 
@@ -262,15 +263,16 @@ def writeJson(json_path: str, data: dict) -> tuple[bool, str]:
     return True, err
 
 def readJson(json_file: str) -> tuple[dict, str]:
-        try:
-            with open(json_file, mode='r', encoding='utf8') as file:
-                return json.load(file), ""
-        except json.JSONDecodeError:
-            err = f"Warning: {json_file} is empty or contains invalid JSON."
+    """Read a json file and return the structure and error message"""
+    try:
+        with open(json_file, mode='r', encoding='utf8') as file:
+            return json.load(file), ""
+    except json.JSONDecodeError:
+        err = f"Warning: {json_file} is empty or contains invalid JSON."
+        return {}, err
+    except FileNotFoundError:
+            err = f"Error: {json_file} not found."
             return {}, err
-        except FileNotFoundError:
-                err = f"Error: {json_file} not found."
-                return {}, err
         
 def contextual_line_id(line: str, context: str = "") -> str:
     normalized = f"{context.strip()}::{line.strip()}"
@@ -313,3 +315,15 @@ def trim_file(filepath, keep_lines=10000):
                 f.writelines(lines[-keep_lines])
         except Exception as e:
             return e
+
+def get_safe_temp_path(fallback: Path | None = None) -> Path:
+    """Return a valid temporary directory path, falling back if needed."""
+
+    temp = Path(gettempdir())
+    if temp.exists():
+        return temp
+
+    # fallback: use provided path or user's home directory
+    fallback = fallback or Path.home() / "temp_fallback"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback

@@ -128,15 +128,16 @@ class Updater(QDialog):
         self.progress.setVisible(False)
         vbox.addWidget(self.progress)
 
-        buttons = (QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttonBox = QDialogButtonBox(buttons)
+        self.buttons = (QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.buttonBox = QDialogButtonBox(self.buttons)
 
-        buttonBox.accepted.connect(self.start_update)
-        buttonBox.rejected.connect(self.reject)
+        self.buttonBox.accepted.connect(self.start_update)
+        self.buttonBox.rejected.connect(self.reject)
 
-        vbox.addWidget(buttonBox)
+        vbox.addWidget(self.buttonBox)
 
     def start_update(self):
+        self.buttonBox.hide()
         url = f"https://github.com/{OWNER}/{REPO}/releases/download/{self.release}/inspectormate-{self.release}.exe"
         installer = os.path.join(os.getenv("TEMP"),f"inspectormate-{self.release}.exe")
         self.progress.setVisible(True)
@@ -166,9 +167,3 @@ class Updater(QDialog):
         self.label.setText("The installer is running.\nThe app will now close.")
         self._parent.force_close = True
         self._parent.close()
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    win = Updater()
-
-    sys.exit(app.exec())

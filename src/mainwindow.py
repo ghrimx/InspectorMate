@@ -14,7 +14,7 @@ from evidence.model import EvidenceModel
 from evidence.view import EvidenceTab
 
 from workspace.view import WorkspaceManagerDialog
-from onenote.msonenote import OnenotePickerDialog
+from onenote.view import OnenotePickerDialog
 
 from documentviewer.viewerfactory import ViewerFactory
 from documentviewer.viewerwidget import ViewerWidget
