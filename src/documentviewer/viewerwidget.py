@@ -1,14 +1,15 @@
 import logging
 from abc import abstractmethod
-from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot, Signal)
+from qtpy import Qt, QtCore, QtWidgets, QtGui, Slot, Signal
 from PyQt6.QtSql import QSqlRelationalDelegate
 
-from evidence.evidencemodel import EvidenceModel
-from database.dbstructure import Document
+from evidence.model import EvidenceModel
+from common import Document
 
 from widgets.toolbar import ToolBar
 from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.richtexteditor import RichTextEditor
+from widgets.readonly_linedit import ReadOnlyLineEdit
 
 from snipping.snippingtool import Capture
 
@@ -106,9 +107,7 @@ class ViewerWidget(QtWidgets.QWidget):
         self.filename = FitContentTextEdit(True)
         self.filename.setStyleSheet("color: grey;")
         self.refKey = QtWidgets.QLineEdit()
-        self.signage_id = QtWidgets.QLineEdit()
-        self.signage_id.setReadOnly(True)
-        self.signage_id.setStyleSheet("color: grey;")
+        self.signage_id = ReadOnlyLineEdit()
 
         formlayout.addRow('Status', self.status)
         formlayout.addRow('RefKey', self.refKey)
@@ -181,12 +180,20 @@ class ViewerWidget(QtWidgets.QWidget):
         self.mapper.addMapping(self.subtitle, model.Fields.Subtitle.index)
         self.mapper.addMapping(self.reference, model.Fields.Reference.index)
         self.mapper.addMapping(self.filename, model.Fields.Filepath.index, b"plainText")
-        self.mapper.addMapping(self.signage_id, model.Fields.SignageID.index)
 
         # Note tab
         self.mapper.addMapping(self.note_tab.editor, model.Fields.Note.index)
         self.mapper.setCurrentModelIndex(index)
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
+        self._on_mapper_index_changed(index.row())
+        self.mapper.currentIndexChanged.connect(self._on_mapper_index_changed)
+
+    def _on_mapper_index_changed(self, row: int):
+        """Workaround to solve mapper fail state"""
+        model: EvidenceModel = self.mapper.model()
+        record = model.record(row)
+        value = record.value(model.Fields.SignageID.index)
+        self.signage_id.setText("" if value is None else str(value))
 
     def setMapperIndex(self, index: QtCore.QModelIndex):
         self.mapper.setCurrentModelIndex(index)

@@ -11,13 +11,13 @@ from utilities.loggin import LOGGIN
 class Config():
     organization_name: str = "FAMHP"
     app_name: str = "InspectorMate"
-    app_version: str = "4.3.0a"
+    app_version: str = "6.0.0rc.1"
     db_version: str = ""
     app_data_path: Path = Path(os.getenv('LOCALAPPDATA')).joinpath("Programs/InspectorMate")
     db_path: Path = app_data_path.joinpath(f"inspectormate.sqlite")
     log_path: Path = app_data_path.joinpath("inspectormate.log")
     config_path: Path = app_data_path.joinpath("logging.ini")
-    style_path: Path = app_data_path.joinpath("Style")
+
 
     def __post_init__(cls):
         """

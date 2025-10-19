@@ -100,6 +100,12 @@ class WordViewer(ViewerWidget):
             h1, h2, h3, h4, h5, h6 { 
                 color: #0d6efd; 
             }
+            .doc-title {
+                font-size: xx-large;
+                font-weight: bold;
+                margin: 0px 0 15px 0;
+                color: #0d6efd;
+            }
             .btn { 
                 background-color: #198754; color: white; padding: .5rem 1rem; border-radius: .25rem; 
             }
@@ -113,9 +119,16 @@ class WordViewer(ViewerWidget):
         </style>
         """
 
+        style_map = """
+        p[style-name='Title'] => div.doc-title:fresh
+        p[style-name='Subtitle'] => h2:fresh
+        table p[style-name='Heading 1'] => p:fresh
+        table p[style-name='Heading 2'] => p:fresh
+        """
+
         try:
             with open(filepath, "rb") as docx_file:
-                result = convert_to_html(docx_file)
+                result = convert_to_html(docx_file, style_map=style_map)
                 html = result.value
                 styled_html = custom_css + html
         except Exception as e:

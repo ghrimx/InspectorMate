@@ -1,40 +1,47 @@
-from qtpy import (QtCore, Qt, QtGui, QtWidgets, QtAds, Slot)
+from qtpy import (QtCore, Qt, QtGui, QtWidgets, QtAds, Slot, QtSql)
 from qt_theme_manager import theme_icon_manager, Theme
 import logging
  
-from signage.signage_model import SignageTreeModel
-from signage.signage_tab import SignageTab as SignageTreeTab
-from signage.signage_dialogs import OwnerDialog
 
-from evidence.evidencemodel import EvidenceModel
-from evidence.evidencetab import EvidenceTab, Document
-from workspace.workspace_dialogs import WorkspaceManagerDialog
-from onenote.msonenote import OnenotePickerDialog
+from signage.dialogs import OwnerDialog
+from signage.connector_widget import ConnectorManagerDialog
+from signage.connector_model import ConnectorModel
+
+from signage.model import SignageModel
+from signage.view import SignageTab
+
+from evidence.model import EvidenceModel
+from evidence.view import EvidenceTab
+
+from workspace.view import WorkspaceManagerDialog
+from onenote.view import OnenotePickerDialog
 
 from documentviewer.viewerfactory import ViewerFactory
 from documentviewer.viewerwidget import ViewerWidget
 
-from richtexteditor.notepad import Notepad
+from notepad.notepad import Notebook
 
 from widgets.filesystem import FileSystem
-from widgets.richtexteditor import RichTextEditor
-from widgets.filedialog import (MergeExcelDialog, UnzipDialog)
+from widgets.filedialog import ConcatExcelDialog, UnzipDialog
 from widgets.summarydialog import SummaryDialog
 from widgets.aboutdialog import About
 from widgets.debuglogviewer import DebugLogViewer
 from widgets.batch_renamer import BatchRenameWidget
+from widgets.emoji_picker import EmojiGridWidget
 
 from utilities import utils
 from utilities import config as mconf
 from database.database import AppDatabase
-from database.dbstructure import SignageType
-from models.model import SummaryModel
+from base_models import SummaryModel
+
+from common import Document
 
 from listinsight import ListinsightWidget
 from listinsight.gui import status_signal as listinsight_status_signal
 
 from utilities.decorators import status_message, status_signal
 from widgets.app_updater import Updater, get_latest_release
+from pyqtspinner import WaitingSpinner
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -42,10 +49,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.force_close = False
-        self.signage_treemodel = SignageTreeModel()
+        self.signage_treemodel = SignageModel()
         self.evidence_model = EvidenceModel()
         self.viewer_factory = ViewerFactory(self.evidence_model, self)
         self.workspace_manager =  None
+        self.connector_model = ConnectorModel()
         self.doc_viewers = {}
 
     def initUI(self):
@@ -61,7 +69,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.set_window_title(AppDatabase.activeWorkspace().name)
 
         # Workspace FileSystem Sidebar
-        self.workspace_explorer_dock_widget = QtAds.CDockWidget("Explorer", self)
+        self.workspace_explorer_dock_widget = QtAds.CDockWidget("Workspace", self)
         self.workspace_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
         self.workspace_explorer = FileSystem(AppDatabase.activeWorkspace().rootpath)
         self.workspace_explorer.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
@@ -70,6 +78,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
         self.workspace_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.workspace_explorer_dock_widget)
         self.workspace_doc_widget_container.setMinimumWidth(250)
+
+        # Evidence Explorer FileSystem Sidebar
+        self.evidence_explorer_dock_widget = QtAds.CDockWidget("Evidence", self)
+        self.evidence_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
+        self.evidence_explorer = FileSystem(AppDatabase.activeWorkspace().evidence_path)
+        self.evidence_explorer_dock_widget.setWidget(self.evidence_explorer)
+        self.evidence_explorer_dock_widget.setMinimumSize(200, 150)
+        self.evidence_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
+        self.evidence_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.evidence_explorer_dock_widget)
+        self.evidence_doc_widget_container.setMinimumWidth(250)
 
         # Notebook Explorer FileSystem Sidebar
         self.notebook_explorer_dock_widget = QtAds.CDockWidget("Notebook", self)
@@ -81,9 +99,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notebook_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.notebook_explorer_dock_widget)
         self.notebook_doc_widget_container.setMinimumWidth(250)
 
-        # Signage Tree Widget        
+        # Signage      
         self.signage_dock_widget = QtAds.CDockWidget("Signage", self)
-        self.signage_tree_tab = SignageTreeTab(model=self.signage_treemodel)
+        self.signage_tree_tab = SignageTab(self.signage_treemodel, self.startSpinner, self.stopSpinner)
         self.signage_dock_widget.setWidget(self.signage_tree_tab)
         self.signage_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.signage_dock_widget.resize(250, 150)
@@ -92,8 +110,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if theme_icon_manager.get_theme() == Theme.DARK:
             self.signage_area.setStyleSheet("color: white;")
 
-        # Notebook widget
-        self.notepad_tab = Notepad(self)
+         # Notebook widget
+        self.notepad_tab = Notebook(self)
         self.notepad_dock_widget = QtAds.CDockWidget("Notebook", self)
         self.notepad_dock_widget.setWidget(self.notepad_tab)
         self.notepad_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
@@ -103,17 +121,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notepad_tab.sigCreateSignage.connect(self.onCreateSignageFromNotepad)
 
         # Document widget
-        self.evidence_tab = EvidenceTab(model=self.evidence_model)
+        self.evidence_tab = EvidenceTab(model=self.evidence_model,
+                                        signage_model=self.signage_treemodel,
+                                        startSpinner=self.startSpinner,
+                                        stopSpinner=self.stopSpinner)
         self.evidence_tab_dock_widget = QtAds.CDockWidget("Evidence", self)
         self.evidence_tab_dock_widget.setWidget(self.evidence_tab)
         self.evidence_tab_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.evidence_tab_dock_widget.resize(250, 150)
         self.evidence_tab_dock_widget.setMinimumSize(200, 150)
         self.evidence_tab_area = self.dock_manager.addDockWidgetTabToArea(self.evidence_tab_dock_widget, self.signage_area)
-        self.evidence_tab.createRefKeyFilterPane(self.signage_treemodel)
 
         # Listinsight widget
-        self.listinsight = ListinsightWidget(f"{AppDatabase.activeWorkspace().rootpath}/ListInsight", AppDatabase.activeWorkspace().name, self)
+        self.listinsight = ListinsightWidget(f"{AppDatabase.activeWorkspace().rootpath}/ListInsight", self)
         self.listinsight_tab_dock_widget = QtAds.CDockWidget("ListInsight")
         self.listinsight_tab_dock_widget.setWidget(self.listinsight)
         self.listinsight_tab_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
@@ -139,6 +159,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.status_bar.showMessage('✔️ Ready!', 30000)
         listinsight_status_signal.status_message.connect(self.status_bar.showMessage)
 
+        self.spinner = WaitingSpinner(self, True, True)
+        self.onWorkspaceChanged()
+
+    def startSpinner(self, msg = "", msec = 7000):
+        self.spinner.start()
+        status_signal.status_message.emit(msg, msec)
+        QtWidgets.QApplication.processEvents()
+
+    def stopSpinner(self, msg = "", msec = 7000):
+        self.spinner.stop()
+        status_signal.status_message.emit(msg, msec)
+
     def checkUpdate(self):
         release = get_latest_release()
         if release:
@@ -146,9 +178,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.updater.show()
 
     def setupDialogs(self):
-        self.merge_excel_dialog: MergeExcelDialog = None
+        self.concat_excel_dialog: ConcatExcelDialog = None
         self.onenote_manager: OnenotePickerDialog = None
         self.summary_dialogs: SummaryDialog = None
+        self.log_viewer: DebugLogViewer = None
+        self.emoji_dialog: EmojiGridWidget = None
 
     def createMenubar(self):
         """Create Application Menubar"""
@@ -157,24 +191,28 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # File Menu
         self.file_menu = self.menubar.addMenu("File")
-        self.file_menu.addAction(QtGui.QAction("Manage Workspace",
+        self.action_workspace_manager = QtGui.QAction(theme_icon_manager.get_icon(":archive-2-line"),"Manage Workspace",
                                                self.menubar,
-                                               triggered=self.openWorkspaceManager))
-        self.file_menu.addAction(QtGui.QAction("Create Signage",
+                                               triggered=self.openWorkspaceManager)
+        self.file_menu.addAction(self.action_workspace_manager)
+        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":signpost-line"),
+                                               "Create Signage",
                                                self.menubar,
                                                shortcut=QtGui.QKeySequence("Ctrl+R"),
                                                triggered=lambda: self.signage_tree_tab.createSignage("", '{"application":"InspectorMate", "module":"MainWindow"}')))
-        self.file_menu.addAction(QtGui.QAction("Export Signage",
+        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":share-forward-2-line"),
+                                               "Export Signage",
                                                self.menubar,
                                                triggered=self.signage_tree_tab.onExportTriggered))
-        self.file_menu.addAction(QtGui.QAction("Import Signage",
+        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":download-2-line"),
+                                               "Import Signage",
                                                self.menubar,
                                                triggered=self.signage_tree_tab.onImportTriggered))
 
         # Edit Menu
         self.file_open_option = QtGui.QAction("Open document with system application",
-                                                  self.menubar,
-                                                  triggered=self.saveSettings)
+                                              self.menubar,
+                                              triggered=self.saveSettings)
         self.edit_menu = self.menubar.addMenu("Edit")
         self.file_open_option.setCheckable(True)
         self.file_open_option.setChecked(True)
@@ -192,6 +230,10 @@ class MainWindow(QtWidgets.QMainWindow):
                                                "Add/Remove Owner",
                                                self.menubar,
                                                triggered=self.addRemoveOwner))
+        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":links-line"),
+                                               "Manage Signage Connectors",
+                                               self.menubar,
+                                               triggered=self.manageConnectors))
 
         # View Menu
         self.view_menu = self.menubar.addMenu("View")
@@ -210,51 +252,60 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Tools Menu
         self.tools_menu = self.menubar.addMenu("Tools")
-        self.tools_menu.addAction(QtGui.QAction("Merge Excel files",
+        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":git-merge-line"),
+                                                "Concatenate Excel files",
                                                 self.menubar,
-                                                triggered=self.handleMergeExcelFiles))
-        self.tools_menu.addAction(QtGui.QAction("Unzip archive",
+                                                triggered=self.concatExcelFiles))
+        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":inbox-unarchive-line"),
+                                                "Unzip archive",
                                                 self.menubar,
-                                                triggered=self.handleUnzipArchive))
-        self.tools_menu.addAction(QtGui.QAction("Unpack PDF",
+                                                triggered=self.unzipArchive))
+        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":file-zip-line"),
+                                                "Unpack PDF",
                                                 self.menubar,
-                                                triggered=self.handleUnpackPDF))
-        self.tools_menu.addAction(QtGui.QAction("Batch Rename file",
+                                                triggered=self.unpackPDF))
+        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":input-field"),
+                                                "Batch Rename file",
                                                 self.menubar,
-                                                triggered=self.handleBatchRenameFile))
+                                                triggered=self.batchRenameFile))
+        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":emoji-sticker-line"),
+                                                "Emoji Dialog",
+                                                self.menubar,
+                                                shortcut=QtGui.QKeySequence("Ctrl+E"),
+                                                triggered=self.emojiDialog))
         
         # Help menu
         self.help_menu = self.menubar.addMenu("Help")
-        self.help_menu.addAction(QtGui.QAction("Summary",
+        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":table-2"),
+                                               "Summary",
                                                 self.menubar,
                                                 triggered=self.showSummary))
-        self.help_menu.addAction(QtGui.QAction("About InspectorMate",
+        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":information-2-line"),
+                                               "About InspectorMate",
                                                 self.menubar,
                                                 triggered=self.showAbout))
-        self.help_menu.addAction(QtGui.QAction("View Debug Output",
+        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":bug-line"),
+                                               "View Debug Output",
                                                 self.menubar,
                                                 triggered=self.showDebugOutput))
-        self.help_menu.addAction(QtGui.QAction("Open App folder",
+        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":folder-open-line"),
+                                               "Open App folder",
                                                 self.menubar,
                                                 triggered=self.openAppFolder))
 
     def connectSignals(self):
-        self.signage_tree_tab.sigSignageTreemodelChanged.connect(self.evidence_tab.refresh)
         self.signage_tree_tab.sigSignageDoubleClicked.connect(self.onSignageDoubleClicked)
+        self.evidence_model.modelReset.connect(self.onEvidenceModelReset)
         self.evidence_tab.sigOpenDocument.connect(self.onOpenEvidenceTriggered)
-        self.evidence_tab.sigDocUploaded.connect(self.onEvidenceModelReset)
-        self.evidence_tab.sigDocUploaded.connect(self.signage_tree_tab.onEvidenceModelUpdate)
-        self.evidence_tab.sigStatusUpdated.connect(self.signage_tree_tab.onEvidenceModelUpdate)
-        self.evidence_tab.sigRefkeyUpdated.connect(self.signage_tree_tab.onEvidenceModelUpdate)
         self.evidence_tab.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
         self.evidence_tab.sigCreateSignage.connect(self.signage_tree_tab.createSignage)
+        self.evidence_tab.sigUpdateReviewProgress.connect(self.signage_tree_tab.updateReviewProgess)
+        self.evidence_model.sigUpdateReviewProgress.connect(self.signage_tree_tab.updateReviewProgess)
         self.notebook_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
         self.notebook_explorer.sigOpenNote.connect(self.onOpenNoteTriggered)
         self.workspace_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
         self.workspace_explorer.sigOpenNote.connect(self.onOpenNoteTriggered)
-        
-        # self.signage_model.rowsInserted.connect(self.evidence_tab.request_filter_tab.updateCounter)
-        # self.signage_model.rowsRemoved.connect(self.evidence_tab.request_filter_tab.updateCounter)
+        self.evidence_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
 
     @Slot()
     def showAbout(self):
@@ -286,6 +337,11 @@ class MainWindow(QtWidgets.QMainWindow):
     @Slot()
     def addRemoveOwner(self):
         dlg = OwnerDialog()
+        dlg.exec()
+
+    @Slot()
+    def manageConnectors(self):
+        dlg = ConnectorManagerDialog(self.connector_model)
         dlg.exec()
 
     @Slot()
@@ -340,7 +396,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.doc_viewers[doc.id] = doc_dock_widget
             self.viewer.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
             doc_dock_widget.closed.connect(lambda: self.onViewerClosed(doc_dock_widget.widget().document.id))
-            # self.viewer.note_tab.sig_create_request.connect(self.createSignageFromNote)
+        else:
+            status_signal.status_message.emit("Cannot open file", 7000)
 
     @Slot(str)
     def onOpenNoteTriggered(self, filepath):
@@ -351,32 +408,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def onCreateSignageFromNotepad(self, title, source: str, hanchor: str):
         """Create a signage from Notepad/Notebook"""
         if self.signage_tree_tab.createSignage(title, source):
-            signage = self.signage_tree_tab.signage_dialog.getNewSignage()
-            self.notepad_tab.insertSignage(signage, hanchor)           
-
-    #TODO
-    @Slot(object)
-    def createSignageFromNote(self, caller: RichTextEditor):
-        """Create signage from note editor"""
-        title = caller.editor.textCursor().selectedText()
-
-        citation = caller._parent.citation()
-
-        val = self.signage_tree_tab.createSignage(title, citation)
-
-        if val == 1:
-            signage = self.signage_tree_tab.create_dialog.getNewSignage()
-
-            icon = None
-            signage_type: SignageType
-            for signage_type in AppDatabase.cache_signage_type.values():
-                if signage_type.type_id == signage.type_id:
-                    icon = signage_type.icon
-
-            if icon != "":
-                caller.editor.textCursor().insertHtml(f'<p><img alt="" src="data:image/png;base64,{icon}"/> {signage.refKey} {signage.title}</p>')
-            else:
-                caller.editor.textCursor().insertText(f'{signage.refKey} {signage.title}')
+            signage = self.signage_tree_tab.signage_dialog.signage()
+            self.notepad_tab.insertSignage(signage, hanchor)         
 
     @Slot()
     def saveSettings(self):
@@ -416,22 +449,30 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_manager.exec()
 
     @Slot()
-    def handleMergeExcelFiles(self):
-        self.merge_excel_dialog = MergeExcelDialog()
-        self.merge_excel_dialog.exec()
+    def concatExcelFiles(self):
+        self.concat_excel_dialog = ConcatExcelDialog(start_process=self.startSpinner,
+                                                     process_ended=self.stopSpinner)     
+        self.concat_excel_dialog.exec()
 
     @Slot()
-    def handleUnzipArchive(self):
-        self.unzip_dialog = UnzipDialog(source=AppDatabase.activeWorkspace().rootpath, dest=AppDatabase.activeWorkspace().evidence_path)
+    def unzipArchive(self):
+        self.unzip_dialog = UnzipDialog(source=AppDatabase.activeWorkspace().rootpath,
+                                        dest=AppDatabase.activeWorkspace().evidence_path,
+                                        start_process=self.startSpinner,
+                                        process_ended=self.stopSpinner)
         self.unzip_dialog.exec()
 
     @Slot()
-    def handleBatchRenameFile(self):
+    def batchRenameFile(self):
         self.dlg = BatchRenameWidget()
         self.dlg.show()
 
+    def emojiDialog(self):
+        self.emoji_dialog = EmojiGridWidget()
+        self.emoji_dialog.show()
+
     @Slot()
-    def handleUnpackPDF(self):
+    def unpackPDF(self):
         file = QtWidgets.QFileDialog.getOpenFileName(caption="Select file", directory=AppDatabase.activeWorkspace().evidence_path, filter="*.pdf")
 
         if file[0] != "":
@@ -442,30 +483,62 @@ class MainWindow(QtWidgets.QMainWindow):
             elif err:
                 QtWidgets.QMessageBox.information(self, "unpackPDF -- Success", "PDF successfully unpacked")
 
+    def disable_all(self):
+        self.evidence_tab.setEnabled(False)
+        self.signage_tree_tab.setEnabled(False)
+        self.notebook_explorer.setEnabled(False)
+        self.workspace_explorer.setEnabled(False)
+        self.notepad_tab.setEnabled(False)
+        for menu in self.menuBar().findChildren(QtWidgets.QMenu):
+            for action in menu.actions():
+                if action is not self.action_workspace_manager:
+                    action.setEnabled(False)
+
+    def enable_all(self):
+        self.evidence_tab.setEnabled(True)
+        self.signage_tree_tab.setEnabled(True)
+        self.notebook_explorer.setEnabled(True)
+        self.notepad_tab.setEnabled(True)
+        self.workspace_explorer.setEnabled(True)
+        for menu in self.menuBar().findChildren(QtWidgets.QMenu):
+            for action in menu.actions():
+               action.setEnabled(True)
+
     @status_message('Workspace updated...', 10000)
     @Slot()
     def onWorkspaceChanged(self):
+        if AppDatabase.activeWorkspace().id == 0:
+            self.disable_all()
+        else:
+            self.enable_all()
+
         self.evidence_tab.refresh()
-        self.signage_tree_tab.refresh()
+        self.signage_treemodel.rootModel().refresh()
+        self.signage_treemodel.buildFromSqlModel()
+        self.signage_treemodel.updateReviewProgess()
+        self.connector_model.refresh()
         self.workspace_explorer.set_root_path(AppDatabase.activeWorkspace().rootpath)
+        self.evidence_explorer.set_root_path(AppDatabase.activeWorkspace().evidence_path)
         self.notebook_explorer.set_root_path(AppDatabase.activeWorkspace().notebook_path)
         self.set_window_title(AppDatabase.activeWorkspace().name)
         self.notepad_tab.close_all()
-        self.signage_treemodel.cacheOESignage()
 
         # Close all viewer tabs
         dockwidget: QtAds.CDockWidget
         for dockwidget in self.doc_viewers.copy().values():
-            dockwidget.closeDockWidget()
-        
+            dockwidget.closeDockWidget()  
 
     @status_message('Importing from OneNote...')
     @Slot()
     def open_onenote_picker(self):
         onenote_warning = QtWidgets.QMessageBox.warning(self,
                                                         "Warning",
-                                                        "Establishing a connection to OneNote before opening the application may put the application in a hang state\n\nIt's recommended to open OneNote app before establishing a connection",
-                                                        buttons=QtWidgets.QMessageBox.StandardButton.Ignore | QtWidgets.QMessageBox.StandardButton.Cancel)
+                                                        (f"Establishing a connection to OneNote before opening " 
+                                                        f"the application may put the application in a hang state"
+                                                        f"\n\nIt's recommended to open OneNote app "
+                                                        f"before establishing a connection"),
+                                                        buttons=(QtWidgets.QMessageBox.StandardButton.Ignore | 
+                                                                 QtWidgets.QMessageBox.StandardButton.Cancel))
 
         if onenote_warning == QtWidgets.QMessageBox.StandardButton.Cancel:
             return
@@ -474,6 +547,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.onenote_manager = OnenotePickerDialog(self)
 
         self.onenote_manager.show()
+        self.onenote_manager.connect()
 
     @Slot()
     def showSummary(self):
@@ -495,29 +569,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.signage_summary_model.loadData(s_data, s_vheaders, s_hheaders)
         self.evidence_summary_model.loadData(e_data, e_vheaders, e_hheaders)
 
-    # def closeEvent(self, event: QtCore.QEvent):
-    #     msg = "Are you sure you want to exit the program?"
-    #     reply = QtWidgets.QMessageBox.question(self,
-    #                                            f'Closing {mconf.config.app_name}',
-    #                                            msg,
-    #                                            QtWidgets.QMessageBox.StandardButton.Ok,
-    #                                            QtWidgets.QMessageBox.StandardButton.No)
-
-    #     if reply == QtWidgets.QMessageBox.StandardButton.Ok:
-    #         logging.shutdown()
-    #         self.evidence_tab.close()
-    #         self.signage_tree_tab.close()
-    #         self.notepad_tab.close_all()
-    #         AppDatabase.close()
-    #         event.accept()
-    #     else:
-    #         event.ignore()
+    def closeDialogs(self):
+        if self.concat_excel_dialog: self.concat_excel_dialog.close()
+        if self.onenote_manager: self.onenote_manager.close()
+        if self.summary_dialogs: self.summary_dialogs.close()
+        if self.log_viewer: self.log_viewer.close()
+        if self.emoji_dialog: self.emoji_dialog.close()
 
     def closeEvent(self, event: QtCore.QEvent):
         # If forced programmatic close, skip confirmation
 
         if self.force_close:
             logging.shutdown()
+            self.closeDialogs()
             self.evidence_tab.close()
             self.signage_tree_tab.close()
             self.notepad_tab.close_all()
@@ -537,6 +601,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if reply == QtWidgets.QMessageBox.StandardButton.Ok:
             logging.shutdown()
+            self.closeDialogs()
             self.evidence_tab.close()
             self.signage_tree_tab.close()
             self.notepad_tab.close_all()

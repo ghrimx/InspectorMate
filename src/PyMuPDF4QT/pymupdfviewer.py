@@ -164,9 +164,11 @@ class PdfView(QtWidgets.QGraphicsView):
         if boxes is None:
             boxes: list = []
             page = self.fitzdoc[pno]
-            for link in page.links([pymupdf.LINK_GOTO, pymupdf.LINK_NAMED]):
+            # for link in page.links([pymupdf.LINK_GOTO, pymupdf.LINK_NAMED]):
+            for link in page.links():
                 linkbox = LinkBox(link, pno, self.zoomSelector().zoomFactor)
                 linkbox.sigJumpTo.connect(self.onLinkClicked)
+                linkbox.sigToUri.connect(self.onUriClicked)
                 self.doc_scene.addItem(linkbox)
                 boxes.append(linkbox)
             self.link_boxes[pno] = boxes
@@ -318,6 +320,14 @@ class PdfView(QtWidgets.QGraphicsView):
     @Slot(int, QtCore.QPointF)
     def onLinkClicked(self, pno: int, to: QtCore.QPointF):
         self._page_navigator.jump(page=pno, location=to)
+
+    #TODO
+    @Slot(str)
+    def onUriClicked(self, uri: str):
+        if "file://" in uri:
+            pass
+        elif "http" in uri:
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl(uri))
 
     def mousePressEvent(self, event):
         self.a0 = self.mapToScene(event.position().toPoint())

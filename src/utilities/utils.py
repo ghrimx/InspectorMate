@@ -1,15 +1,19 @@
 import os
-from pathlib import Path, WindowsPath
 import re
 import json
 import uuid
-import pandas as pd
 import fitz
+import pandas as pd
+from hashlib import sha1
+from pathlib import Path
 from zipfile import ZipFile
-
+from mammoth import extract_raw_text
+from typing import Literal
 from base64 import (b64decode, b64encode)
+from tempfile import gettempdir
 
 from qtpy import (QtWidgets, QtCore, QtGui)
+
 
 
 def walkFolder(path: str | Path) -> set[Path]:
@@ -39,10 +43,12 @@ def createFolder(fpath: str):
     if not _path.exists() and _path.parent.exists():
         _path.mkdir()
             
-def open_file(filepath: Path|str) -> None:
-    """Open file using the operating system default app"""
-    
+def open_file(filepath: Path|str, pathtype: Literal["file", "folder"] = "file") -> None:
+    """Open file/folder using the operating system default app"""
     filepath = Path(filepath)
+
+    if pathtype == "folder" and filepath.is_file():
+        filepath = filepath.parent
 
     if filepath.exists():
 
@@ -88,15 +94,25 @@ def find_match(text: str, pattern: str = r"^(([a-zA-Z]{0,3})\d{1,3})") -> str:
     
     Note: Mainly used to infer the refKey from the title of a document request and document title
     """
-    print(pattern)
     try:
         match = re.search(pattern, text)
-        print(match)
     except Exception as e:
-        print(e)
         return ""
     else:
         return match.group(0) if match else ""
+    
+def findRefKeyFromPath(filepath: str, pattern: str = "", parent_segment: str = "") -> str:
+    segments = filepath.replace(parent_segment, "")
+
+    refkey = ""
+    if pattern != "":
+        # find refKey only in segments up to the evidence folder
+        for item in segments.split('/'):
+            refkey = find_match(item, pattern)
+            if refkey != "":
+                break
+    
+    return refkey
 
 def mergeExcelFiles(files: list, drop_duplicate: str | bool = 'first', outfile: str = "") -> None | pd.DataFrame:
     """
@@ -106,7 +122,7 @@ def mergeExcelFiles(files: list, drop_duplicate: str | bool = 'first', outfile: 
     if len(files) > 0:
         dfs = []
         for file in files:
-            dfs.append(pd.read_excel(file, dtype={'RefKey': str, 'Evidence': str}))
+            dfs.append(pd.read_excel(file, dtype=str))
             
         df = pd.concat(dfs)
 
@@ -161,7 +177,7 @@ def extractAll(archive: str, dest: str = ""):
 
     return err
 
-def unpackZip(zippedFile: str, dest: str = "") -> None | Exception:
+def unpackZip(zippedFile: str, dest: str = "", max_name_length: int | None = None) -> None | Exception:
     """ Extract a zip file including any nested zip files
         Delete the zip file(s) after extraction
     """
@@ -247,13 +263,67 @@ def writeJson(json_path: str, data: dict) -> tuple[bool, str]:
     return True, err
 
 def readJson(json_file: str) -> tuple[dict, str]:
-        try:
-            with open(json_file, mode='r', encoding='utf8') as file:
-                return json.load(file), ""
-        except json.JSONDecodeError:
-            err = f"Warning: {json_file} is empty or contains invalid JSON."
+    """Read a json file and return the structure and error message"""
+    try:
+        with open(json_file, mode='r', encoding='utf8') as file:
+            return json.load(file), ""
+    except json.JSONDecodeError:
+        err = f"Warning: {json_file} is empty or contains invalid JSON."
+        return {}, err
+    except FileNotFoundError:
+            err = f"Error: {json_file} not found."
             return {}, err
-        except FileNotFoundError:
-                err = f"Error: {json_file} not found."
-                return {}, err
+        
+def contextual_line_id(line: str, context: str = "") -> str:
+    normalized = f"{context.strip()}::{line.strip()}"
+    return sha1(normalized.encode()).hexdigest()[:10]
 
+def line_id(line: str) -> str:
+    normalized = " ".join(line.strip().split())
+    return sha1(normalized.encode()).hexdigest()[:10]
+
+def extract_hash_lines(docx_path) -> dict:
+    """
+    Extract all lines starting with '#' or '! from a Word (.docx) document using mammoth.
+    """
+    try:
+        with open(docx_path, "rb") as docx_file:
+            result = extract_raw_text(docx_file)
+            text: str = result.value  # The raw text extracted
+
+    except Exception as e:
+        return False, str(e)
+
+    lines = {}
+    for line in text.splitlines():
+        if line.strip().startswith(("#", "!")):
+            lid = line_id(line)
+            lines[lid] = line.strip()
+    return lines
+
+def trim_file(filepath, keep_lines=10000):
+    """Trim a text file to keep only the last n lines"""
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except Exception as e:
+        return e
+    
+    if len(lines) > keep_lines:
+        try:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.writelines(lines[-keep_lines])
+        except Exception as e:
+            return e
+
+def get_safe_temp_path(fallback: Path | None = None) -> Path:
+    """Return a valid temporary directory path, falling back if needed."""
+
+    temp = Path(gettempdir())
+    if temp.exists():
+        return temp
+
+    # fallback: use provided path or user's home directory
+    fallback = fallback or Path.home() / "temp_fallback"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback

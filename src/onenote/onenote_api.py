@@ -1,10 +1,7 @@
 import logging
-import subprocess
-import json
-from ctypes import windll
 from xml.etree import ElementTree as ET
 from dataclasses import dataclass, field
-from utilities.config import config as msconf
+
 
 logger = logging.getLogger(__name__)
 
@@ -16,102 +13,6 @@ ON14_SCHEMA = "{http://schemas.microsoft.com/office/onenote/2010/onenote}"
 ON_APP = 'OneNote.Application'
 
 namespace = ON15_SCHEMA
-
-def executeScript(section_id: str) -> dict | None:
-    ps1 = msconf.app_data_path.joinpath("onenotescrapper.ps1").as_posix()
-    outfile = ""
-
-    try:
-        process = subprocess.run(
-            ["powershell", 
-             "-File", ps1, 
-             "-SectionId", section_id, 
-             "-OutputJson", outfile],
-             shell=True,
-             check=True,
-             capture_output=True,
-             encoding="utf-8"
-             )
-    except subprocess.CalledProcessError as e:
-        logger.error(f"CalledProcessError={e}")
-        logger.error(f"Command: {e.cmd}")
-        logger.error(f"Return Code: {e.returncode}")
-        logger.error(f"Output: {e.output}")
-        logger.error(f"Error Output: {e.stderr}")
-        return
-    except Exception as e:
-        logger.error(f"Unexepected error occured. Error: {e}")
-        return
-
-    try:
-        output = json.loads(process.stdout)
-    except Exception as e:
-        logger.error(f"Cannot parse data into dict using json. Error={e}")
-        return         
-
-    return output
-
-def execute(cmd: str) -> str | None:
-    """
-        Execute Powershell command in subprocess.
-
-        Change Powershell Console Code Page to 65001 (UTF-8).
-    """
-    code_page_cmd = """$OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()"""
-
-    try:
-        process = subprocess.run(["powershell", "-Command", code_page_cmd+cmd], check=True, capture_output=True)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"CalledProcessError={e}")
-        return
-
-    try:
-        output = process.stdout.decode("UTF-8").strip()
-    except Exception as e:
-        logger.error(f"Cannot decode powershell command output using UTF-8 codec. Error={e}")
-        logger.debug(f"Current Powershell Console Code Page={windll.kernel32.GetConsoleOutputCP()}")
-        return         
-
-    return output
-
-def convert2XML(xml_str) -> ET.Element | None:
-    xml: ET.Element = None
-    try:
-        xml = ET.fromstring(xml_str)
-    except Exception as e:
-        logger.error(e)
-    
-    return xml
-
-def getHierarchy(node_id: str = "") -> ET.Element | None:
-    ps = f"""
-            $OneNote = New-Object -ComObject OneNote.Application
-            [xml]$Hierarchy = ""
-            $OneNote.GetHierarchy("{node_id}", [Microsoft.Office.InterOp.OneNote.HierarchyScope]::hsPages, [ref]$Hierarchy)
-            $Hierarchy.outerXml
-        """
-    output = execute(ps)
-
-    if output is None:
-        return
-
-    xml = convert2XML(output)
-
-    return xml
-
-def getPageContent(page_id: str = "") -> ET.Element | None:
-    ps = f"""
-            $OneNote = New-Object -ComObject OneNote.Application
-            [xml]$pageXML = ""
-            $OneNote.GetPageContent("{page_id}", [ref]$pageXML, [Microsoft.Office.InterOp.OneNote.PageInfo]::piBasic)
-            $pageXML.outerXml
-        """
-    output = execute(ps)
-
-    if output is None:
-        return
-
-    return convert2XML(output)
 
 
 @dataclass
@@ -155,7 +56,8 @@ class HierarchyNode():
         self.synchronized = ""
 
     def deserialize_from_xml(self, xml: ET.Element):
-        self.name = xml.get("name")
+        name = xml.get("name")
+        self.name = name if name else "other"
         self.path = xml.get("path")
         self.id = xml.get("ID")
         self.last_modified_time = xml.get("lastModifiedTime")
@@ -193,7 +95,7 @@ class Notebook(HierarchyNode):
             yield c
 
     def __str__(self):
-        return self.name 
+        return self.nickname if self.nickname else self.name 
 
 
 class SectionGroup(HierarchyNode):

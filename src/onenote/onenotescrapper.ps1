@@ -1,140 +1,141 @@
-# version 2.0
-# Params
+# version 2.2
+# ====== Params ======
 param (
     [Parameter(Mandatory = $true)][string]$SectionID,
     [string]$OutputJson
 )
 
-# ====== Global variables ======
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+# ====== Global settings ======
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$InformationPreference = 'SilentlyContinue'
+
+# Force UTF-8 output (no BOM)
+# $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
+[bool]$global:debug = $false
+
+# ====== Debug function ======
+function DebugPrint {
+    param ([string]$what)
+    if ($global:debug -eq $true) {
+        Write-Verbose $what
+    }
+}
+
+# ====== Encoding defaults ======
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 $PSDefaultParameterValues['Get-Content:Encoding'] = 'utf8'
 
-# ====== Class ======
+# ====== Classes ======
 Class cTag {
-  # Define variables
-  [string] $Name
-  [string] $Cdata
-  [string] $Link
-  [string] $ID # ID of the parent OE
-  [string] $PageID
-  [string] $PageName
-  [string] $creationTime
-  [string] $lastModifiedTime
-  [string] $index
-
-  # Class contructor
-  cTag() {
-  }
-
-  # Define methods
-  DisplayProperties() {
-    write-host "Name:" $this.name
-    write-host "Link:" $this.link
-    write-host "ID:" $this.ID
-    write-host "Page ID:" $this.pageID
-  }
-} # End of Class 'cTag'
+    [string] $TypeName
+    [string] $Text
+    [string] $Link
+    [string] $ID
+    [string] $PageID
+    [string] $PageName
+    [string] $CreationTime
+    [string] $LastModifiedTime
+    [string] $TypeIndex
+}
 
 Class cPage {
-  # Define variables
-  [string] $Name
-  [string] $ID
-  [string] $Link
-  [string] $lastModifiedTime
-  [string] $dateTime
-  [System.Collections.ArrayList]$tags = @()
+    [string] $Name
+    [string] $ID
+    [string] $Link
+    [string] $LastModifiedTime
+    [string] $DateTime
+    [System.Collections.ArrayList]$tags = @()
 
-  # Class contructor
-  cPage() {
-  }
-
-  [void]AddItem([cTag]$item) {
-    $this.tags.Add($item)
-  }
-
-  # Define methods
-  DisplayProperties() {
-    write-host "Name:" $this.name
-    write-host "Link:" $this.link
-    write-host "ID:" $this.ID
-    write-host "lastModifiedTime:" $this.lastModifiedTime
-  }
-} # End of Class 'cPage'
-
-# ====== Housekeeping ======
-# Declaration
-$data = @{}
-[string]$sLink = ""
-
-# Init OneNote object
-$OneNote = New-Object -ComObject OneNote.Application
+    [void]AddItem([cTag]$item) {
+        $this.tags.Add($item)
+    }
+}
 
 # ====== Main ======
+$data = [System.Collections.ArrayList]@()
+[string]$sLink = ""
+
+try {
+    $OneNote = New-Object -ComObject OneNote.Application
+} catch {
+    Write-Error "Fail to init OneNote COM object: $_"
+    exit 1
+}
 
 [xml]$Hierarchy = ""
-$OneNote.GetHierarchy($SectionID, [Microsoft.Office.InterOp.OneNote.HierarchyScope]::hsPages, [ref]$Hierarchy)
+try {
+    $OneNote.GetHierarchy($SectionID, [Microsoft.Office.Interop.OneNote.HierarchyScope]::hsPages, [ref]$Hierarchy)
+} catch {
+    Write-Error "Fail to get Hierarchy: $_"
+    exit 1
+}
 
-# Fetch and process pages
-foreach($i in $Hierarchy.Section.Page){
-	  #DebugPrint($i.ID)
-
-    $page = New-Object cPage
+foreach ($i in $Hierarchy.Section.Page) {
+    $page = [cPage]::new()
     $page.ID = $i.ID
     $page.Name = $i.name
     $page.Link = $i.link
-    $page.lastModifiedTime = $i.lastModifiedTime
-    $page.dateTime = $i.dateTime
-	
+    $page.LastModifiedTime = $i.lastModifiedTime
+    $page.DateTime = $i.dateTime
+
     $NewPageXML = ""
-    $OneNote.GetPageContent($i.ID,[ref]$NewPageXML,[Microsoft.Office.Interop.OneNote.PageInfo]::piAll)
+    $OneNote.GetPageContent($i.ID, [ref]$NewPageXML, [Microsoft.Office.Interop.OneNote.PageInfo]::piAll)
     $xDoc = New-Object -TypeName System.Xml.XmlDocument
     $xDoc.LoadXml($NewPageXML)
-   
-    $namespaceManager = [System.Xml.XmlNamespaceManager]::new($xDoc.NameTable)
-    $namespaceManager.AddNamespace('one', 'http://schemas.microsoft.com/office/onenote/2013/onenote')
-    
-    # Create TagDef hastable
-    $hashtable = @{}
-    $nodes = $xDoc.SelectNodes("//one:TagDef",$namespaceManager)
-    if($nodes.Count -ge 1){
-        foreach ($node in $nodes){
-            if (-not $hashtable.Contains($node.index)) {
-            $hashtable.Add($node.index, $node.Name)
+
+    $ns = [System.Xml.XmlNamespaceManager]::new($xDoc.NameTable)
+    $ns.AddNamespace('one', 'http://schemas.microsoft.com/office/onenote/2013/onenote')
+
+    # Build TagDef lookup
+    $tagDefs = @{}
+    foreach ($node in $xDoc.SelectNodes("//one:TagDef", $ns)) {
+        if (-not $tagDefs.Contains($node.index)) {
+            $tagDefs[$node.index] = $node.name
+        }
+    }
+
+    # Process OE tags
+    foreach ($node in $xDoc.SelectNodes("//one:OE", $ns)) {
+        if ($node.Tag.index) {
+            $OneNote.GetHyperLinkToObject($i.ID, $node.objectID, [ref]$sLink)
+            $tag = [cTag]::new()
+            $tag.ID = $node.objectID
+            $tag.TypeName = $tagDefs[$node.Tag.index]
+            try {
+                $rawText = $node.T.InnerText
+                $normalized = $rawText.Normalize([System.Text.NormalizationForm]::FormC)
+                $cleanText = $normalized -replace '[^\u0000-\uFFFF]', ''
+                $tag.Text = $cleanText
+            } catch {
+                DebugPrint "Invalid characters in page '$($i.name)'"
             }
+
+            $tag.Link = $sLink
+            $tag.PageName = $i.name
+            $tag.PageID = $i.ID
+            $tag.CreationTime = $node.creationTime
+            $tag.LastModifiedTime = $node.lastModifiedTime
+            $tag.TypeIndex = $node.Tag.index
+
+            [void]$data.Add($tag)
         }
     }
-
-    # Go thru each OE node and get Tag
-    $nodes = $xDoc.SelectNodes("//one:OE",$namespaceManager)
-    if($nodes.Count -ge 1){
-        foreach ($node in $nodes){
-            if ($node.Tag.index){
-                $OneNote.GetHyperLinkToObject($i.ID,$node.objectID,[ref]$sLink) 
-                $tag = New-Object cTag
-                $tag.ID = $node.objectID
-                $tag.Name = $hashtable[$node.Tag.index]
-                $tag.Cdata = $node.T.InnerText
-                $tag.Link = $sLink
-                $tag.PageName = $i.name
-                $tag.PageID = $i.ID
-                $tag.creationTime = $node.creationTime
-                $tag.lastModifiedTime = $node.lastModifiedTime
-                $tag.index = $node.Tag.index
-
-                $page.AddItem($tag)
-                
-            }   
-        }
-    }
-    $data.Add($page.Name, $page)
 }
 
-# Export
-$data | ConvertTo-Json -Depth 5 
+# ====== Export ======
+try {
+    $json = $data | ConvertTo-Json -Depth 10
 
-IF (![string]::IsNullOrWhitespace($OutputJson)) {
-  $utf8NoBOM = New-Object System.Text.UTF8Encoding $false
-  [System.IO.File]::WriteAllText($OutputJson, ($data | ConvertTo-Json -Depth 10), $utf8NoBOM)
+    # Output ONLY JSON to stdout (no newline, no extra text)
+    [Console]::Write($json)
+
+    # Optional: also write to file if requested
+    if (![string]::IsNullOrWhiteSpace($OutputJson)) {
+        [System.IO.File]::WriteAllText($OutputJson, $json, [System.Text.UTF8Encoding]::new($false))
+    }
+} catch {
+    Write-Error "Failed to export JSON: $_"
+    exit 1
 }

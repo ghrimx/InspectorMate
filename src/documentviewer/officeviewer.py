@@ -1,10 +1,10 @@
 import logging
-from qtpy import (QtWidgets, Slot)
+from qtpy import QtWidgets, Slot
 
 from PyMuPDF4QT.pymupdfviewer import PdfViewer
-from evidence.evidencemodel import Document
+from common import Document
 
-from widgets.waitingspinner import WaitingSpinner
+from pyqtspinner import WaitingSpinner
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class OfficeViewer(PdfViewer):
 
     @classmethod
     def supportedFormats(cls) -> list[str]:
-        return [".xlsx", ".xls", ".pptx", ".ppt"]
+        return [".pptx", ".ppt"]
 
     @Slot()
     def handleConversionStarted(self):
