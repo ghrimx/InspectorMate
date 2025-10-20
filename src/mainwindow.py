@@ -504,7 +504,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for action in menu.actions():
                action.setEnabled(True)
 
-    @status_message('Workspace updated...', 10000)
+    @status_message('Updating Workspace...', 10000)
     @Slot()
     def onWorkspaceChanged(self):
         if AppDatabase.activeWorkspace().id == 0:
@@ -528,7 +528,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for dockwidget in self.doc_viewers.copy().values():
             dockwidget.closeDockWidget()  
 
-    @status_message('Importing from OneNote...')
+    @status_message('Connecting to OneNote...')
     @Slot()
     def open_onenote_picker(self):
         onenote_warning = QtWidgets.QMessageBox.warning(self,

@@ -38,7 +38,7 @@ def getTags(ps_script: str, section_id: str) -> list[OETag]:
     outfile = ""
 
     if logging.root.level == logging.DEBUG:
-        outfile = get_safe_temp_path().joinpath("OneNote_scrapper_output.json").as_posix()
+        outfile = get_safe_temp_path().joinpath(f"output_{section_id}.json").as_posix()
         logger.debug(f"Output powershell will written to '{outfile}'")
 
     try:
@@ -58,13 +58,18 @@ def getTags(ps_script: str, section_id: str) -> list[OETag]:
         logger.error(f"Return Code: {e.returncode}")
         logger.error(f"Output: {e.output}")
         logger.error(f"Error Output: {e.stderr}")
-        return
+        return []
     except Exception as e:
         logger.error(f"Unexepected error occured. Error: {e}")
         return []
-    
+        
     try:
         json_text = process.stdout.strip()
+    except Exception as e:
+        logger.error(f"Cannot read Powershell script output. Error={e}")
+        return []
+    
+    try:
         data = json.loads(json_text)
     except Exception as e:
         logger.error(f"Cannot parse data into dict using json. Error={e}")
@@ -73,7 +78,7 @@ def getTags(ps_script: str, section_id: str) -> list[OETag]:
     try:
         tags = [OETag(**t) for t in data]
     except Exception as e:
-        logger.error(e)
+        logger.error(f"Cannot decrompress dict into dataclass")
         return []
       
     return tags

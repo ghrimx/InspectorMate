@@ -48,7 +48,7 @@ class LoadWorker(QtCore.QRunnable):
             self.signals.error.emit(e)
             msg = "⚠️ Error while loading data from connector!"
         else:
-            msg = "✔️ Data loaded!"
+            msg = "✔️ Data imported from connector!"
         finally:
             self.signals.finished.emit(self.cache, msg)
 
@@ -485,7 +485,7 @@ class SignageSqlModel(QSqlRelationalTableModel):
         """Return the QSqlTableModel index of the signage id"""
         for row in range(self.rowCount()):
             index = self.index(row, self.Fields.ID.index)
-            if int(self.data(index)) == int(id):
+            if int(self.data(index, QtCore.Qt.ItemDataRole.DisplayRole)) == int(id):
                 return index
         return None
 
@@ -765,15 +765,30 @@ class SignageModel(TreeModel):
     def deleteRow(self, index: QtCore.QModelIndex) -> bool:
         """Delete a row from the QSqlTableModel and TreeModel and refresh"""
         signage_id = self.data(index.sibling(index.row(),
-                                     SignageSqlModel.Fields.ID.index),
-                                     QtCore.Qt.ItemDataRole.DisplayRole)
+                                             SignageSqlModel.Fields.ID.index),
+                                             QtCore.Qt.ItemDataRole.DisplayRole)
+        
+        logger.debug(f"Row:{index.row()}, Signage ID:{signage_id}")
 
-        if signage_id:
-            sql_index = self._source_model.findIndexById(signage_id)
-        if self._source_model.removeRow(sql_index.row(), QtCore.QModelIndex()):
-            return self.removeRows(index.row(), 1, index.parent())
+        if not signage_id:
+            logger.error(f"Signage ID not found from TreeModel: row={index.row()}")
+            return False
+        
+        sql_index = self._source_model.findIndexById(signage_id)
+        if not sql_index:
+            logger.error(f"Fail to find SQL Model's index for signage ID: {signage_id}")
+            return False
+        
+        if not self._source_model.removeRow(sql_index.row(), QtCore.QModelIndex()):
+            logger.error(f"Fail to remove record '{signage_id}' from SQL model:\n\t{self._source_model.lastError().text()}")
+            return False
 
+        if not self.removeRows(index.row(), 1, index.parent()):
+            logger.error(f"Fail to remove record '{signage_id}' from TreeModel")
+            return False    
 
+        self._source_model.refresh()
+        return True       
 
     def summary(self) -> list:
         """Get a summary of signage's status"""

@@ -7,6 +7,7 @@ from database.database import AppDatabase
 
 from utilities import config as mconf
 from utilities.config import settings
+from utilities.decorators import status_signal
 from common import Signage, SignageStatus, ConnectorType
 from base_delegates import NoteColumnDelegate, CompositeDelegate
 
@@ -19,6 +20,7 @@ from widgets.basetab import BaseTab
 from widgets.richtexteditor import RichTextEditor
 from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.readonly_linedit import ReadOnlyLineEdit
+
 
 from qt_theme_manager import theme_icon_manager, Theme
 
@@ -501,8 +503,12 @@ class SignageTab(BaseTab):
 
         # Insert signage into the database and into the model
         if self.model.insertSignage(signage=signage):
-            self.stopSpinner("Inserted")
+            status_signal.status_message.emit("✔️ Signage created", 7000)
+            self.updateReviewProgess()
             return True
+        else:
+            status_signal.status_message.emit("⚠️ Fail to create Signage", 7000)
+            return False
 
     @Slot(int, str)
     def createChildSignage(self, parent_id: str, source: str = ""):
@@ -533,10 +539,12 @@ class SignageTab(BaseTab):
         signage.parentID = parent_id
         signage.source = source
         if self.model.insertSignage(signage=signage):
-            msg = "Signage inserted"
+            status_signal.status_message.emit("✔️ Signage created", 7000)
+            self.updateReviewProgess()
+            return True
         else:
-            msg = "Error: create Signage failed"
-        self.stopSpinner(msg)
+            status_signal.status_message.emit("⚠️ Fail to create Signage", 7000)
+            return False
 
     def _createChildSignage(self):
         index = self.table.selectionModel().currentIndex()
@@ -554,7 +562,9 @@ class SignageTab(BaseTab):
         source_index = self.proxymodel.mapToSource(index)
         if self.model.deleteRow(source_index):
             AppDatabase.update_document_signage_id()
-
+            status_signal.status_message.emit("✔️ Signage deleted", 7000)
+        else:
+            status_signal.status_message.emit("⚠️ Fail to delete Signage", 7000)
 
     @Slot(str)
     def searchfor(self, text: str):
@@ -620,6 +630,7 @@ class SignageTab(BaseTab):
         self.model.connector_cache = cache
         self.stopSpinner(msg)
         AppDatabase.update_document_signage_id()
+        self.updateReviewProgess()
 
     def importFromConnector(self, connector_type: ConnectorType):
         connectors: dict = ConnectorModel.connectors().get(connector_type.value)

@@ -10,8 +10,18 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $InformationPreference = 'SilentlyContinue'
 
-# Force UTF-8 output (no BOM)
-# $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+# --- Force UTF-8 output for both Windows PowerShell and PowerShell 7+ ---
+# --- Safe UTF-8 output setup ---
+$utf8 = New-Object System.Text.UTF8Encoding $false
+try {
+    if ([Console]::Out -ne $null) {
+        [Console]::OutputEncoding = $utf8
+    }
+} catch {
+    # no valid console handle; ignore
+}
+$OutputEncoding = $utf8
+
 
 [bool]$global:debug = $false
 
@@ -51,6 +61,22 @@ Class cPage {
     [void]AddItem([cTag]$item) {
         $this.tags.Add($item)
     }
+}
+
+# ====== Function ======
+function Remove-HtmlTags {
+    param (
+        [Parameter(Mandatory=$true)][string]$Text
+    )
+    Add-Type -AssemblyName System.Web
+    # Remove all remaining tags
+    # Decode HTML entities (&nbsp;, &amp;, etc.)
+    $clean = [System.Web.HttpUtility]::HtmlDecode(($text -replace '<[^>]+>', ''))
+
+    # Trim excessive whitespace
+    $clean = ($clean -replace '\s{2,}', ' ').Trim()
+
+    return $clean
 }
 
 # ====== Main ======
@@ -107,7 +133,8 @@ foreach ($i in $Hierarchy.Section.Page) {
                 $rawText = $node.T.InnerText
                 $normalized = $rawText.Normalize([System.Text.NormalizationForm]::FormC)
                 $cleanText = $normalized -replace '[^\u0000-\uFFFF]', ''
-                $tag.Text = $cleanText
+                $cleanHtml = Remove-HtmlTags $cleanText
+                $tag.Text = $cleanHtml
             } catch {
                 DebugPrint "Invalid characters in page '$($i.name)'"
             }
