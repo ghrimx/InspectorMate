@@ -243,13 +243,20 @@ class EvidenceModel(QSqlRelationalTableModel):
             - Update the filepath and the refkey 
         """
         regex = mconf.default_regex if mconf.settings.value("regex") is None else mconf.settings.value("regex")
-
+        self.refresh()
         for row in rows:
+            update_filepath = False
             filepath = self.data(self.index(row, self.Fields.Filepath.index), Qt.ItemDataRole.DisplayRole)
 
             if not Path(filepath).is_file():
                 fileid = self.data(self.index(row, self.Fields.FileID.index), Qt.ItemDataRole.DisplayRole)
-                filepath = Path(utils.queryFileNameByID(fileid)).as_posix()
+                new_filepath = Path(utils.queryFileNameByID(fileid)).as_posix()
+                if not Path(new_filepath).is_file():
+                    logger.error(f"File '{filepath}' not found. Cannot detect refkey.")
+                    continue
+                else:
+                    update_filepath = True
+                    filepath = new_filepath
 
             refkey = utils.findRefKeyFromPath(filepath, regex, AppDatabase.activeWorkspace().evidence_path)
             
@@ -258,14 +265,15 @@ class EvidenceModel(QSqlRelationalTableModel):
             if refkey != "":
                 record = self.record(row)
                 record.setValue(self.Fields.Refkey.index, refkey)
-                record.setValue(self.Fields.Filepath.index, filepath)
+                if update_filepath:
+                    record.setValue(self.Fields.Filepath.index, filepath)
                 if not self.setRecord(row, record):
                     logger.error(f'{self.lastError().text()}')
 
         self.refresh()
         self.init_cache_files()
-        self.sigUpdateReviewProgress.emit()
         AppDatabase.update_document_signage_id()
+        self.sigUpdateReviewProgress.emit()
 
     def updateRefKey(self, rows: list[int], refkey: str):
         if refkey != "":
@@ -275,8 +283,8 @@ class EvidenceModel(QSqlRelationalTableModel):
                 if not self.setRecord(row, record):
                     logger.error(f"{self.lastError().text()}")
             self.refresh()
-            self.sigUpdateReviewProgress.emit()
             AppDatabase.update_document_signage_id()
+            self.sigUpdateReviewProgress.emit()
 
     def updateFilePath(self, index: QtCore.QModelIndex, filepath: str):
         fpath = Path(filepath)

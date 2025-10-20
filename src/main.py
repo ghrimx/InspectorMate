@@ -62,6 +62,7 @@ def main() -> int:
     logging.config.fileConfig(mconf.config.config_path.as_posix(),
                               disable_existing_loggers=False,
                               defaults={'logfilepath': mconf.config.log_path.as_posix()})
+    logger.info(f"Current logging level: {logging.getLevelName(logging.root.level)}")
 
     # Set Taskbar Icon
     try:
