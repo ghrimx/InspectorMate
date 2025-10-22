@@ -277,6 +277,7 @@ class EvidenceModel(QSqlRelationalTableModel):
 
     def updateRefKey(self, rows: list[int], refkey: str):
         if refkey != "":
+            self.refresh()
             for row in rows:
                 record = self.record(row)
                 record.setValue(self.Fields.Refkey.index, refkey)

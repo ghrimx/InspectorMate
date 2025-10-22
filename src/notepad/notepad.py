@@ -723,7 +723,7 @@ class Notebook(QtWidgets.QWidget):
 
     def createActions(self):
         self.action_addnote = QtGui.QAction(theme_icon_manager.get_icon(':file_add'), "Add note (Ctrl+N)", self, triggered=self.addNote)
-        self.action_editnote = QtGui.QAction(theme_icon_manager.get_icon(':file-edit-line'), "Edit note (Ctrl+E)", self, triggered=self.editNote)
+        self.action_editnote = QtGui.QAction(theme_icon_manager.get_icon(':file-edit-line'), "Edit note (Ctrl+O)", self, triggered=self.editNote)
 
         self.action_minimizeAll = QtGui.QAction(theme_icon_manager.get_icon(':folder-2-line'), "Minimize", self, triggered=self.minimizeAll)
         self.action_showNormalAll = QtGui.QAction(theme_icon_manager.get_icon(':folder-2-line'), "Normal", self, triggered=self.showNormalAll)
@@ -900,7 +900,7 @@ class Notebook(QtWidgets.QWidget):
     
     def createShortcuts(self):
         self.shortcut_add_note = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+N"), self, self.addNote, ambiguousMember=self.addNote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self.shortcut_edit_note = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+E"), self, self.editNote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.shortcut_edit_note = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+O"), self, self.editNote, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_quick_highlight = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+H"), self, self.quickHighlight, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_date = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+D"), self, self.insertDate, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.shortcut_time = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+T"), self, self.insertTime, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -1132,7 +1132,7 @@ class Notebook(QtWidgets.QWidget):
         dlg.setLayout(form)
 
         form.addRow("Add Note:", QtWidgets.QLabel("Ctrl+N"))
-        form.addRow("Edit Note:", QtWidgets.QLabel("Ctrl+E"))
+        form.addRow("Edit Note:", QtWidgets.QLabel("Ctrl+O"))
         form.addRow("Insert Signage:", QtWidgets.QLabel("Ctrl+Alt+R"))
         form.addRow("Select all text:", QtWidgets.QLabel("Ctrl+A"))
         form.addRow("Undo:", QtWidgets.QLabel("Ctrl+Z"))
@@ -1228,7 +1228,7 @@ class Notebook(QtWidgets.QWidget):
     def addNote(self):
         filename = f"Untitled.html"
         fname = QtWidgets.QFileDialog.getSaveFileName(parent=None,
-                                                      caption="RichTextEditor -- Save File As",
+                                                      caption="Create new Note",
                                                       directory=f"{AppDatabase.activeWorkspace().notebook_path}/{filename}",
                                                       filter="Text files (*.html *.*)")
         if fname[0] == "":
@@ -1243,7 +1243,7 @@ class Notebook(QtWidgets.QWidget):
 
     def editNote(self):
         fname = QtWidgets.QFileDialog.getOpenFileName(parent=None,
-                                                      caption="RichTextEditor -- Select file",
+                                                      caption="Select Note",
                                                       directory=f"{AppDatabase.activeWorkspace().notebook_path}",
                                                       filter="Text files (*.html *.*)")
         

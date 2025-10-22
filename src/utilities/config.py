@@ -11,7 +11,7 @@ from utilities.loggin import LOGGIN
 class Config():
     organization_name: str = "FAMHP"
     app_name: str = "InspectorMate"
-    app_version: str = "6.0.1rc.1"
+    app_version: str = "6.1.2rc.1"
     db_version: str = ""
     app_data_path: Path = Path(os.getenv('LOCALAPPDATA')).joinpath("Programs/InspectorMate")
     db_path: Path = app_data_path.joinpath(f"inspectormate.sqlite")
