@@ -1,5 +1,5 @@
 # emoji_grid.py
-from PyQt6 import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets, QtCore, QtGui
 
 
 DEFAULT_EMOJIS = [
@@ -44,7 +44,6 @@ class EmojiGridWidget(QtWidgets.QWidget):
                 emoji = self.emojis[index]
                 btn = QtWidgets.QPushButton(emoji)
                 btn.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-                btn.setCheckable(True)
                 btn.setAutoExclusive(True)  # only one selected at a time
                 btn.setMinimumSize(self.emoji_size + 8, self.emoji_size + 8)
                 btn.setMaximumSize(self.emoji_size + 8, self.emoji_size + 8)
@@ -77,7 +76,7 @@ class EmojiGridWidget(QtWidgets.QWidget):
             self._selected_btn: QtWidgets.QPushButton = btn
             self.emojiSelected.emit(emoji)
         return on_click
-
+    
     def selectedEmoji(self):
         if self._selected_btn:
             return self._selected_btn.text()
@@ -88,7 +87,6 @@ class EmojiGridWidget(QtWidgets.QWidget):
         btn: QtWidgets.QPushButton
         for btn in self._buttons:
             if btn.text() == emoji:
-                btn.setChecked(True)
                 self._selected_btn = btn
                 self.emojiSelected.emit(emoji)
                 return True

@@ -99,6 +99,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notebook_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.notebook_explorer_dock_widget)
         self.notebook_doc_widget_container.setMinimumWidth(250)
 
+        self.emoji_widget_dock_widget = QtAds.CDockWidget("Emoji", self)
+        self.emoji_widget = EmojiGridWidget()
+        self.emoji_widget_dock_widget.setWidget(self.emoji_widget)
+        self.emoji_widget_dock_widget.setMinimumSize(200, 150)
+        self.emoji_widget_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
+        self.emoji_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.emoji_widget_dock_widget)
+        self.emoji_doc_widget_container.setMinimumWidth(250)
+        self.emoji_widget_dock_widget.toggleView(False)
+
         # Signage      
         self.signage_dock_widget = QtAds.CDockWidget("Signage", self)
         self.signage_tree_tab = SignageTab(self.signage_treemodel, self.startSpinner, self.stopSpinner)
@@ -182,7 +191,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.onenote_manager: OnenotePickerDialog = None
         self.summary_dialogs: SummaryDialog = None
         self.log_viewer: DebugLogViewer = None
-        self.emoji_dialog: EmojiGridWidget = None
 
     def createMenubar(self):
         """Create Application Menubar"""
@@ -272,7 +280,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                                 "Emoji Dialog",
                                                 self.menubar,
                                                 shortcut=QtGui.QKeySequence("Ctrl+E"),
-                                                triggered=self.emojiDialog))
+                                                triggered=lambda: self.emoji_widget_dock_widget.toggleView(not self.emoji_widget_dock_widget.isVisible())))
         
         # Help menu
         self.help_menu = self.menubar.addMenu("Help")
@@ -467,10 +475,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dlg = BatchRenameWidget()
         self.dlg.show()
 
-    def emojiDialog(self):
-        self.emoji_dialog = EmojiGridWidget()
-        self.emoji_dialog.show()
-
     @Slot()
     def unpackPDF(self):
         file = QtWidgets.QFileDialog.getOpenFileName(caption="Select file", directory=AppDatabase.activeWorkspace().evidence_path, filter="*.pdf")
@@ -574,7 +578,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.onenote_manager: self.onenote_manager.close()
         if self.summary_dialogs: self.summary_dialogs.close()
         if self.log_viewer: self.log_viewer.close()
-        if self.emoji_dialog: self.emoji_dialog.close()
 
     def closeEvent(self, event: QtCore.QEvent):
         # If forced programmatic close, skip confirmation
