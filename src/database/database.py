@@ -301,7 +301,7 @@ class AppDatabase:
                     FROM signage
                     WHERE signage.refkey = document.refkey
                     AND signage.workspace_id = document.workspace_id
-                    AND signage.type = 1
+                    AND signage.type = 0
                 )
                 ELSE NULL
             END
@@ -309,5 +309,7 @@ class AppDatabase:
         """)
         query.bindValue(":workspace_id", AppDatabase.activeWorkspace().id)
         QtCore.QTimer.singleShot(500, lambda: None)
-        query.exec()
+
+        if not query.exec():
+            logger.error("Query failed:", query.lastError().text())
 

@@ -171,7 +171,7 @@ class EvidenceModel(QSqlRelationalTableModel):
             logger.error(self.lastError().text())
 
     def insertDocumentAsync(self,
-                            on_finished: callable = None):
+                            on_finished: callable):
         evidence_path = AppDatabase.activeWorkspace().evidence_path
         cache_files = self.cache_files
         pattern = mconf.default_regex if mconf.settings.value("regex") is None else mconf.settings.value("regex")
@@ -183,13 +183,15 @@ class EvidenceModel(QSqlRelationalTableModel):
                                        pattern=pattern,
                                        fields=self.Fields
                                        )
+        
+        def onInsertFinished():
+            on_finished(f"[Evidence(s) inserted: {self.inserted_count}]")
+            self.refresh()
+            AppDatabase.update_document_signage_id()
+
 
         worker.signals.result.connect(self._onDocumentsReady)
-        if on_finished:
-            worker.signals.finished.connect(lambda: on_finished(f"[Evidence(s) inserted: {self.inserted_count}]"))
-            worker.signals.finished.connect(self.refresh)
-            worker.signals.finished.connect(self.sigUpdateReviewProgress)
-            worker.signals.finished.connect(AppDatabase.update_document_signage_id)
+        worker.signals.finished.connect(onInsertFinished)
         self.inserted_count = 0
         pool.start(worker)
     
