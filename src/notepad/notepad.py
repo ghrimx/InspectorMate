@@ -298,7 +298,8 @@ class TextEdit(QtWidgets.QTextEdit):
         try:
             fh = QtCore.QFile(self.filename)
             if not fh.open(QtCore.QIODevice.OpenModeFlag.WriteOnly):
-                logger.error(IOError(fh.errorString()))
+                err = IOError(fh.errorString())
+                logger.error(f"Failed to open '{self.filename}': {err}")
             stream = QtCore.QTextStream(fh)
             stream.setEncoding(QtCore.QStringConverter.Encoding.Utf8)
             stream << self.toHtml()
