@@ -20,7 +20,7 @@ args=(sys.stdout,)
 [handler_fileHandler]
 class=FileHandler
 formatter=fileFormatter
-args=('%(logfilepath)s','a')
+args=('%(logfilepath)s','a', 'utf-8')
 
 [formatter_consoleFormatter]
 format=%(levelname)s - %(asctime)s - %(name)s - %(funcName)s - %(message)s
