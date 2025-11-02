@@ -222,8 +222,18 @@ class SignageTab(BaseTab):
 
         # Private & Public Note
         self.note = RichTextEditor.fromMapper(bar=False, parent=self)
+
+        private_note_layout = QtWidgets.QVBoxLayout()
+        private_note_widget = QtWidgets.QWidget()
+        private_note_widget.setLayout(private_note_layout)
+        to_private = QtWidgets.QPushButton(theme_icon_manager.get_icon(':share-forward-2-line'),
+                                           "Sent to private note")
+        
+        to_private.clicked.connect(self.sentToPrivate)
+        private_note_layout.addWidget(to_private)
         self.public_note = RichTextEditor.fromMapper(bar=False, parent=self)
         self.public_note.editor.setStyleSheet("border: 2px solid red;")
+        private_note_layout.addWidget(self.public_note)
 
         formlayout = QtWidgets.QFormLayout()
         info_widget = QtWidgets.QWidget()
@@ -245,7 +255,7 @@ class SignageTab(BaseTab):
         formlayout.addItem(spacer)
         self.right_pane.addTab(info_widget, "Info")
         self.right_pane.addTab(self.note, theme_icon_manager.get_icon(':lock-2'), "Private Note")
-        self.right_pane.addTab(self.public_note, theme_icon_manager.get_icon(':glasses-2'), "Public Note")
+        self.right_pane.addTab(private_note_widget, theme_icon_manager.get_icon(':glasses-2'), "Public Note")
 
         self.mapper = QtWidgets.QDataWidgetMapper(self)
         self.mapper.setModel(self.model)
@@ -660,6 +670,20 @@ class SignageTab(BaseTab):
 
     def collapseAll(self):
         self.table.collapseAll()
+
+    def sentToPrivate(self):
+        public_text = self.public_note.editor.toHtml()
+        self.note.editor.append(public_text)
+
+        index = self.table.selectionModel().currentIndex()
+        src_index = self.proxymodel.mapToSource(index)
+
+        public_note_index = src_index.sibling(src_index.row(), SignageSqlModel.Fields.PublicNote.index)
+        private_note_index = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Note.index)
+
+        if self.model.setData(private_note_index, self.note.editor.toHtml(), Qt.ItemDataRole.EditRole):
+            self.public_note.editor.clear()
+            self.model.setData(public_note_index, "", Qt.ItemDataRole.EditRole)
 
     @Slot()
     def onExportTriggered(self):
