@@ -9,13 +9,14 @@ DEFAULT_EMOJIS = [
     "⛔","❤️","💥","👁️‍🗨️","⭐",
     "🟩","🟧","🟦","🟥","🟨",
     "🟢","🟠","🔵","🔴","🟡",
+    "→","←","↔","📌","👉",
 ]
 
 
 class EmojiGridWidget(QtWidgets.QWidget):
     emojiSelected = QtCore.pyqtSignal(str)  # Emits the emoji (string) when selected
 
-    def __init__(self, emojis=None, rows=6, cols=5, emoji_size=24, parent=None):
+    def __init__(self, emojis=None, rows=7, cols=5, emoji_size=24, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Emoji Picker")
         self.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
