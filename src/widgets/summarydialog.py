@@ -10,7 +10,6 @@ class SummaryDialog(QtWidgets.QDialog):
         super(SummaryDialog, self).__init__(parent)
         self.initUI()
 
-
     def initUI(self):
         self.setWindowTitle("Summary Dialog")
 

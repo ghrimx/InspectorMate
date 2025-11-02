@@ -70,24 +70,20 @@ class ExportWorker(QtCore.QRunnable):
         ws.title = "main"
 
         if self.include_publicnote:
-            headers = ["Refkey", "Title", "Status", "Owner", "Type", "Evidence", "Note"]
-            xrange = "A1:G"
+            headers = ["Refkey", "Title", "Status", "Type", "Note"]
+            xrange = "A1:E"
             model_fields = [SignageSqlModel.Fields.Refkey.index,
                             SignageSqlModel.Fields.Title.index,
                             SignageSqlModel.Fields.Status.index,
-                            SignageSqlModel.Fields.Owner.index,
                             SignageSqlModel.Fields.Type.index,
-                            SignageSqlModel.Fields.DocCount.index,
                             SignageSqlModel.Fields.PublicNote.index]
         else:
-            headers = ["Refkey", "Title", "Status", "Owner", "Type", "Evidence"]
-            xrange = "A1:F"
+            headers = ["Refkey", "Title", "Status", "Type"]
+            xrange = "A1:D"
             model_fields = [SignageSqlModel.Fields.Refkey.index,
                             SignageSqlModel.Fields.Title.index,
                             SignageSqlModel.Fields.Status.index,
-                            SignageSqlModel.Fields.Owner.index,
-                            SignageSqlModel.Fields.Type.index,
-                            SignageSqlModel.Fields.DocCount.index]
+                            SignageSqlModel.Fields.Type.index]
 
         for column in range(len(headers)):
             ws.cell(row=1, column=column + 1, value=headers[column])
@@ -108,7 +104,7 @@ class ExportWorker(QtCore.QRunnable):
                     values = list(map(record.value, model_fields))
 
                     # Signage Type
-                    values[4] = record.value(SignageSqlModel.Fields.Type.index)
+                    values[3] = record.value(SignageSqlModel.Fields.Type.index)
 
                     # Signage Status
                     values[2] = record.value(SignageSqlModel.Fields.Status.index)
@@ -130,16 +126,20 @@ class ExportWorker(QtCore.QRunnable):
                                showColumnStripes=False)
         table.tableStyleInfo = style
 
-        ws.column_dimensions["B"].width = 150.0
+        ws.column_dimensions["B"].width = 80.0
         ws.column_dimensions["A"].number_format = numbers.FORMAT_TEXT
+        ws.column_dimensions["C"].width = 18.0
 
-        # Conditional formatting
-        red_text = Font(color="9C0006")
-        red_fill = PatternFill(bgColor="FFC7CE")
-        ws.conditional_formatting.add(f"F2:F{record_count}", CellIsRule(operator='equal', formula=['0'], stopIfTrue=False, font=red_text, fill=red_fill))
-
-        for cell in ws['F':'F']:
+        # Alignement
+        for cell in ws['A':'A']:
             cell.alignment = Alignment(horizontal="center")
+        for cell in ws['B': 'B']:
+            cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+
+        if "Note" in headers:
+            ws.column_dimensions["E"].width = 80.0
+            for cell in ws['E': 'E']:
+                cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
 
         ws.add_table(table)
         wb.save(self.destination)
@@ -178,7 +178,6 @@ class ExcelLoader(QtCore.QRunnable):
         try:
             df["Type"]
             df["Title"]
-            df["Owner"]
             df['Refkey']
         except KeyError as e:
             raise KeyError(f"Missing required column header: {e}") 
@@ -199,7 +198,6 @@ class ExcelLoader(QtCore.QRunnable):
             df_refkey: str = df_row["Refkey"]
             df_type: str = df_row["Type"]
             df_title: str = df_row["Title"]
-            df_owner: str = df_row["Owner"]
 
             found = False
             cache_signage_type = AppDatabase.cache_signage_type.get(df_type.capitalize())
@@ -223,7 +221,6 @@ class ExcelLoader(QtCore.QRunnable):
                 signage = Signage(
                     refkey=df_refkey,
                     title=df_title,
-                    owner=df_owner,
                     type=cache_signage_type.uid if cache_signage_type else None,
                     source=f'{{"application":"InspectorMate", "module":"loadFromExcel"}}',
                     workspace_id=AppDatabase.activeWorkspace().id,

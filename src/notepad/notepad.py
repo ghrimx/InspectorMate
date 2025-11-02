@@ -8,7 +8,6 @@ from qtpy import (QtWidgets, QtCore, QtGui, Slot, Signal)
 from database.database import AppDatabase
 from common import Signage
 
-from utilities.config import settings
 from utilities.utils import (hexuuid, timeuuid, createFolder)
 from utilities import config as mconf
 from qt_theme_manager import theme_icon_manager
@@ -990,15 +989,18 @@ class Notebook(QtWidgets.QWidget):
             textedit: TextEdit = subwindows.widget()
             files.append(textedit.filename)
 
-        settings.setValue("NotebookCurrentFiles", files)
+        mconf.settings.beginGroup("notepad")
+        mconf.settings.setValue("NotebookCurrentFiles", files)
 
         # Save layout strategy
-        settings.setValue("LayoutStrategy", self.layout_strategy.name)
+        mconf.settings.setValue("LayoutStrategy", self.layout_strategy.name)
+        mconf.settings.endGroup()
     
     def loadSettings(self):
         # Restore layout strategy
+        mconf.settings.beginGroup("notepad")
         try:
-            layout_strategy = settings.value("LayoutStrategy", self.layout_strategy, str)
+            layout_strategy = mconf.settings.value("LayoutStrategy", self.layout_strategy, str)
         except:
             layout_strategy = self.LayoutStrategy.Cascade.name
 
@@ -1008,6 +1010,7 @@ class Notebook(QtWidgets.QWidget):
             self.setTileView()
         elif layout_strategy == self.LayoutStrategy.Tabbed.name:
             self.setTabbedView()
+        mconf.settings.endGroup()
 
     def loadfile(self, filename, title: str = ""):
         for subwindow in self.mdi.subWindowList():
@@ -1206,12 +1209,15 @@ class Notebook(QtWidgets.QWidget):
 
     @Slot()
     def loadFiles(self):
-        files = settings.value("NotebookCurrentFiles", [], "QStringList")
+        mconf.settings.beginGroup("notepad")
+        files = mconf.settings.value("NotebookCurrentFiles", [], "QStringList")
+        mconf.settings.endGroup()
+        
         for filename in files:
             if QtCore.QFile.exists(filename):
                 self.loadfile(filename)
                 QtWidgets.QApplication.processEvents()
-
+        
     def saveAll(self):
         errors = []
         for subwindows in self.mdi.subWindowList():
