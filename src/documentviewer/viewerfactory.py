@@ -13,7 +13,7 @@ from evidence.model import EvidenceModel
 
 from common import Document
 
-import utilities.msoffice2pdf as ms
+from utilities.msoffice2pdf import office2pdf
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,9 @@ class ConverterWorkerSignals(QtCore.QObject):
 
 
 class DocConverterWorker(QtCore.QRunnable):
-    def __init__(self, filepath: Path, converter: ms.office2pdf):
+    def __init__(self,
+                 filepath: Path,
+                 converter: callable):
         super().__init__()
         self.converter = converter
         self._filepath = filepath
@@ -92,7 +94,7 @@ class ViewerFactory:
             
     def convert(self, doc: Document, viewer: OfficeViewer):
         """Convert Office document to PDF"""
-        worker = DocConverterWorker(doc.filepath, ms.convert2pdf)
+        worker = DocConverterWorker(doc.filepath, office2pdf)
         worker.signals.started.connect(viewer.handleConversionStarted)
         worker.signals.finished.connect(viewer.handleConversionEnded)
         worker.signals.error.connect(viewer.handleConversionEnded)

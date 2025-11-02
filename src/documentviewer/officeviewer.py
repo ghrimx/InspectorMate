@@ -22,7 +22,8 @@ class OfficeViewer(PdfViewer):
 
     @classmethod
     def supportedFormats(cls) -> list[str]:
-        return [".pptx", ".ppt"]
+        # return [".pptx", ".ppt"]
+        return []
 
     @Slot()
     def handleConversionStarted(self):
