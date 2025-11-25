@@ -71,6 +71,155 @@ class LinkEditor(QtWidgets.QDialog):
         formlayout.addRow(QtWidgets.QLabel(), self.buttonBox)
 
 
+
+class LinkEditorDialog(QtWidgets.QDialog):
+    """
+    Dialog to insert or edit a hyperlink.
+    Handles:
+      - Web URLs
+      - Local file paths
+      - Gracefully pre-fills existing link text + href
+    """
+
+    def __init__(self, parent=None, display_text="", href=""):
+        super().__init__(parent)
+        self.setWindowTitle("Edit Link" if href else "Insert Link")
+        self.setMinimumWidth(430)
+
+        # Save initial values
+        self._orig_text = display_text or "link"
+        self._orig_href = href.strip()
+
+        # -----------------------
+        #   UI WIDGETS
+        # -----------------------
+        self.url_radio = QtWidgets.QRadioButton("Web URL")
+        self.file_radio = QtWidgets.QRadioButton("Local File")
+
+        self.text_edit = QtWidgets.QLineEdit(self._orig_text)
+        self.target_edit = QtWidgets.QLineEdit(self._orig_href)
+
+        self.file_btn = QtWidgets.QPushButton("Browse…")
+
+        btns = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Ok |
+            QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
+
+        # Layout
+        layout = QtWidgets.QVBoxLayout(self)
+
+        # Display text
+        row = QtWidgets.QHBoxLayout()
+        row.addWidget(QtWidgets.QLabel("Display Text:"))
+        row.addWidget(self.text_edit)
+        layout.addLayout(row)
+
+        # Radio buttons
+        r = QtWidgets.QHBoxLayout()
+        r.addWidget(self.url_radio)
+        r.addWidget(self.file_radio)
+        layout.addLayout(r)
+
+        # Target
+        row2 = QtWidgets.QHBoxLayout()
+        row2.addWidget(QtWidgets.QLabel("Target:"))
+        row2.addWidget(self.target_edit)
+        row2.addWidget(self.file_btn)
+        layout.addLayout(row2)
+
+        layout.addWidget(btns)
+
+        # -----------------------
+        #   SIGNALS
+        # -----------------------
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        self.url_radio.toggled.connect(self._on_mode_changed)
+        self.file_btn.clicked.connect(self._browse_file)
+
+        # -----------------------
+        #   INITIAL MODE
+        # -----------------------
+        self._init_mode()
+
+    # ----------------------------------------------------------
+
+    def _init_mode(self):
+        """
+        Decide URL vs File mode based on the initial href.
+        """
+        href = self._orig_href.lower()
+
+        # Check if it's likely a URL
+        if href.startswith("http://") or href.startswith("https://"):
+            self.url_radio.setChecked(True)
+            self.file_btn.setEnabled(False)
+        else:
+            # Likely a local file path or file:// url
+            self.file_radio.setChecked(True)
+            self.file_btn.setEnabled(True)
+
+    # ----------------------------------------------------------
+
+    def _on_mode_changed(self, checked: bool):
+        """
+        Enable/disable file picker when switching modes.
+        """
+        if checked:
+            # URL mode
+            self.file_btn.setEnabled(False)
+            self.target_edit.setPlaceholderText("https://example.com")
+        else:
+            # File mode
+            self.file_btn.setEnabled(True)
+            self.target_edit.setPlaceholderText("Choose a file…")
+
+    # ----------------------------------------------------------
+
+    def _browse_file(self):
+        """
+        File chooser for local paths.
+        """
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select File")
+        if path:
+            self.target_edit.setText(path)
+
+    # ----------------------------------------------------------
+
+    def get_link_html(self):
+        """
+        Returns:
+            <a href="href">text</a>
+        """
+        from pathlib import Path
+        from urllib import parse
+        text = self.text_edit.text().strip() or self._orig_text or "link"
+        raw_target = self.target_edit.text().strip()
+
+        # Convert local file path to file:// URL
+        if self.file_radio.isChecked():
+            try:
+                href = Path(raw_target).absolute().as_uri()
+            except Exception:
+                # Fallback: treat as literal path
+                href = "file://" + parse.quote(raw_target)
+        else:
+            href = raw_target
+
+        return f'<a href="{href}">{text}</a>'
+
+    # ----------------------------------------------------------
+
+    def get_link_markdown(self):
+        """
+        Returns:
+            [text](href)
+        """
+        text = self.text_edit.text().strip() or "link"
+        href = self.target_edit.text().strip()
+        return f"[{text}]({href})"
+
 class TextEdit(QtWidgets.QTextEdit):
 
     def __init__(self, filename=str, text=str, parent=None):
@@ -1163,20 +1312,36 @@ class Notebook(QtWidgets.QWidget):
         dlg.exec()
 
     @Slot()
+    #TODO
     def editLink(self):
-        dlg = LinkEditor()
-        if dlg.exec():
-            text = dlg.display_text.text().strip()
-            url = dlg.url_link.text().strip()
+        cursor = self.active_mdi_child().textCursor()
+        fmt: QtGui.QTextCharFormat = cursor.charFormat()
 
-            cursor = self.active_mdi_child().textCursor()
-            link = QtGui.QTextCharFormat()
-            link.setAnchor(True)
-            link.setAnchorHref(f"{url}")
-            link.setAnchorNames([f"{text}"])
-            link.setForeground(QtCore.Qt.GlobalColor.blue)
-            link.setFontUnderline(True)
-            cursor.insertText(text, link)
+        if fmt.isAnchor():
+            href = fmt.anchorHref()
+            text = cursor.selectedText() or fmt.anchorNames()[0]
+        else:
+            href = ""
+            text = cursor.selectedText()
+
+        dlg = LinkEditorDialog(self,  text, href)
+        if dlg.exec():
+            link_html = dlg.get_link_html()
+            cursor.insertHtml(link_html)
+
+        # dlg = LinkEditor()
+        # if dlg.exec():
+        #     text = dlg.display_text.text().strip()
+        #     url = dlg.url_link.text().strip()
+
+        #     cursor = self.active_mdi_child().textCursor()
+        #     link = QtGui.QTextCharFormat()
+        #     link.setAnchor(True)
+        #     link.setAnchorHref(f"{url}")
+        #     link.setAnchorNames([f"{text}"])
+        #     link.setForeground(QtCore.Qt.GlobalColor.blue)
+        #     link.setFontUnderline(True)
+        #     cursor.insertText(text, link)
 
     @Slot()
     def createSignage(self):
