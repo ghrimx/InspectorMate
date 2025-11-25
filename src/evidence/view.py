@@ -662,10 +662,14 @@ class EvidenceTab(BaseTab):
         source = f'{{"application":"InspectorMate", "module":"Evidence", "item":"document", "item_title":"{title}", "item_id":"{uid}"}}'
         self.sigCreateChildSignage.emit(signage_id, source)
 
+    def _on_load_ended(self, m:str = ""):
+        self.sigUpdateReviewProgress.emit()
+        self.stopSpinner(m)
+
     @Slot()
     def loadEvidence(self):
         self.startSpinner()
-        self._model.insertDocumentAsync(on_finished=self.stopSpinner)
+        self._model.insertDocumentAsync(on_finished=self._on_load_ended)
 
     @Slot()
     def onResetFilters(self):

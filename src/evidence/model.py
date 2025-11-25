@@ -185,10 +185,10 @@ class EvidenceModel(QSqlRelationalTableModel):
                                        )
         
         def onInsertFinished():
-            on_finished(f"[Evidence(s) inserted: {self.inserted_count}]")
             self.refresh()
             AppDatabase.update_document_signage_id()
-
+            self.refresh()
+            on_finished(f"[Evidence(s) inserted: {self.inserted_count}]")
 
         worker.signals.result.connect(self._onDocumentsReady)
         worker.signals.finished.connect(onInsertFinished)
