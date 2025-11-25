@@ -168,7 +168,7 @@ class SignageTab(BaseTab):
 
         self.table.customContextMenuRequested.connect(self.show_table_context_menu)
         self.table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectItems)
+        self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.sortByColumn(SignageSqlModel.Fields.ID.index,
                                 QtCore.Qt.SortOrder.AscendingOrder)
 
