@@ -152,7 +152,7 @@ class LinkEditorDialog(QtWidgets.QDialog):
         href = self._orig_href.lower()
 
         # Check if it's likely a URL
-        if href.startswith("http://") or href.startswith("https://"):
+        if href[:3] in ['htt', 'www']:
             self.url_radio.setChecked(True)
             self.file_btn.setEnabled(False)
         else:
@@ -1328,20 +1328,6 @@ class Notebook(QtWidgets.QWidget):
         if dlg.exec():
             link_html = dlg.get_link_html()
             cursor.insertHtml(link_html)
-
-        # dlg = LinkEditor()
-        # if dlg.exec():
-        #     text = dlg.display_text.text().strip()
-        #     url = dlg.url_link.text().strip()
-
-        #     cursor = self.active_mdi_child().textCursor()
-        #     link = QtGui.QTextCharFormat()
-        #     link.setAnchor(True)
-        #     link.setAnchorHref(f"{url}")
-        #     link.setAnchorNames([f"{text}"])
-        #     link.setForeground(QtCore.Qt.GlobalColor.blue)
-        #     link.setFontUnderline(True)
-        #     cursor.insertText(text, link)
 
     @Slot()
     def createSignage(self):
