@@ -678,26 +678,39 @@ class SignageModel(TreeModel):
             yield from self.iter_model_rows(index)
     
     def initCache(self):
-        """Init Connector Cache"""
+        """
+            Init Connector Cache
+
+            This cache is intended to avoid to load the same signage and the duplicate.        
+        """
         self.connector_cache.clear()
         self.connector_cache.setdefault("OneNote", set())
         self.connector_cache.setdefault("Docx", set())
 
+        connector_cnt = 0
         for row in range(self.rootModel().rowCount()):
             source_json = (self.rootModel().index(row,
-                                                    SignageSqlModel.Fields.Source.index)
-                                                    .data(QtCore.Qt.ItemDataRole.DisplayRole))
-            source: dict = json.loads(source_json)
+                                                  SignageSqlModel.Fields.Source.index)
+                                                  .data(QtCore.Qt.ItemDataRole.DisplayRole))
+            if source_json.strip() == "":
+                continue
+
+            try:
+                source: dict = json.loads(source_json)
+            except Exception as e:
+                logger.error(f"Fail to load json: '{source_json}'. error:{e}")
+                continue
             application = source.get("application")
             if application == "OneNote":
                 object_id = source.get("object_id")
                 self.connector_cache.setdefault("OneNote", set()).add(object_id)
+                connector_cnt += 1
             elif application == "Docx":
                 object_id = source.get("object_id")
-                self.connector_cache.setdefault("Docx", set()).add(object_id)
-        
-        logger.debug(f"Connector cache's size: {len(self.connector_cache)}")
-        
+                self.connector_cache.setdefault("Docx", set()).add(object_id)        
+                connector_cnt += 1
+
+        logger.info(f"Connector cache's size: {connector_cnt}")
 
     def insertSignage(self, signage: Signage):
         """Insert new signage into the database"""
