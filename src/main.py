@@ -2,7 +2,7 @@ import sys
 import logging
 import logging.config
 from uuid import uuid4
-from qtpy import (QtWidgets, QtGui, Qt)
+from qtpy import (QtWidgets, QtGui, Qt, QtCore)
 from database.database import AppDatabase
 from mainwindow import MainWindow
 from utilities import config as mconf
@@ -89,7 +89,7 @@ def main() -> int:
     splash.finish(mainwindow)
 
     mainwindow.loadSettings()
-    mainwindow.checkUpdate()
+    QtCore.QTimer.singleShot(500, mainwindow.checkUpdate)
 
     return sys.exit(app.exec())
 

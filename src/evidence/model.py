@@ -120,6 +120,7 @@ class EvidenceModel(QSqlRelationalTableModel):
 
         if not self.select():
             logger.error(f"Fail to select data from database - Error: {self.lastError().text()}")
+            return
 
         self._renameHeaders()
         self.init_cache_files()
@@ -132,9 +133,21 @@ class EvidenceModel(QSqlRelationalTableModel):
 
     def init_cache_files(self):
         self.cache_files.clear()
-        for row in range(self.rowCount()):
-            filepath = self.index(row, self.Fields.Filepath.index).data(Qt.ItemDataRole.DisplayRole)
-            self.cache_files.add(Path(filepath))
+        
+        query = QtSql.QSqlQuery()
+        sql = """
+            SELECT filepath
+            FROM document
+            WHERE document.workspace_id = :workspace_id;
+        """
+        query.prepare(sql)
+        query.bindValue(":workspace_id", AppDatabase.activeWorkspace().id)
+        if not query.exec():
+            logger.error(f"Execution failed: {query.lastError().text()}")
+        else:
+            while query.next():
+                filepath = query.value(0)
+                self.cache_files.add(Path(filepath))
         
         logger.info(f"Success! - Cache's size={len(self.cache_files)}")
 

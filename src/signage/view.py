@@ -387,6 +387,9 @@ class SignageTab(BaseTab):
             self.action_edit_owner.setEnabled(False)
             self.action_create_child_signage.setEnabled(False)
 
+        msg = f"[Signage selected: {len(self.selectedRows())}]"
+        status_signal.status_message.emit(msg, 5000)
+
     def show_table_context_menu(self, pos: QtCore.QPoint):
         """Triggered when user right-clicks on the table."""
         indexes = self.table.selectedIndexes()

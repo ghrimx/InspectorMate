@@ -181,10 +181,12 @@ class MainWindow(QtWidgets.QMainWindow):
         status_signal.status_message.emit(msg, msec)
 
     def checkUpdate(self):
+        self.startSpinner("Checking for update...")
         release = get_latest_release()
         if release:
             self.updater = Updater(release, self)
             self.updater.show()
+        self.spinner.stop()
 
     def setupDialogs(self):
         self.concat_excel_dialog: ConcatExcelDialog = None

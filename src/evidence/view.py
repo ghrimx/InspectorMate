@@ -464,6 +464,9 @@ class EvidenceTab(BaseTab):
             self.action_auto_refkey.setEnabled(True)
             self.action_setRefKey.setEnabled(True)
             self.action_locate.setEnabled(False)
+        
+        msg = f"[Document selected: {len(self.selectedRows())}]"
+        status_signal.status_message.emit(msg, 5000)
     
     def removeRows(self):
         msgbox = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
