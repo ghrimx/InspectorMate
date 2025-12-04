@@ -186,7 +186,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if release:
             self.updater = Updater(release, self)
             self.updater.show()
-        self.spinner.stop()
+        self.stopSpinner()
 
     def setupDialogs(self):
         self.concat_excel_dialog: ConcatExcelDialog = None

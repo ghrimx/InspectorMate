@@ -286,6 +286,8 @@ class SignageTab(BaseTab):
         self.toolbar.insertAction(self.action_separator, self.reset_filtering)
         self.toolbar.insertAction(self.action_separator, self.action_expandAll)
         self.toolbar.insertAction(self.action_separator, self.action_collapseAll)
+        self.toolbar.insertAction(self.action_separator, self.toolbar.addSeparator())
+        self.toolbar.insertAction(self.action_separator, self.action_cite)
 
         connector_menu_btn = QtWidgets.QToolButton(self)
         connector_menu_btn.setIcon(theme_icon_manager.get_icon(':links-line'))
@@ -362,6 +364,11 @@ class SignageTab(BaseTab):
                                                 "Collapse All",
                                                 self,
                                                 triggered=self.collapseAll)
+        self.action_cite = QtGui.QAction(theme_icon_manager.get_icon(":double-quotes"),
+                                         "Cite",
+                                         self,
+                                         triggered=self.cite)
+        
     def selectedRows(self) -> set[int]:
         """Source model's selected rows"""
         proxy_indexes = self.table.selectedIndexes()
@@ -417,6 +424,7 @@ class SignageTab(BaseTab):
         menu.addMenu(owner_menu)
         menu.addAction(self.action_create_child_signage)
         menu.addAction(self.action_delete_signage)
+        menu.addAction(self.action_cite)
         menu.exec(self.table.viewport().mapToGlobal(pos))
 
     def onCellClicked(self, index: QtCore.QModelIndex):
@@ -673,6 +681,24 @@ class SignageTab(BaseTab):
 
     def collapseAll(self):
         self.table.collapseAll()
+    
+    def cite(self):
+        index: QtCore.QModelIndex = self.table.selectionModel().currentIndex()
+        
+        if not index.isValid():
+            return
+        
+        src_index = self.proxymodel.mapToSource(index)
+        refkey_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Refkey.index)
+        refkey = self.model.data(refkey_idx, Qt.ItemDataRole.DisplayRole)
+        type_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Type.index)
+        type = self.model.data(type_idx, Qt.ItemDataRole.DisplayRole)
+        title_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Title.index)
+        title = self.model.data(title_idx, Qt.ItemDataRole.DisplayRole)
+
+        citation = f"{type} {refkey} - {title}"
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(f"{citation}")
 
     def sentToPrivate(self):
         public_text = self.public_note.editor.toHtml()
