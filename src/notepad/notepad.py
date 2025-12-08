@@ -1312,7 +1312,6 @@ class Notebook(QtWidgets.QWidget):
         dlg.exec()
 
     @Slot()
-    #TODO
     def editLink(self):
         cursor = self.active_mdi_child().textCursor()
         fmt: QtGui.QTextCharFormat = cursor.charFormat()

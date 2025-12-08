@@ -218,7 +218,7 @@ class EvidenceTab(BaseTab):
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers) # ReadOnly
         self.table.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.table.customContextMenuRequested.connect(self.show_table_context_menu)
+        self.table.customContextMenuRequested.connect(self.showContextMenu)
         self.table.setModel(self.proxy_model)
         self.table.setSortingEnabled(True)
         self.table.sortByColumn(self._model.Fields.Refkey.index,
@@ -372,6 +372,9 @@ class EvidenceTab(BaseTab):
                                          "Cite",
                                          self,
                                          triggered=self.cite)
+        self.action_copy_path = QtGui.QAction("Copy Path",
+                                              self,
+                                              triggered=self.copyPath)
         self.shortcut_action_cite = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Alt+C"),
                                                     self,
                                                     self.cite,
@@ -389,7 +392,7 @@ class EvidenceTab(BaseTab):
                                               self,
                                               triggered=self.setRefKey)
 
-    def show_table_context_menu(self, pos: QtCore.QPoint):
+    def showContextMenu(self, pos: QtCore.QPoint):
         """Triggered when user right-clicks on the table."""
         indexes = self.table.selectedIndexes()
         if not indexes:
@@ -412,6 +415,7 @@ class EvidenceTab(BaseTab):
         menu.addAction(self.action_open_externally)
         menu.addAction(self.action_open_folder)
         menu.addAction(self.action_cite)
+        menu.addAction(self.action_copy_path)
         menu.addAction(self.action_auto_refkey)
         menu.addAction(self.action_setRefKey)
         menu.addAction(self.action_locate)
@@ -514,6 +518,12 @@ class EvidenceTab(BaseTab):
         citation = "; ".join(x for x in [refkey, title, subtitle, reference, extension] if x)
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(f"[{citation}]")
+
+    def copyPath(self):
+        index: QtCore.QModelIndex = self.proxy_model.mapToSource(self.table.selectionModel().currentIndex())
+        filepath: str = index.sibling(index.row(), self._model.Fields.Filepath.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(filepath)
 
     def locate(self):
         index: QtCore.QModelIndex = self.proxy_model.mapToSource(self.table.selectionModel().currentIndex())
