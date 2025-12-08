@@ -717,7 +717,12 @@ class TextEdit(QtWidgets.QTextEdit):
         tablefmt.setBorderStyle(QtGui.QTextFrameFormat.BorderStyle.BorderStyle_None)
         tablefmt.setBorderCollapse(False)
  
-        cursor.insertTable(1, 1, tablefmt)
+        table = cursor.insertTable(1, 1, tablefmt)
+
+        cellfmt = QtGui.QTextTableCellFormat()
+        cellfmt.setBackground(QtGui.QColor("#e6f2ff"))
+        cellfmt.setPadding(10.0)
+        table.cellAt(0, 0).setFormat(cellfmt)
  
         cursor.endEditBlock()
 
@@ -1424,11 +1429,10 @@ class Notebook(QtWidgets.QWidget):
         if not textedit:
             return
         
-        title = textedit.filename.split(".")[0]
         fname = QtWidgets.QFileDialog.getSaveFileName(parent=None,
                                                       caption="Export Note to PDF",
                                                       directory=f"{AppDatabase.activeWorkspace().notebook_path}",
-                                                      filter="Pdf files (*.pdf *.*)")
+                                                      filter="Pdf files (*.pdf)")
 
         output_pdf = fname[0]
         if output_pdf == "":

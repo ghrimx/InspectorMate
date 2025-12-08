@@ -424,10 +424,22 @@ def join_html_documents(html_files: list[str], add_headers=False, spacing_mm=10)
         if header:
             merged_html += f"<h1>{header}</h1>\n"
         
-        # Append original content (strip <html>, <head>, <body> if present)
-        content = re.sub(r"</?html.*?>", "", raw_html, flags=re.IGNORECASE | re.DOTALL)
-        content = re.sub(r"</?head.*?>.*?</head>", "", content, flags=re.IGNORECASE | re.DOTALL)
-        content = re.sub(r"</?body.*?>", "", content, flags=re.IGNORECASE | re.DOTALL)
+        # --- Clean the HTML fragment ---
+        content = raw_html
+
+        # Remove DOCTYPE
+        content = re.sub(r"<!DOCTYPE[^>]*>", "", content, flags=re.IGNORECASE)
+
+        # Remove <html> ... </html>
+        content = re.sub(r"</?html[^>]*>", "", content, flags=re.IGNORECASE)
+
+        # Remove <head> ... </head>
+        content = re.sub(r"<head[^>]*>.*?</head>", "", content, flags=re.IGNORECASE | re.DOTALL)
+
+        # Remove <body> ... </body>
+        content = re.sub(r"</?body[^>]*>", "", content, flags=re.IGNORECASE)
+
+        content = content.strip()
         
         merged_html += content + "\n"
     
