@@ -188,3 +188,4 @@ data/
 *.sqlite
 database.db
 requirements.txt
+tests/

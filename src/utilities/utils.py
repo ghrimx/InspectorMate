@@ -328,35 +328,108 @@ def get_safe_temp_path(fallback: Path | None = None) -> Path:
     fallback.mkdir(parents=True, exist_ok=True)
     return fallback
 
-def html2pdf(html_files: list, output_pdf):
-    from weasyprint import HTML, CSS, Document
+def html2pdf(html_file, output_pdf):
+    from weasyprint import HTML, CSS
 
-    css = CSS(string="""
+    fix_css = CSS(string="""
         @page {
+            size: A4;
             margin: 20mm;
-
-            @bottom-center {
-                content: "Page " counter(page) " / " counter(pages);
-                font-size: 10pt;
-                color: #555;
-            }
         }
 
         body {
-            font-family: "DejaVu Sans";
             font-size: 12pt;
         }
+                  
+        h1 {
+            margin-top: 20mm;
+            margin-bottom: 10mm; 
+        }
+                  
+        h2 {
+            padding-top: 5mm;
+                  }
+        h3 {
+            padding-top: 5mm;
+                  }
+
+        /* Prevent huge SVGs */
+        img[src^="data:image/svg+xml"] {
+            width: 1.2em;
+            height: 1.2em;
+        }
+
+        /* General safety: scale all images to page width */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Add space between merged documents */
+        hr {
+            border: none;
+            height: 30px;
+        }
     """)
+    HTML(html_file).write_pdf(output_pdf, stylesheets=[fix_css])
 
-    rendered_docs = [
-        HTML(filename=f, base_url=os.path.dirname(f)).render(stylesheets=[css])
-        for f in html_files
-    ]
-
-    # Merge all pages
-    doc: Document = rendered_docs[0]
-    for d in rendered_docs[1:]:
-        doc.pages.extend(d.pages)
-
-    # Export to PDF
-    doc.write_pdf(output_pdf)
+def join_html_documents(html_files: list[str], add_headers=False, spacing_mm=10) -> str:
+    """
+    Join multiple HTML files into a single HTML document.
+    
+    Args:
+        html_files: list of paths to HTML files.
+        add_headers: if True, inserts <h1> header per file (filename or <title>).
+        
+    Returns:
+        A single HTML string containing all the HTML content, separated by page breaks.
+    """
+    
+    def extract_title(html: str, fallback: str) -> str:
+        """Extract <title> from HTML, fallback to filename."""
+        match = re.search(r"<title>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        return fallback
+    
+    merged_html = "<!DOCTYPE html>\n<html>\n<head>\n<meta charset='utf-8'>\n"
+    
+    # Default css styles
+    merged_html += f"""
+    <style>
+        @media print {{
+            .page-break {{ page-break-before: always; }}
+        }}
+        img {{ max-width: 100%; height: auto; }}
+        body {{ font-family: sans-serif; font-size: 12pt; margin: 20mm; }}
+        h1 {{ margin-top: 20mm; margin-bottom: 10mm; font-size: 18pt; }}
+        h2 {{ padding-top: 5mm; }}
+        h3 {{ padding-top: 5mm; }}
+        .doc-spacing {{ margin-top: {spacing_mm}mm; }}
+    </style>
+    """
+    merged_html += "\n</head>\n<body>\n"
+    
+    for idx, html_file in enumerate(html_files):
+        html_path = Path(html_file)
+        raw_html = html_path.read_text(encoding="utf-8")
+        header = extract_title(raw_html, html_path.stem) if add_headers else ""
+        
+        # Add a page break between documents, except before the first one
+        if idx > 0:
+            merged_html += '<div class="page-break"></div>\n'
+            merged_html += '<div class="doc-spacing"></div>\n'
+        
+        # Add optional header
+        if header:
+            merged_html += f"<h1>{header}</h1>\n"
+        
+        # Append original content (strip <html>, <head>, <body> if present)
+        content = re.sub(r"</?html.*?>", "", raw_html, flags=re.IGNORECASE | re.DOTALL)
+        content = re.sub(r"</?head.*?>.*?</head>", "", content, flags=re.IGNORECASE | re.DOTALL)
+        content = re.sub(r"</?body.*?>", "", content, flags=re.IGNORECASE | re.DOTALL)
+        
+        merged_html += content + "\n"
+    
+    merged_html += "</body>\n</html>"
+    return merged_html

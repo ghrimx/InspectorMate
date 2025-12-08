@@ -4,6 +4,7 @@ from functools import partial
 from datetime import datetime
 
 from qtpy import (QtWidgets, QtCore, QtGui, Slot, Signal)
+from PyQt6.QtPrintSupport import (QPrinter, QPrintDialog) 
 
 from database.database import AppDatabase
 from common import Signage
@@ -1423,17 +1424,17 @@ class Notebook(QtWidgets.QWidget):
         if not textedit:
             return
         
+        title = textedit.filename.split(".")[0]
         fname = QtWidgets.QFileDialog.getSaveFileName(parent=None,
                                                       caption="Export Note to PDF",
                                                       directory=f"{AppDatabase.activeWorkspace().notebook_path}",
                                                       filter="Pdf files (*.pdf *.*)")
+
         output_pdf = fname[0]
         if output_pdf == "":
             return
         
-        print(output_pdf)
-
-        html2pdf([textedit.filename], output_pdf)
+        html2pdf(textedit.filename, output_pdf)
 
     def setTabbedView(self):
         self.mdi.setViewMode(QtWidgets.QMdiArea.ViewMode.TabbedView)
