@@ -327,3 +327,36 @@ def get_safe_temp_path(fallback: Path | None = None) -> Path:
     fallback = fallback or Path.home() / "temp_fallback"
     fallback.mkdir(parents=True, exist_ok=True)
     return fallback
+
+def html2pdf(html_files: list, output_pdf):
+    from weasyprint import HTML, CSS, Document
+
+    css = CSS(string="""
+        @page {
+            margin: 20mm;
+
+            @bottom-center {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 10pt;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: "DejaVu Sans";
+            font-size: 12pt;
+        }
+    """)
+
+    rendered_docs = [
+        HTML(filename=f, base_url=os.path.dirname(f)).render(stylesheets=[css])
+        for f in html_files
+    ]
+
+    # Merge all pages
+    doc: Document = rendered_docs[0]
+    for d in rendered_docs[1:]:
+        doc.pages.extend(d.pages)
+
+    # Export to PDF
+    doc.write_pdf(output_pdf)

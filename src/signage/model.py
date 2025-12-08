@@ -98,6 +98,7 @@ class ExportWorker(QtCore.QRunnable):
         record_count = 1
         for row in range(self.sql_model.rowCount()):
             record = self.sql_model.record(row)
+            
             if record.value(SignageSqlModel.Fields.Type.index) in self.types:
                 if record.value(SignageSqlModel.Fields.Status.index) in self.statuses:
                     record_count += 1

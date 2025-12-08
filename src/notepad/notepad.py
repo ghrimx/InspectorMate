@@ -8,7 +8,7 @@ from qtpy import (QtWidgets, QtCore, QtGui, Slot, Signal)
 from database.database import AppDatabase
 from common import Signage
 
-from utilities.utils import (hexuuid, timeuuid, createFolder)
+from utilities.utils import (hexuuid, timeuuid, createFolder, html2pdf)
 from utilities import config as mconf
 from qt_theme_manager import theme_icon_manager
 
@@ -938,7 +938,14 @@ class Notebook(QtWidgets.QWidget):
                                                   self,
                                                   triggered=self.createSignage)
 
+        self.action_export2pdf = QtGui.QAction(theme_icon_manager.get_icon(':share-forward-2-line'),
+                                               "Export to PDF",
+                                               self,
+                                               triggered=self.export2pdf)
+
         self.action_help = QtGui.QAction(theme_icon_manager.get_icon(':question-line'), "Help", self, triggered=self.helpClicked, checkable=False)
+
+
 
     def createToolbar(self):
         self.toolbar = QtWidgets.QToolBar(self)
@@ -1032,6 +1039,8 @@ class Notebook(QtWidgets.QWidget):
         self.toolbar.addAction(self.action_edit_link)
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.action_insertSignage)
+        self.toolbar.addSeparator()
+        self.toolbar.addAction(self.action_export2pdf)
 
         spacer = QtWidgets.QWidget(self)
         spacer.setContentsMargins(0,0,0,0)
@@ -1408,6 +1417,23 @@ class Notebook(QtWidgets.QWidget):
             return
 
         self.loadfile(fname[0])
+
+    def export2pdf(self):
+        textedit: TextEdit = self.active_mdi_child()
+        if not textedit:
+            return
+        
+        fname = QtWidgets.QFileDialog.getSaveFileName(parent=None,
+                                                      caption="Export Note to PDF",
+                                                      directory=f"{AppDatabase.activeWorkspace().notebook_path}",
+                                                      filter="Pdf files (*.pdf *.*)")
+        output_pdf = fname[0]
+        if output_pdf == "":
+            return
+        
+        print(output_pdf)
+
+        html2pdf([textedit.filename], output_pdf)
 
     def setTabbedView(self):
         self.mdi.setViewMode(QtWidgets.QMdiArea.ViewMode.TabbedView)
