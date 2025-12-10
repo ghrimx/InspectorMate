@@ -4,11 +4,11 @@ from functools import partial
 from datetime import datetime
 
 from qtpy import (QtWidgets, QtCore, QtGui, Slot, Signal)
-from PyQt6.QtPrintSupport import (QPrinter, QPrintDialog) 
 
 from database.database import AppDatabase
 from common import Signage
 
+from utilities.decorators import status_signal
 from utilities.utils import (hexuuid, timeuuid, createFolder, html2pdf)
 from utilities import config as mconf
 from qt_theme_manager import theme_icon_manager
@@ -1438,7 +1438,15 @@ class Notebook(QtWidgets.QWidget):
         if output_pdf == "":
             return
         
-        html2pdf(textedit.filename, output_pdf)
+        try:
+            html2pdf(textedit.filename, output_pdf)
+        except Exception as e:
+            m = '❌ An error occured when exporting to PDF'
+            logger.error(e)
+        else:
+            m = '✔️ Note exported to PDF'
+        finally:
+            status_signal.status_message.emit(m, 5000)
 
     def setTabbedView(self):
         self.mdi.setViewMode(QtWidgets.QMdiArea.ViewMode.TabbedView)
