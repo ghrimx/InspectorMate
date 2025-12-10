@@ -36,7 +36,6 @@ class WordViewer(ViewerWidget):
         self.viewer.setStyleSheet("QTextBrowser { background: #ffffff; }")
         self.viewer.document().setTextWidth(600)
         self.viewer.document().setDocumentMargin(60)
-        self.viewer.setFixedWidth(900)
 
         self.scroll_area.setWidget(self.viewer)
         self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
