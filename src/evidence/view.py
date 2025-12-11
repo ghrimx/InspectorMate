@@ -80,11 +80,12 @@ class SignageFilter(QtWidgets.QWidget):
         vbox.addLayout(form)
 
         self.search_field = QtWidgets.QLineEdit()
+        self.search_field.setPlaceholderText("Search...")
         vbox.addWidget(self.search_field)
 
         self.count_request = QtWidgets.QLabel()
         self.count_request.setText(str(self._proxy_model.rowCount()))
-        form.addRow("count:", self.count_request)
+        form.addRow("Count:", self.count_request)
 
         self.table = QtWidgets.QTableView()
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)  # Make ReadOnly
