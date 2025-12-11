@@ -79,6 +79,9 @@ class SignageFilter(QtWidgets.QWidget):
         form = QtWidgets.QFormLayout()
         vbox.addLayout(form)
 
+        self.search_field = QtWidgets.QLineEdit()
+        vbox.addWidget(self.search_field)
+
         self.count_request = QtWidgets.QLabel()
         self.count_request.setText(str(self._proxy_model.rowCount()))
         form.addRow("count:", self.count_request)
@@ -102,12 +105,21 @@ class SignageFilter(QtWidgets.QWidget):
 
         vbox.addWidget(self.table)
 
+        # Connection
         self._model.dataChanged.connect(self.updateCounter)
         self._model.modelReset.connect(self.updateCounter)
+        self.search_field.textChanged.connect(self.searchFor)
 
     @Slot()
     def updateCounter(self):
         self.count_request.setText(str(self._proxy_model.rowCount()))
+
+    def searchFor(self):
+        pattern = self.search_field.text()
+        self._proxy_model.setUserFilter(pattern,
+                                        [SignageSqlModel.Fields.Refkey.index,
+                                         SignageSqlModel.Fields.Title.index])
+        self._proxy_model.invalidateFilter()
 
 
 class TitleColumnDelegate(QtWidgets.QStyledItemDelegate):
