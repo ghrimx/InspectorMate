@@ -283,3 +283,4 @@ class Cache(Generic[K_int, K_str, V]):
 
     def __repr__(self) -> str:
         return f"<Cache size={len(self)}>"
+

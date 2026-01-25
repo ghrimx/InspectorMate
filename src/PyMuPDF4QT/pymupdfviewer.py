@@ -11,7 +11,7 @@ from PyMuPDF4QT.QtPymuPdf import (OutlineModel, OutlineItem, PageNavigator,
                                   ZoomSelector, SearchModel, SearchItem, MetaDataWidget, 
                                   TextSelection, RectItem, LinkBox)
 from PyMuPDF4QT.annotation import AnnotationModel, AnnotationPane
-
+from utilities.utils import copy_file_link_to_clipboard
 from qt_theme_manager import theme_icon_manager
 
 
@@ -484,7 +484,7 @@ class PdfViewer(ViewerWidget):
         self.rotate_clockwise.triggered.connect(lambda: self.pdfview.setRotation(90))
 
         # Citation
-        self.action_cite.triggered.connect(lambda: self.cite(self.citation()))
+        self.action_cite.triggered.connect(self.citationToClipboard)
 
         # Add Action/Widget to toolbar
         self._toolbar.insertWidget(self.toolbarFreeSpace(), self.page_navigator)
@@ -631,6 +631,11 @@ class PdfViewer(ViewerWidget):
         title = f'"{self.title.toPlainText()}"'
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), "PDF", page] if x)
         return f"[{citation}]"
+    
+    def citationToClipboard(self):
+        target = f'{self._document.filepath.as_posix()}'
+        suffix = f'#page={self.page_navigator.currentPageLabel()}'
+        copy_file_link_to_clipboard(target, self.citation(), suffix)
 
     def source(self) -> str:
         title = self._document.title

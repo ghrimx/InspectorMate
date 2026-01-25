@@ -1,8 +1,126 @@
 from qtpy import (QtWidgets, Qt, QtGui, QtCore)
 from utilities import config as mconf
+from urllib import parse
+import base64
+
+def make_cf_html(fragment: str) -> bytes:
+    fragment = fragment.strip()
+
+    html = (
+        "<html><body>"
+        "<!--StartFragment-->"
+        f"{fragment}"
+        "<!--EndFragment-->"
+        "</body></html>"
+    )
+
+    html_bytes = html.encode("utf-8")
+
+    header = (
+        "Version:1.0\r\n"
+        "StartHTML:{:08d}\r\n"
+        "EndHTML:{:08d}\r\n"
+        "StartFragment:{:08d}\r\n"
+        "EndFragment:{:08d}\r\n"
+    )
+
+    # Temporary header to compute byte offsets
+    header_bytes = header.format(0, 0, 0, 0).encode("ascii")
+
+    start_html = len(header_bytes)
+    start_fragment = html_bytes.index(b"<!--StartFragment-->") + len(b"<!--StartFragment-->") + start_html
+    end_fragment = html_bytes.index(b"<!--EndFragment-->") + start_html
+    end_html = start_html + len(html_bytes)
+
+    final_header = header.format(
+        start_html,
+        end_html,
+        start_fragment,
+        end_fragment,
+    ).encode("ascii")
+
+    return final_header + html_bytes
+
+
+import base64
+from urllib import parse
+
+from PyQt6 import QtCore, QtGui, QtWidgets
+
+
+class ClipboardExporter:
+    """
+    Export image + caption (as file link) to the system clipboard.
+
+    Optimized for:
+    - PyQt6 QTextEdit
+    - Word / LibreOffice
+    - Outlook
+
+    Graceful fallback:
+    - text/plain
+    - image/*
+    - text/uri-list
+    """
+
+    _last_mime = None  # prevent GC on Windows
+
+    @staticmethod
+    def copy_capture(
+        pixmap: QtGui.QPixmap,
+        caption: str,
+        source_file: str,
+    ):
+        clipboard = QtWidgets.QApplication.clipboard()
+
+        def _do_copy():
+            mime = QtCore.QMimeData()
+
+            # ---------- Plain text fallback ----------
+            if caption:
+                mime.setText(caption)
+
+            # ---------- Image ----------
+            mime.setImageData(pixmap.toImage())
+
+            # ---------- URI list (important for Windows apps) ----------
+            if source_file:
+                url = QtCore.QUrl.fromLocalFile(source_file)
+                mime.setUrls([url])
+
+            # ---------- Encode pixmap ----------
+            ba = QtCore.QByteArray()
+            buffer = QtCore.QBuffer(ba)
+            buffer.open(QtCore.QIODevice.OpenModeFlag.WriteOnly)
+            pixmap.save(buffer, "PNG")
+
+            img_base64 = base64.b64encode(ba.data()).decode("ascii")
+
+            # ---------- Build HTML (Qt-friendly) ----------
+            href = "file:///" + parse.quote(source_file.replace("\\", "/"))
+
+            html = (
+                "<html><body>"
+                f"<img src='data:image/png;base64,{img_base64}'><br>"
+                f"<a href='{href}'>{caption}</a>"
+                "</body></html>"
+            )
+
+            mime.setHtml(html)
+
+            mime.setText(f"<a href='{href}'>{caption}</a>")
+
+            # ---------- Keep alive + set ----------
+            ClipboardExporter._last_mime = mime
+            clipboard.setMimeData(mime)
+
+        # Delay to avoid OLE race conditions
+        QtCore.QTimer.singleShot(0, _do_copy)
+
+
 
 class Capture(QtWidgets.QWidget):
-    def __init__(self, source: str = None, parent=None):
+    def __init__(self, caption: str = None, uri: str = None, parent=None):
         super(Capture, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
@@ -11,7 +129,8 @@ class Capture(QtWidgets.QWidget):
 
         self.global_final_origin = None
         self._cache_key = None
-        self._source = source
+        self.caption = caption
+        self._uri = uri
 
         # Cover *all* monitors
         desktop_geometry = QtGui.QGuiApplication.primaryScreen().virtualGeometry()
@@ -80,15 +199,24 @@ class Capture(QtWidgets.QWidget):
                 self.pixmap = self.pixmap.copy(corrected_crop)
 
                 # set clipboard
-                clipboard = QtWidgets.QApplication.clipboard()
-                clipboard.setPixmap(self.pixmap)
+                # clipboard = QtWidgets.QApplication.clipboard()
+                # clipboard.setPixmap(self.pixmap)
 
-                self._cache_key = clipboard.pixmap().cacheKey()
+                self.copy_pixmap_with_text(self.pixmap)
 
-                mconf.settings.setValue("capture", [self._cache_key, self._source])
+                # self._cache_key = clipboard.pixmap().cacheKey()
+
+                mconf.settings.setValue("capture", [self._cache_key, self.caption])
 
             self.close()
         super().mouseReleaseEvent(event)
 
     def capturekey(self) -> int:
         return self._cache_key
+    
+    def copy_pixmap_with_text(self, pixmap: QtGui.QPixmap):
+        ClipboardExporter.copy_capture(
+            pixmap=pixmap,
+            caption=self.caption,
+            source_file=self._uri,
+        )

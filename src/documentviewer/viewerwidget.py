@@ -12,6 +12,7 @@ from widgets.richtexteditor import RichTextEditor
 from widgets.readonly_linedit import ReadOnlyLineEdit
 
 from snipping.snippingtool import Capture
+from utilities.utils import copy_file_link_to_clipboard
 
 from qt_theme_manager import theme_icon_manager
 
@@ -226,12 +227,12 @@ class ViewerWidget(QtWidgets.QWidget):
 
     @Slot()
     def cite(self, citation):
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(citation)
+        copy_file_link_to_clipboard(self._document.filepath.as_posix(), citation)
 
     @Slot()
     def capture(self, citation):
-        self.capturer = Capture(source=citation)
+        fpath = self._document.filepath.as_posix()
+        self.capturer = Capture(caption=citation, uri=fpath)
         self.capturer.show()
 
     def source(self) -> str:

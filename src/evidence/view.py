@@ -26,7 +26,7 @@ from widgets.folder_explorer import FolderExplorer
 from widgets.readonly_linedit import ReadOnlyLineEdit
 
 from utilities.config import settings
-from utilities.utils import queryFileNameByID, open_file
+from utilities.utils import queryFileNameByID, open_file, copy_file_link_to_clipboard
 from utilities.decorators import status_signal
 
 from qt_theme_manager import theme_icon_manager, Theme
@@ -529,8 +529,7 @@ class EvidenceTab(BaseTab):
         refkey = "refkey: " + refkey if refkey != "" else None
         title = f'"{title}"'
         citation = "; ".join(x for x in [refkey, title, subtitle, reference, extension] if x)
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(f"[{citation}]")
+        copy_file_link_to_clipboard(filepath, f"[{citation}]")
 
     def copyPath(self):
         index: QtCore.QModelIndex = self.proxy_model.mapToSource(self.table.selectionModel().currentIndex())
