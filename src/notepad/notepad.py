@@ -1308,27 +1308,30 @@ class Notebook(QtWidgets.QWidget):
     @Slot()
     def createSignage(self):
         title = self.active_mdi_child().textCursor().selectedText()
-        hanchor = str(timeuuid())
+        anchor = str(timeuuid())
         source = (f'{{"application":"InspectorMate", "module":"Notebook", "item":"Note", '
-                  f'"item_title":"{self.active_mdi_child().userFriendlyFilename()}", "hanchor":"{hanchor}"}}')
+                  f'"item_title":"{self.active_mdi_child().userFriendlyFilename()}", "anchor":"{anchor}"}}')
 
-        self.sigCreateSignage.emit(title, source, hanchor)
+        self.sigCreateSignage.emit(title, source, anchor)
 
-    def insertSignage(self, signage: Signage, hanchor: str):
+    def insertSignage(self, signage: Signage, anchor: str):
         icon = AppDatabase.cache_signage_type.get(signage.type).icon
+        color = AppDatabase.cache_signage_type.get(signage.type).color
 
         fmt = QtGui.QTextCharFormat()
         fmt.setAnchor(True)
         fmt.setAnchorHref("")
-        fmt.setAnchorNames([f"signage_type={signage.type}; id={hanchor}"])
-        fmt.setForeground((QtCore.Qt.GlobalColor.blue))
-        fmt.setFontUnderline(True)
+        fmt.setAnchorNames([f"signage_type={signage.type}; id={anchor}"])
+        qcolor = QtGui.QColor(color)
+        fmt.setForeground(qcolor)
+        # fmt.setForeground((QtCore.Qt.GlobalColor.blue))
+        fmt.setFontUnderline(False)
+        fmt.setFontWeight(QtGui.QFont.Weight.Bold)
         if icon != "":
             img = QtGui.QTextImageFormat()
             img.setWidth(24.0)
             img.setHeight(24.0)
             img.setName(f"data:image/svg+xml;base64,{icon}")
-            # img.setName(f"data:image/png;base64,{icon}")
             self.active_mdi_child().textCursor().insertImage(img)
             self.active_mdi_child().textCursor().insertText(f" {signage.refkey} {signage.title}", fmt)
         else:

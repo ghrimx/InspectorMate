@@ -33,7 +33,7 @@ class FileSystem(QtWidgets.QTreeView):
     def set_root_path(self, rootpath: str):
         index = self._model.setRootPath(rootpath)
         self.setRootIndex(index)
-        self.sortByColumn(1, Qt.SortOrder.AscendingOrder)
+        self.sortByColumn(0, Qt.SortOrder.AscendingOrder)
 
     def hide_columns(self, columns:list[int]):
         """Hide columns.

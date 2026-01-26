@@ -72,7 +72,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer_dock_widget = QtAds.CDockWidget("Workspace", self)
         self.workspace_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
         self.workspace_explorer = FileSystem(AppDatabase.activeWorkspace().rootpath)
-        self.workspace_explorer.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
         self.workspace_explorer_dock_widget.setWidget(self.workspace_explorer)
         self.workspace_explorer_dock_widget.setMinimumSize(200, 150)
         self.workspace_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
@@ -415,11 +414,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notepad_dock_widget.toggleView()
 
     @Slot(str, str, str)
-    def onCreateSignageFromNotepad(self, title, source: str, hanchor: str):
+    def onCreateSignageFromNotepad(self, title, source: str, anchor: str):
         """Create a signage from Notepad/Notebook"""
         if self.signage_tree_tab.createSignage(title, source):
             signage = self.signage_tree_tab.signage_dialog.signage()
-            self.notepad_tab.insertSignage(signage, hanchor)         
+            self.notepad_tab.insertSignage(signage, anchor)         
 
     @Slot()
     def saveSettings(self):
