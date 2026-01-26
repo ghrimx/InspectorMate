@@ -1,5 +1,6 @@
-import logging
+import json
 import enum
+import logging
 from pathlib import Path
 from functools import partial
 from datetime import datetime
@@ -74,13 +75,7 @@ class LinkEditor(QtWidgets.QDialog):
 
 
 class LinkEditorDialog(QtWidgets.QDialog):
-    """
-    Dialog to insert or edit a hyperlink.
-    Handles:
-      - Web URLs
-      - Local file paths
-      - Gracefully pre-fills existing link text + href
-    """
+    """Dialog to insert or edit a hyperlink"""
 
     def __init__(self, parent=None, display_text="", href=""):
         super().__init__(parent)
@@ -128,7 +123,7 @@ class LinkEditorDialog(QtWidgets.QDialog):
 
         layout.addWidget(btns)
 
-        # SIGNALS
+        # Signals
         btns.accepted.connect(self.accept)
         btns.rejected.connect(self.reject)
         self.url_radio.toggled.connect(self._on_mode_changed)
@@ -162,7 +157,7 @@ class LinkEditorDialog(QtWidgets.QDialog):
         else:
             # File mode
             self.file_btn.setEnabled(True)
-            self.target_edit.setPlaceholderText("Choose a file…")
+            self.target_edit.setPlaceholderText("Choose a file...")
 
     def _browse_file(self):
         """
@@ -337,81 +332,7 @@ class TextEdit(QtWidgets.QTextEdit):
         if source.hasImage():
             return source.hasImage()
         else:
-            return super(TextEdit, self).canInsertFromMimeData(source)
-        
-    # def insertFromMimeData(self, source: QtCore.QMimeData):
-    #     cursor = self.textCursor()
-    #     document = self.document()
-
-    #     if source.hasUrls():
-    #         for url in source.urls():
-    #             file_info = QtCore.QFileInfo(url.toLocalFile())
-    #             if file_info.suffix().lower() in QtGui.QImageReader.supportedImageFormats():
-    #                 image = QtGui.QImage(url.toLocalFile())
-    #                 if not image.isNull():
-    #                     document.addResource(QtGui.QTextDocument.ResourceType.ImageResource, url, image)
-    #                     cursor.insertImage(url.toLocalFile())
-    #             else:
-    #                 # If we hit a non-image or non-local URL break the loop and fall out
-    #                 # to the super call & let Qt handle it
-    #                 break
-    #     elif source.hasImage():
-    #         image = source.imageData()
-    #         uuid = hexuuid()
-
-    #         image_dir = f"{AppDatabase.activeWorkspace().notebook_path}/.images"
-    #         createFolder(image_dir)
-    #         image_path = f'{image_dir}/{uuid}.png'
-
-    #         img = QtGui.QImage(image)
-    #         if not img.save(image_path, "PNG", 100):
-    #             logger.error(f"Error saving image saved: {image_path}")
-            
-    #         relative_url = QtCore.QUrl(".images/" + uuid + ".png")
-    #         resolved_url = self.document().baseUrl().resolved(relative_url)
-
-    #         document.addResource(QtGui.QTextDocument.ResourceType.ImageResource, resolved_url, image)
-
-    #         # insert image with relative path for web browser
-    #         image_format = QtGui.QTextImageFormat()
-    #         image_format.setName(relative_url.toString())  # Must match the resource key
-
-    #         device_ratio = QtWidgets.QApplication.primaryScreen().devicePixelRatio()
-    #         image_format.setWidth(img.width() / device_ratio)
-    #         image_format.setHeight(img.height() / device_ratio)
-    #         cursor.insertImage(image_format)
-
-    #         # Add citation below the image
-    #         # Get the Pixmap cacheKey from the Qsettings if cachekeys match then insert the citation along with the image
-    #         image_cachekey = QtWidgets.QApplication.clipboard().image().cacheKey()
-    #         capture = mconf.settings.value("capture", [], "QStringList")
-    #         if len(capture) > 0:
-    #             if str(image_cachekey) == capture[0]:
-    #                 citation = capture[1]
-    #                 cursor.insertBlock()
-    #                 cursor.insertText(citation)
-                    
-    #                 # set a blue color to the foreground of the citation
-    #                 cursor.select(QtGui.QTextCursor.SelectionType.LineUnderCursor)
-    #                 fmt = QtGui.QTextCharFormat()
-    #                 fmt.setForeground(QtGui.QColor(85, 0, 255))
-    #                 cursor.mergeCharFormat(fmt)
-    #                 self.mergeCurrentCharFormat(fmt)
-    #     elif source.hasText():
-    #         hyperlink = QtCore.QUrl(source.text())
-    #         if not hyperlink.isRelative():
-    #             link = QtGui.QTextCharFormat()
-    #             link.setAnchor(True)
-    #             link.setAnchorHref(f"{source.text()}")
-    #             link.setAnchorNames([f"{source.text()}"])
-    #             link.setForeground(QtCore.Qt.GlobalColor.blue)
-    #             link.setFontUnderline(True)
-    #             cursor.insertText(source.text(), link)
-    #         else:
-    #             super(TextEdit, self).insertFromMimeData(source)
-    #     else:
-    #         super(TextEdit, self).insertFromMimeData(source)
-    
+            return super(TextEdit, self).canInsertFromMimeData(source)   
 
     def _persist_image(self, image: QtGui.QImage) -> str:
         image_dir = f"{AppDatabase.activeWorkspace().notebook_path}/.images"
@@ -423,8 +344,8 @@ class TextEdit(QtWidgets.QTextEdit):
         image.save(path, "PNG")
         return path
     
-    def _insert_image_from_file(self, path: str, caption: str = ""):
-        url = QtCore.QUrl.fromLocalFile(path).toString()
+    def _insert_image_from_file(self, image_path: str, caption: str = ""):
+        url = QtCore.QUrl.fromLocalFile(image_path).toString()
         html = f"<img src='{url}'>"
         if caption:
             html = html + f'<p>{caption}</p>'
@@ -432,27 +353,35 @@ class TextEdit(QtWidgets.QTextEdit):
 
     def insertFromMimeData(self, source: QtCore.QMimeData):
         
-        # Case 2: Image + URL → link image to file
+        # Image + URL > link image to file
         if source.hasImage() and source.hasUrls():
-            print('case 2')
-            image = source.imageData()
-            path = self._persist_image(image)
+            
             caption = source.text()
             url = source.urls()[0]
-            print(url)
+            image = source.imageData()
+            image_path = self._persist_image(image)
+            href = url.toString()          
+
+            if source.hasFormat("application/x-inspectormate-anchor"):
+                anchor = json.loads(
+                    bytes(source.data("application/x-inspectormate-anchor"))
+                )
+                page = anchor.get("page", "?")
+                hlink = f'<a href="{href}#page={page}">{caption}</a>'
+            else:
+                hlink = f'<a href="{href}">{caption}</a>'
+
             if url.isLocalFile():
-                self._insert_image_from_file(path, caption)
+                self._insert_image_from_file(image_path, hlink)
                 return
             
-        # Case 1: HTML already present → let Qt handle it
+        # HTML already present > let Qt handle it
         if source.hasHtml():
-            print('case 1')
             super().insertFromMimeData(source)
             return
 
-        # Case 3: Image only → persist and link
+        # Image only > persist and link
         if source.hasImage():
-            print('case 3')
             image = source.imageData()
             path = self._persist_image(image)
             self._insert_image_from_file(path)

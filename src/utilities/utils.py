@@ -448,21 +448,3 @@ def join_html_documents(html_files: list[str], add_headers=False, spacing_mm=10)
     merged_html += "</body>\n</html>"
     return merged_html
 
-def copy_file_link_to_clipboard(target: str, title: str = None, suffix: str = ""):
-    clipboard = QtWidgets.QApplication.clipboard()
-
-    url = QtCore.QUrl.fromLocalFile(target)
-    href = url.toString()
-
-    if not title:
-        title = Path(target).name
-
-    # Create MIME data
-    mime = QtCore.QMimeData()
-    mime.setText(title)
-    mime.setUrls([url])
-    html = f'<a href="{href}{suffix}">{title}</a>'
-    mime.setHtml(html)
-
-    clipboard._last_mime = mime
-    clipboard.setMimeData(mime)

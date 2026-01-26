@@ -34,16 +34,7 @@ class TxtViewer(ViewerWidget):
         self.scroll_area.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.scroll_area.setWidget(self.viewer)
 
-        # Citation
-        self.action_cite.triggered.connect(lambda: self.cite(self.citation()))
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.action_cite)
-
-        # Snipping tool
-        self.capture_area.triggered.connect(lambda: self.capture(self.citation()))
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.capture_area)
-
-        # Create Signage
-        self._toolbar.insertAction(self._toolbar_spacer, self.action_create_child_signage)
+        # --- Custom action ---
 
         # Zoom
         zoom_in = QtGui.QAction(theme_icon_manager.get_icon(":zoom-in"), "Zoom In", self)
@@ -105,6 +96,9 @@ class TxtViewer(ViewerWidget):
         title = f'"{self.title.toPlainText()}"'
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"
+    
+    def getAnchor(self):
+        return None
     
     def source(self) -> str:
         title = self._document.title

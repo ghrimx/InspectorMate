@@ -1,6 +1,6 @@
+import json
 import pymupdf
 import logging
-import json
 
 from enum import Enum
 
@@ -11,7 +11,6 @@ from PyMuPDF4QT.QtPymuPdf import (OutlineModel, OutlineItem, PageNavigator,
                                   ZoomSelector, SearchModel, SearchItem, MetaDataWidget, 
                                   TextSelection, RectItem, LinkBox)
 from PyMuPDF4QT.annotation import AnnotationModel, AnnotationPane
-from utilities.utils import copy_file_link_to_clipboard
 from qt_theme_manager import theme_icon_manager
 
 
@@ -436,6 +435,8 @@ class PdfViewer(ViewerWidget):
         self.search_model = SearchModel()
         self.annotation_model = AnnotationModel()
 
+        # --- Custom action ---
+
         # Toolbar button
         self.mouse_action_group = QtGui.QActionGroup(self)
         self.mouse_action_group.setExclusionPolicy(QtGui.QActionGroup.ExclusionPolicy.ExclusiveOptional)
@@ -446,9 +447,6 @@ class PdfViewer(ViewerWidget):
         self.text_selector.setCheckable(True)
         self.text_selector.setShortcut(QtGui.QKeySequence("ctrl+alt+t"))
         self.text_selector.triggered.connect(self.triggerMouseAction)
-
-        # Snipping tool
-        self.capture_area.triggered.connect(lambda: self.capture(self.citation()))
         
         # MarkPen
         self.mark_pen = QtGui.QAction(theme_icon_manager.get_icon(':mark_pen'), "Mark Text", self)
@@ -483,9 +481,6 @@ class PdfViewer(ViewerWidget):
         self.rotate_clockwise.setToolTip("Rotate clockwise")
         self.rotate_clockwise.triggered.connect(lambda: self.pdfview.setRotation(90))
 
-        # Citation
-        self.action_cite.triggered.connect(self.citationToClipboard)
-
         # Add Action/Widget to toolbar
         self._toolbar.insertWidget(self.toolbarFreeSpace(), self.page_navigator)
         self._toolbar.insertSeparator(self.toolbarFreeSpace())
@@ -497,10 +492,9 @@ class PdfViewer(ViewerWidget):
         self._toolbar.insertAction(self.toolbarFreeSpace(), self.rotate_anticlockwise)
         self._toolbar.insertAction(self.toolbarFreeSpace(), self.rotate_clockwise)
         self._toolbar.insertSeparator(self.toolbarFreeSpace())
-        self._toolbar.insertAction(self._toolbar_spacer, self.action_create_child_signage)
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.action_cite)
+
         self._toolbar.insertAction(self.toolbarFreeSpace(), self.text_selector)
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.capture_area)
+
         # self._toolbar.insertAction(self.toolbarFreeSpace(), self.mark_pen) #TODO
 
         # Outline Tab
@@ -632,11 +626,11 @@ class PdfViewer(ViewerWidget):
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), "PDF", page] if x)
         return f"[{citation}]"
     
-    def citationToClipboard(self):
-        target = f'{self._document.filepath.as_posix()}'
-        suffix = f'#page={self.page_navigator.currentPageLabel()}'
-        copy_file_link_to_clipboard(target, self.citation(), suffix)
-
+    def getAnchor(self):
+        anchor = {"type": "pdf",
+                   "page": self.page_navigator.currentPageLabel()}
+        return anchor
+    
     def source(self) -> str:
         title = self._document.title
         page = self.page_navigator.currentPageLabel()
