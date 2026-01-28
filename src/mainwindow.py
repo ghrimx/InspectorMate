@@ -388,6 +388,7 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def onSettingsChanged(self):
         self.signage_tree_tab.table.setAlternatingRowColors(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
+        self.evidence_tab.table.setAlternatingRowColors(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
 
     @Slot(str)
     def onSignageDoubleClicked(self, refkey: str):

@@ -10,6 +10,7 @@ from qtpy import Qt, QtGui, QtCore, Signal, Slot, QtWidgets, QtSql
 from database.database import AppDatabase
 
 from evidence.model import EvidenceModel
+from evidence.style import TABLE_STYLE
 from signage.model import SignageModel, SignageSqlModel
 
 from base_models import ProxyModel
@@ -257,6 +258,9 @@ class EvidenceTab(BaseTab):
 
         combo_delegate = CompositeDelegate([status_delegate, title_delegate], self.table)
         self.table.setItemDelegateForColumn(self._model.Fields.Title.index, combo_delegate)
+
+        if theme_icon_manager.get_theme() == Theme.LIGHT:
+            self.table.setStyleSheet(TABLE_STYLE)
 
         # --- Right Pane ---
         self.status = QtWidgets.QComboBox()
