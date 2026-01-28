@@ -160,6 +160,7 @@ class SignageTab(BaseTab):
 
         # --- Table ---
         self.table = QtWidgets.QTreeView(self)
+        self.table.setAlternatingRowColors(False)
         self.table.setModel(self.proxymodel)
         # self.table.header().sortIndicatorChanged.connect(self.table.model().sortTree)
         self.table.setSortingEnabled(True)

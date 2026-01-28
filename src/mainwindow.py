@@ -222,9 +222,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_open_option = QtGui.QAction("Open document with system application",
                                               self.menubar,
                                               triggered=self.saveSettings)
-        self.edit_menu = self.menubar.addMenu("Edit")
         self.file_open_option.setCheckable(True)
-        self.file_open_option.setChecked(True)
+
+        self.edit_menu = self.menubar.addMenu("Edit")
         self.edit_menu.addAction(self.file_open_option)
 
         self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":onenote"),
@@ -251,6 +251,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_menu.addAction(self.notepad_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.listinsight_tab_dock_widget.toggleViewAction())
         self.view_menu.addSeparator()
+
+        self.alternating_table_row_color = QtGui.QAction("Alternating table row color",
+                                                         self.view_menu,
+                                                         triggered=self.saveSettings)
+        self.alternating_table_row_color.setCheckable(True)
+        self.view_menu.addAction(self.alternating_table_row_color)
 
         app_menu = QtWidgets.QMenu("Application FontSize", self.menubar)
         app_menu.addAction(QtGui.QAction("Small", self, triggered=lambda: self.setAppFont(9.0)))
@@ -370,10 +376,18 @@ class MainWindow(QtWidgets.QMainWindow):
             mconf.settings.setValue("regex", text)
 
     def loadSettings(self):
-        if mconf.settings.value("USE_DEFAULT_FILEOPENER") == 'false':
-            self.file_open_option.setChecked(False)
-        else:
-            self.file_open_option.setChecked(True)
+        self.file_open_option.setChecked(mconf.settings.value("USE_DEFAULT_FILEOPENER", False, bool))
+        self.alternating_table_row_color.setChecked(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
+        self.onSettingsChanged()
+
+    @Slot()
+    def saveSettings(self):
+        mconf.settings.setValue("USE_DEFAULT_FILEOPENER", self.file_open_option.isChecked())
+        mconf.settings.setValue("ALTERNATING_TABLE_ROW_COLOR", self.alternating_table_row_color.isChecked())
+        self.onSettingsChanged()
+    
+    def onSettingsChanged(self):
+        self.signage_tree_tab.table.setAlternatingRowColors(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
 
     @Slot(str)
     def onSignageDoubleClicked(self, refkey: str):
@@ -419,10 +433,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.signage_tree_tab.createSignage(title, source):
             signage = self.signage_tree_tab.signage_dialog.signage()
             self.notepad_tab.insertSignage(signage, anchor)         
-
-    @Slot()
-    def saveSettings(self):
-        mconf.settings.setValue("USE_DEFAULT_FILEOPENER", self.file_open_option.isChecked())
 
     def set_window_title(self, text=None):
         if text is not None:
