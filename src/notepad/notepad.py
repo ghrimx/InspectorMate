@@ -242,7 +242,11 @@ class TextEdit(QtWidgets.QTextEdit):
     def mouseReleaseEvent(self, e):
         if e.button() == QtCore.Qt.MouseButton.LeftButton:
             if self.anchor:
-                QtGui.QDesktopServices.openUrl(QtCore.QUrl(self.anchor))
+                status_signal.status_message.emit("Trying to open the link...", 3000)
+                if QtGui.QDesktopServices.openUrl(QtCore.QUrl(self.anchor)):
+                    status_signal.status_message.emit("Link opened", 3000)
+                else:
+                    status_signal.status_message.emit("⚠️ Failed to open the link!", 3000)
                 self.anchor = None
         return super().mouseReleaseEvent(e)
     
