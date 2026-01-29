@@ -1,4 +1,5 @@
 import logging
+from json import loads
 from base64 import b64decode
 from functools import partial
 from qtpy import Qt, QtGui, QtCore, Signal, Slot, QtWidgets, QtSql
@@ -8,6 +9,7 @@ from database.database import AppDatabase
 from utilities import config as mconf
 from utilities.config import settings
 from utilities.decorators import status_signal
+from utilities.utils import open_file
 from common import Signage, SignageStatus, ConnectorType
 from base_delegates import NoteColumnDelegate, CompositeDelegate
 
@@ -135,6 +137,7 @@ class VirtualProgressBarDelegate(QtWidgets.QStyledItemDelegate):
 
 class SignageTab(BaseTab):
     sigSignageDoubleClicked = Signal(str)
+    sigOpenNote = Signal(str, str)
 
     def __init__(self,
                  model: SignageModel,
@@ -289,6 +292,7 @@ class SignageTab(BaseTab):
         self.toolbar.insertAction(self.action_separator, self.action_collapseAll)
         self.toolbar.insertAction(self.action_separator, self.toolbar.addSeparator())
         self.toolbar.insertAction(self.action_separator, self.action_cite)
+        self.toolbar.insertAction(self.action_separator, self.action_reach_source)
 
         connector_menu_btn = QtWidgets.QToolButton(self)
         connector_menu_btn.setIcon(theme_icon_manager.get_icon(':links-line'))
@@ -369,6 +373,10 @@ class SignageTab(BaseTab):
                                          "Cite",
                                          self,
                                          triggered=self.cite)
+        self.action_reach_source = QtGui.QAction(theme_icon_manager.get_icon(":share-forward-2-line"),
+                                         "Go to Source",
+                                         self,
+                                         triggered=self.reachSource)
         
     def selectedRows(self) -> set[int]:
         """Source model's selected rows"""
@@ -426,6 +434,7 @@ class SignageTab(BaseTab):
         menu.addAction(self.action_create_child_signage)
         menu.addAction(self.action_delete_signage)
         menu.addAction(self.action_cite)
+        menu.addAction(self.action_reach_source)
         menu.exec(self.table.viewport().mapToGlobal(pos))
 
     def onCellClicked(self, index: QtCore.QModelIndex):
@@ -753,6 +762,34 @@ class SignageTab(BaseTab):
                                   update_title,
                                   self._on_signage_ready,
                                   self.stopSpinner)
+        
+    def reachSource(self):
+        index: QtCore.QModelIndex = self.table.selectionModel().currentIndex()
+        
+        if not index.isValid():
+            return
+        
+        src_index = self.proxymodel.mapToSource(index)
+        source_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Source.index)
+        source = self.model.data(source_idx, Qt.ItemDataRole.DisplayRole)
+        source_dict: dict = loads(source)
+
+        app = source_dict.get("application")
+        module = source_dict.get("module")
+
+        if app == "InspectorMate":
+            target = source_dict.get("item_title")
+            anchor = source_dict.get("anchor", "")
+            if target:
+                fpath = f"{AppDatabase.activeWorkspace().notebook_path}/{target}"
+                self.sigOpenNote.emit(fpath, anchor)
+        else:
+            if module == "loadFromDocx":
+                target = source_dict.get("file")
+                open_file(target)
+            elif module == "loadFromOnenote":
+                target = source_dict.get("link")
+                QtGui.QDesktopServices.openUrl(QtCore.QUrl(target))
 
     def restoreTableColumnWidth(self):
         """Restore table column width upon GUI initialization"""

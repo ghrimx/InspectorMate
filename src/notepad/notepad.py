@@ -1142,11 +1142,12 @@ class Notebook(QtWidgets.QWidget):
             self.setTabbedView()
         mconf.settings.endGroup()
 
-    def loadfile(self, filename, title: str = ""):
+    def loadfile(self, filename, title: str = "", anchor: str = ""):
         for subwindow in self.mdi.subWindowList():
             textedit: TextEdit = subwindow.widget()
             if textedit.filename == filename:
                 self.mdi.setActiveSubWindow(subwindow)
+                textedit.scrollToAnchor(anchor)
                 return
 
         textedit = TextEdit.load(filename)
@@ -1157,6 +1158,8 @@ class Notebook(QtWidgets.QWidget):
 
         if title != "":
             textedit.setTitle(QtCore.QFileInfo(title).completeBaseName())
+
+        textedit.scrollToAnchor(anchor)
     
     def active_mdi_child(self) -> TextEdit:
         active_sub_window = self.mdi.activeSubWindow()
@@ -1326,6 +1329,7 @@ class Notebook(QtWidgets.QWidget):
         fmt.setAnchor(True)
         fmt.setAnchorHref("")
         fmt.setAnchorNames([f"signage_type={signage.type}; id={anchor}"])
+        fmt.setAnchorNames([anchor])
         qcolor = QtGui.QColor(color)
         fmt.setForeground(qcolor)
         # fmt.setForeground((QtCore.Qt.GlobalColor.blue))

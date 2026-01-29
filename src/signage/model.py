@@ -337,7 +337,8 @@ class DataService:
                     signage.workspace_id = AppDatabase.activeWorkspace().id
                     src = (f'{{"application":"OneNote", "module":"loadFromOnenote",'
                            f'"section":"{section_name}", "page":"{tag.PageName}",'
-                           f'"object_id":"{tag.ID}"}}')
+                           f'"object_id":"{tag.ID}",'
+                           f'"link":"{tag.Link}"}}')
                     signage.source = src
                     signage.creation_datetime = (datetime.fromisoformat(tag.CreationTime[:-1])
                                                  .astimezone(timezone.utc).strftime('%Y-%m-%d'))

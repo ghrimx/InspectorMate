@@ -310,6 +310,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def connectSignals(self):
         self.signage_tree_tab.sigSignageDoubleClicked.connect(self.onSignageDoubleClicked)
+        self.signage_tree_tab.sigOpenNote.connect(self.onOpenNoteTriggered)
         self.evidence_model.modelReset.connect(self.onEvidenceModelReset)
         self.evidence_tab.sigOpenDocument.connect(self.onOpenEvidenceTriggered)
         self.evidence_tab.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
@@ -423,9 +424,8 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             status_signal.status_message.emit("Cannot open file", 7000)
 
-    @Slot(str)
-    def onOpenNoteTriggered(self, filepath):
-        self.notepad_tab.loadfile(filepath)
+    def onOpenNoteTriggered(self, filepath, anchor = ""):
+        self.notepad_tab.loadfile(filename=filepath, anchor=anchor)
         self.notepad_dock_widget.toggleView()
 
     @Slot(str, str, str)
