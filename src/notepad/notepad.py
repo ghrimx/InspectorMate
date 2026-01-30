@@ -531,7 +531,7 @@ class TextEdit(QtWidgets.QTextEdit):
             block_fmt.setHeadingLevel(style.value)
             cursor.setBlockFormat(block_fmt)
             fmt = QtGui.QTextCharFormat()
-            fmt.setForeground(QtGui.QColor(85, 0, 255)) #TODO
+            fmt.setForeground(QtGui.QColor("#0055ff"))
             fmt.setFontWeight(QtGui.QFont.Weight.Bold if style.value > 0 else QtGui.QFont.Weight.Normal)
             fmt.setProperty(QtGui.QTextFormat.Property.FontSizeAdjustment, 4 - style.value if style.value > 0 else 0)
             self.merge_format_on_line_or_selection(fmt)
