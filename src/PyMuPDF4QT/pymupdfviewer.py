@@ -297,7 +297,7 @@ class PdfView(QtWidgets.QGraphicsView):
             if rect.pno > self.pageNavigator().currentPno():
                 rect.setVisible(False)
             self.doc_scene.addItem(rect)
-
+        
     def getGraphicItems(self) -> dict:
         return self.graphic_items
     
@@ -428,6 +428,8 @@ class PdfViewer(ViewerWidget):
         self.annotation_model.setFilter(f"document_id={self.document.id}")
         if self.annotation_model.initCache(self.document.id):
             self.pdfview.loadGraphicItems(self.annotation_model.cache())
+        
+        self.pdfview.renderPage()
 
     def initViewer(self):
         self.pdfview = PdfView(self)

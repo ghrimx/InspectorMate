@@ -573,7 +573,7 @@ class EvidenceTab(BaseTab):
         
         status_signal.status_message.emit("[Evidence: status updated]", 7000)
 
-        # Force refresh of the table view
+        # Force update of the table view
         self.table.viewport().update()
 
         if hasattr(self, "mapper"):
@@ -733,6 +733,7 @@ class EvidenceTab(BaseTab):
     def refresh(self):
         self._model.refresh()
         self.doc_filter.setRootPath(AppDatabase.activeWorkspace().evidence_path)
+        self.onResetFilters()
 
     def closeEvent(self, a0):
         self.saveTableColumnWidth()
