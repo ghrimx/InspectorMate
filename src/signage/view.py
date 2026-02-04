@@ -605,7 +605,8 @@ class SignageTab(BaseTab):
                                         SignageSqlModel.Fields.Title.index,
                                         SignageSqlModel.Fields.Note.index,
                                         SignageSqlModel.Fields.PublicNote.index,
-                                        SignageSqlModel.Fields.Owner.index])
+                                        SignageSqlModel.Fields.Owner.index,
+                                        SignageSqlModel.Fields.Source.index])
 
         self.proxymodel.invalidateFilter()
 
