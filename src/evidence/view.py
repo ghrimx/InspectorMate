@@ -315,6 +315,7 @@ class EvidenceTab(BaseTab):
         self.status.activated.connect(self.sigUpdateReviewProgress)
         self.refkey.editingFinished.connect(self.sigUpdateReviewProgress)
         self.refkey.editingFinished.connect(AppDatabase.update_document_signage_id)
+        self.refkey.editingFinished.connect(lambda: self._model.updateRefKey([self.table.currentIndex().row()], self.refkey.text()))
 
         # --- Toolbar ---
         self.toolbar.insertAction(self.action_separator, self.load_file)

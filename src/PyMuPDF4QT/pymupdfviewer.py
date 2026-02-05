@@ -231,12 +231,6 @@ class PdfView(QtWidgets.QGraphicsView):
     def previous(self):
         self.pageNavigator().jump(self.pageNavigator().currentPno() - 1)
 
-    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
-        if event.key() == QtCore.Qt.Key.Key_Left:
-            self.previous()
-        elif event.key() == QtCore.Qt.Key.Key_Right:
-            self.next()
-
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         #Zoom : CTRL + wheel
         modifiers = QtWidgets.QApplication.keyboardModifiers()
@@ -383,6 +377,12 @@ class PdfView(QtWidgets.QGraphicsView):
                     result = self.removeAnnotation(item.uid)
                     if result:
                         self.sigRemoveAnnotation.emit(item.uid)
+                        
+        elif event.key() == QtCore.Qt.Key.Key_Left.value:
+            self.previous()
+
+        elif event.key() == QtCore.Qt.Key.Key_Right.value:
+            self.next()
 
     @Slot('qint64')
     def removeAnnotation(self, uid: int) -> bool:

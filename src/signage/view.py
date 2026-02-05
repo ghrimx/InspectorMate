@@ -777,13 +777,15 @@ class SignageTab(BaseTab):
 
         app = source_dict.get("application")
         module = source_dict.get("module")
+        target = None
 
         if app == "InspectorMate":
-            target = source_dict.get("item_title")
-            anchor = source_dict.get("anchor", "")
-            if target:
-                fpath = f"{AppDatabase.activeWorkspace().notebook_path}/{target}"
-                self.sigOpenNote.emit(fpath, anchor)
+            if module == "Notebook":
+                target = source_dict.get("item_title")
+                anchor = source_dict.get("anchor", "")
+                if target:
+                    fpath = f"{AppDatabase.activeWorkspace().notebook_path}/{target}"
+                    self.sigOpenNote.emit(fpath, anchor)
         else:
             if module == "loadFromDocx":
                 target = source_dict.get("file")
