@@ -136,10 +136,13 @@ class WordViewer(ViewerWidget):
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"
     
-    def source(self) -> str:
+    def source(self) -> dict:
         title = self._document.title
-        source = f'{{"application":"InspectorMate", "module":"{self.viewerName()}", "item":"document", "item_title":"{title}"}}'
-        return source
+        return {"application":"InspectorMate",
+                "module":self.viewerName(),
+                "item":"document",
+                "item_title":title,
+                "filepath":self._document.filepath.as_posix()}
     
     def getAnchor(self):
         return None

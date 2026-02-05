@@ -428,8 +428,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notepad_tab.loadfile(filename=filepath, anchor=anchor)
         self.notepad_dock_widget.toggleView()
 
-    @Slot(str, str, str)
-    def onCreateSignageFromNotepad(self, title, source: str, anchor: str):
+    @Slot(str, dict, str)
+    def onCreateSignageFromNotepad(self, title, source: dict, anchor: str):
         """Create a signage from Notepad/Notebook"""
         if self.signage_tree_tab.createSignage(title, source):
             signage = self.signage_tree_tab.signage_dialog.signage()
@@ -542,7 +542,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Close all viewer tabs
         dockwidget: QtAds.CDockWidget
         for dockwidget in self.doc_viewers.copy().values():
-            dockwidget.closeDockWidget()  
+            dockwidget.closeDockWidget()
+        
+        status_signal.status_message.emit("Workspace changed!", 5000)
 
     @status_message('Connecting to OneNote...')
     @Slot()

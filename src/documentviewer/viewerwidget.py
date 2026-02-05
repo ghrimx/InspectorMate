@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class ViewerWidget(QtWidgets.QWidget):
-    sigCreateChildSignage = Signal(int, str, str)
+    sigCreateChildSignage = Signal(int, dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -266,7 +266,7 @@ class ViewerWidget(QtWidgets.QWidget):
         except Exception as e:
             signage_id = -1
 
-        self.sigCreateChildSignage.emit(signage_id, "", self.source())
+        self.sigCreateChildSignage.emit(signage_id, self.source())
 
     def showEvent(self, event: QtGui.QShowEvent):
         super().showEvent(event)

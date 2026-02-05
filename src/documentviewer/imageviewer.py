@@ -133,8 +133,10 @@ class ImageViewer(ViewerWidget):
 
         self.updateActions()
     
-    def source(self) -> str:
+    def source(self) -> dict:
         title = self._document.title
-        viewer = self.viewerName()
-        source = f'{{"application":"InspectorMate", "module":"{viewer}", "item":"document", "item_title":"{title}"}}'
-        return source
+        return {"application":"InspectorMate",
+                "module":self.viewerName(),
+                "item":"document",
+                "item_title":title,
+                "filepath":self._document.filepath.as_posix()}

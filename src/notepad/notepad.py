@@ -810,7 +810,7 @@ class TextEdit(QtWidgets.QTextEdit):
 
 
 class Notebook(QtWidgets.QWidget):
-    sigCreateSignage = Signal(str, str, str)
+    sigCreateSignage = Signal(str, dict, str)
 
     class LayoutStrategy(enum.Enum):
         Cascade = 0
@@ -1316,8 +1316,11 @@ class Notebook(QtWidgets.QWidget):
     def createSignage(self):
         title = self.active_mdi_child().textCursor().selectedText()
         anchor = str(timeuuid())
-        source = (f'{{"application":"InspectorMate", "module":"Notebook", "item":"Note", '
-                  f'"item_title":"{self.active_mdi_child().userFriendlyFilename()}", "anchor":"{anchor}"}}')
+        source = {"application":"InspectorMate",
+                  "module":"Notebook",
+                  "item":"Note",
+                  "item_title":self.active_mdi_child().userFriendlyFilename(), 
+                  "anchor":anchor}
 
         self.sigCreateSignage.emit(title, source, anchor)
 

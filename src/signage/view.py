@@ -1,5 +1,5 @@
 import logging
-from json import loads
+from json import loads, dumps
 from base64 import b64decode
 from functools import partial
 from qtpy import Qt, QtGui, QtCore, Signal, Slot, QtWidgets, QtSql
@@ -153,8 +153,8 @@ class SignageTab(BaseTab):
         self.createAction()
         self.initUI()
 
-    def signageSource(self) -> str:
-        return '{"application":"InspectorMate", "module":"Signage"}'
+    def signageSource(self) -> dict:
+        return {"application":"InspectorMate", "module":"Signage"}
 
     def initUI(self):
         # --- Left Pane ---
@@ -504,8 +504,8 @@ class SignageTab(BaseTab):
         result = self.signage_dialog.exec()
         return result
 
-    @Slot(str, str)
-    def createSignage(self, title: str = "", source: str = ""):
+    @Slot(str, dict)
+    def createSignage(self, title: str = "", source: dict = {}):
         """Create Parent Signage"""
         if self.signage_dialog is None:
             self.signage_dialog = SignageDialog(parent=None)
@@ -523,7 +523,7 @@ class SignageTab(BaseTab):
         
         # Get signage from the dialog
         signage = self.signage_dialog.signage()
-        signage.source = source
+        signage.source = dumps(source)
 
         # source:
         # '{"application":"InspectorMate", "module":"Notebook", "item":"note", "item_title":"1.3 Line Listing session", "item_id":"1.3 Line Listing session.html", "position":"anchor123"}'
@@ -541,8 +541,8 @@ class SignageTab(BaseTab):
             status_signal.status_message.emit("⚠️ Fail to create Signage", 7000)
             return False
 
-    @Slot(int, str)
-    def createChildSignage(self, parent_id: str, source: str = ""):
+    @Slot(int, dict)
+    def createChildSignage(self, parent_id: str, source: dict = {}):
         """Create Child Signage"""
         if self.signage_dialog is None:
             self.signage_dialog = SignageDialog(parent=None)
@@ -568,7 +568,7 @@ class SignageTab(BaseTab):
         
         signage = self.signage_dialog.signage()
         signage.parentID = parent_id
-        signage.source = source
+        signage.source = dumps(source)
         if self.model.insertSignage(signage=signage):
             status_signal.status_message.emit("✔️ Signage created", 7000)
             self.updateReviewProgess()
@@ -786,6 +786,17 @@ class SignageTab(BaseTab):
                 if target:
                     fpath = f"{AppDatabase.activeWorkspace().notebook_path}/{target}"
                     self.sigOpenNote.emit(fpath, anchor)
+            else:
+                target = source_dict.get("filepath")
+                if target:
+                    status_signal.status_message.emit("Opening target...", 5000)
+                    try:
+                        open_file(target)
+                    except Exception as e:
+                        logger.error(e)
+                    else:
+                        status_signal.status_message.emit("Target opened!", 3000)
+
         else:
             if module == "loadFromDocx":
                 target = source_dict.get("file")

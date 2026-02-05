@@ -195,8 +195,8 @@ class StatusColorDelegate(QtWidgets.QStyledItemDelegate):
 
 class EvidenceTab(BaseTab):
     sigOpenDocument = Signal(object, QtCore.QModelIndex)
-    sigCreateSignage = Signal(str, str)
-    sigCreateChildSignage = Signal(int, str)
+    sigCreateSignage = Signal(str, dict)
+    sigCreateChildSignage = Signal(int, dict)
     sigUpdateReviewProgress = Signal()
 
     def __init__(self,
@@ -350,17 +350,17 @@ class EvidenceTab(BaseTab):
                                        self,
                                        triggered=self.loadEvidence)
         self.action_auto_refkey = QtGui.QAction(theme_icon_manager.get_icon(":refkey"),
-                                           "Detect refkey",
-                                           self,
-                                           triggered=self.autoRefKey)
+                                                "Detect refkey",
+                                                self,
+                                                triggered=self.autoRefKey)
         self.action_filter_dlg = QtGui.QAction(theme_icon_manager.get_icon(":filter-line"),
-                                       "Filter",
-                                       self,
-                                       triggered=self.setFilters)
+                                               "Filter",
+                                               self,
+                                               triggered=self.setFilters)
         self.action_resetfilter = QtGui.QAction(theme_icon_manager.get_icon(":filter-off-line"),
-                                             "Reset Filters",
-                                             self,
-                                             triggered=self.onResetFilters)
+                                                "Reset Filters",
+                                                self,
+                                                triggered=self.onResetFilters)
         self.action_create_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line"),
                                                    "Create Signage (Ctrl + R)",
                                                    self,
@@ -671,7 +671,7 @@ class EvidenceTab(BaseTab):
 
     @Slot()
     def createSignage(self):
-        source = f'{{"application":"InspectorMate", "module":"Evidence"}}'
+        source = {"application":"InspectorMate", "module":"Evidence"}
         self.sigCreateSignage.emit("", source)
 
     @Slot()
@@ -682,15 +682,22 @@ class EvidenceTab(BaseTab):
             return
 
         sidx = self.proxy_model.mapToSource(index)
-        signage_id = (sidx.sibling(sidx.row(),
+        r = sidx.row()
+        signage_id = (sidx.sibling(r,
                                    self._model.Fields.SignageID.index)
                                    .data(QtCore.Qt.ItemDataRole.DisplayRole))
         if not signage_id:
             return
 
-        title = sidx.sibling(sidx.row(), self._model.Fields.Title.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
-        uid = sidx.sibling(sidx.row(), self._model.Fields.ID.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
-        source = f'{{"application":"InspectorMate", "module":"Evidence", "item":"document", "item_title":"{title}", "item_id":"{uid}"}}'
+        title = sidx.sibling(r, self._model.Fields.Title.index).data(Qt.ItemDataRole.DisplayRole)
+        filepath = sidx.sibling(r, self._model.Fields.Filepath.index).data(Qt.ItemDataRole.DisplayRole)
+        uid = sidx.sibling(r, self._model.Fields.ID.index).data(Qt.ItemDataRole.DisplayRole)
+        source = {"application":"InspectorMate",
+             "module":"Evidence",
+             "item":"document",
+             "item_title":title,
+             "item_id":uid,
+             "filepath":filepath}       
         self.sigCreateChildSignage.emit(signage_id, source)
 
     def _on_load_ended(self, m:str = ""):

@@ -633,12 +633,15 @@ class PdfViewer(ViewerWidget):
                    "page": self.page_navigator.currentPageLabel()}
         return anchor
     
-    def source(self) -> str:
+    def source(self) -> dict:
         title = self._document.title
         page = self.page_navigator.currentPageLabel()
-        viewer = self.viewerName()
-        source = f'{{"application":"InspectorMate", "module":"{viewer}", "item":"document", "item_title":"{title}", "page":"{page}"}}'
-        return source
+        return {"application":"InspectorMate",
+                "module":self.viewerName(),
+                "item":"document",
+                "item_title":title,
+                "page":page,
+                "filepath":self._document.filepath.as_posix()}
     
     @Slot(object)
     def onAnnotationAdded(self, annot: RectItem):
