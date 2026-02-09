@@ -2,7 +2,7 @@ import json
 from enum import Enum
 from pathlib import Path
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field, fields
 from typing import TypeVar, Generic, Dict, Optional, Iterable, Tuple
 
 
@@ -100,6 +100,15 @@ class OETag:
     CreationTime: str
     LastModifiedTime: str
     TypeIndex:  int
+    extra: dict = field(default_factory=dict)
+    
+    @classmethod
+    def from_dict(cls, d: dict):
+        known = {f.name for f in fields(cls) if f.name != "extra"}
+        known_data = {k: v for k, v in d.items() if k in known}
+        extra = {k: v for k, v in d.items() if k not in known}
+
+        return cls(**known_data, extra=extra)
 
 
 @dataclass
@@ -283,3 +292,4 @@ class Cache(Generic[K_int, K_str, V]):
 
     def __repr__(self) -> str:
         return f"<Cache size={len(self)}>"
+

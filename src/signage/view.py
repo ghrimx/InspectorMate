@@ -1,4 +1,5 @@
 import logging
+from json import loads, dumps
 from base64 import b64decode
 from functools import partial
 from qtpy import Qt, QtGui, QtCore, Signal, Slot, QtWidgets, QtSql
@@ -8,6 +9,7 @@ from database.database import AppDatabase
 from utilities import config as mconf
 from utilities.config import settings
 from utilities.decorators import status_signal
+from utilities.utils import open_file
 from common import Signage, SignageStatus, ConnectorType
 from base_delegates import NoteColumnDelegate, CompositeDelegate
 
@@ -135,6 +137,7 @@ class VirtualProgressBarDelegate(QtWidgets.QStyledItemDelegate):
 
 class SignageTab(BaseTab):
     sigSignageDoubleClicked = Signal(str)
+    sigOpenNote = Signal(str, str)
 
     def __init__(self,
                  model: SignageModel,
@@ -150,8 +153,8 @@ class SignageTab(BaseTab):
         self.createAction()
         self.initUI()
 
-    def signageSource(self) -> str:
-        return '{"application":"InspectorMate", "module":"Signage"}'
+    def signageSource(self) -> dict:
+        return {"application":"InspectorMate", "module":"Signage"}
 
     def initUI(self):
         # --- Left Pane ---
@@ -160,6 +163,7 @@ class SignageTab(BaseTab):
 
         # --- Table ---
         self.table = QtWidgets.QTreeView(self)
+        self.table.setAlternatingRowColors(False)
         self.table.setModel(self.proxymodel)
         # self.table.header().sortIndicatorChanged.connect(self.table.model().sortTree)
         self.table.setSortingEnabled(True)
@@ -288,6 +292,7 @@ class SignageTab(BaseTab):
         self.toolbar.insertAction(self.action_separator, self.action_collapseAll)
         self.toolbar.insertAction(self.action_separator, self.toolbar.addSeparator())
         self.toolbar.insertAction(self.action_separator, self.action_cite)
+        self.toolbar.insertAction(self.action_separator, self.action_reach_source)
 
         connector_menu_btn = QtWidgets.QToolButton(self)
         connector_menu_btn.setIcon(theme_icon_manager.get_icon(':links-line'))
@@ -368,6 +373,10 @@ class SignageTab(BaseTab):
                                          "Cite",
                                          self,
                                          triggered=self.cite)
+        self.action_reach_source = QtGui.QAction(theme_icon_manager.get_icon(":share-forward-2-line"),
+                                         "Go to Source",
+                                         self,
+                                         triggered=self.reachSource)
         
     def selectedRows(self) -> set[int]:
         """Source model's selected rows"""
@@ -425,6 +434,7 @@ class SignageTab(BaseTab):
         menu.addAction(self.action_create_child_signage)
         menu.addAction(self.action_delete_signage)
         menu.addAction(self.action_cite)
+        menu.addAction(self.action_reach_source)
         menu.exec(self.table.viewport().mapToGlobal(pos))
 
     def onCellClicked(self, index: QtCore.QModelIndex):
@@ -494,8 +504,8 @@ class SignageTab(BaseTab):
         result = self.signage_dialog.exec()
         return result
 
-    @Slot(str, str)
-    def createSignage(self, title: str = "", source: str = ""):
+    @Slot(str, dict)
+    def createSignage(self, title: str = "", source: dict = {}):
         """Create Parent Signage"""
         if self.signage_dialog is None:
             self.signage_dialog = SignageDialog(parent=None)
@@ -513,10 +523,10 @@ class SignageTab(BaseTab):
         
         # Get signage from the dialog
         signage = self.signage_dialog.signage()
-        signage.source = source
+        signage.source = dumps(source)
 
         # source:
-        # '{"application":"InspectorMate", "module":"Notebook", "item":"note", "item_title":"1.3 Line Listing session", "item_id":"1.3 Line Listing session.html", "position":"hanchor123"}'
+        # '{"application":"InspectorMate", "module":"Notebook", "item":"note", "item_title":"1.3 Line Listing session", "item_id":"1.3 Line Listing session.html", "position":"anchor123"}'
         # '{"application":"InspectorMate", "module":"Evidence", "item":"doc", "item_title":"document[:25]", "item_id":"6", "position":"page2"}'
         # '{"application":"InspectorMate", "module":"Signage", "item":"Request", "item_title":"signage[:25]", "item_id":"2", "position":"child2"}'
         # '{"application":"InspectorMate", "module":"ImportFromOneNote", "item":"Page", "item_title":"title[:25]", "item_id":"id", "position":"link"}'
@@ -531,8 +541,8 @@ class SignageTab(BaseTab):
             status_signal.status_message.emit("⚠️ Fail to create Signage", 7000)
             return False
 
-    @Slot(int, str)
-    def createChildSignage(self, parent_id: str, source: str = ""):
+    @Slot(int, dict)
+    def createChildSignage(self, parent_id: str, source: dict = {}):
         """Create Child Signage"""
         if self.signage_dialog is None:
             self.signage_dialog = SignageDialog(parent=None)
@@ -558,7 +568,7 @@ class SignageTab(BaseTab):
         
         signage = self.signage_dialog.signage()
         signage.parentID = parent_id
-        signage.source = source
+        signage.source = dumps(source)
         if self.model.insertSignage(signage=signage):
             status_signal.status_message.emit("✔️ Signage created", 7000)
             self.updateReviewProgess()
@@ -595,7 +605,8 @@ class SignageTab(BaseTab):
                                         SignageSqlModel.Fields.Title.index,
                                         SignageSqlModel.Fields.Note.index,
                                         SignageSqlModel.Fields.PublicNote.index,
-                                        SignageSqlModel.Fields.Owner.index])
+                                        SignageSqlModel.Fields.Owner.index,
+                                        SignageSqlModel.Fields.Source.index])
 
         self.proxymodel.invalidateFilter()
 
@@ -752,6 +763,47 @@ class SignageTab(BaseTab):
                                   update_title,
                                   self._on_signage_ready,
                                   self.stopSpinner)
+        
+    def reachSource(self):
+        index: QtCore.QModelIndex = self.table.selectionModel().currentIndex()
+        
+        if not index.isValid():
+            return
+        
+        src_index = self.proxymodel.mapToSource(index)
+        source_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Source.index)
+        source = self.model.data(source_idx, Qt.ItemDataRole.DisplayRole)
+        source_dict: dict = loads(source)
+
+        app = source_dict.get("application")
+        module = source_dict.get("module")
+        target = None
+
+        if app == "InspectorMate":
+            if module == "Notebook":
+                target = source_dict.get("item_title")
+                anchor = source_dict.get("anchor", "")
+                if target:
+                    fpath = f"{AppDatabase.activeWorkspace().notebook_path}/{target}"
+                    self.sigOpenNote.emit(fpath, anchor)
+            else:
+                target = source_dict.get("filepath")
+                if target:
+                    status_signal.status_message.emit("Opening target...", 5000)
+                    try:
+                        open_file(target)
+                    except Exception as e:
+                        logger.error(e)
+                    else:
+                        status_signal.status_message.emit("Target opened!", 3000)
+
+        else:
+            if module == "loadFromDocx":
+                target = source_dict.get("file")
+                open_file(target)
+            elif module == "loadFromOnenote":
+                target = source_dict.get("link")
+                QtGui.QDesktopServices.openUrl(QtCore.QUrl(target))
 
     def restoreTableColumnWidth(self):
         """Restore table column width upon GUI initialization"""

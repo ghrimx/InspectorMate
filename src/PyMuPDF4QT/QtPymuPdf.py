@@ -1,6 +1,7 @@
 import pymupdf
-from dataclasses import dataclass, InitVar
+import re
 from enum import Enum
+from dataclasses import dataclass, InitVar
 
 from qt_theme_manager import theme_icon_manager
 from qtpy import QtCore, QtGui, QtWidgets, Slot, Signal
@@ -447,7 +448,8 @@ class MetaDataWidget(QtWidgets.QWidget):
 class TextSelection:
     """Class that holds the selected text as string and its corresponding quad.
         
-    Quad represents a four-sided mathematical shape (also called “quadrilateral” or “tetragon”) in the plane, defined as a sequence of four Point objects.
+    Quad represents a four-sided mathematical shape (also called quadrilateral or tetragon) in the plane,
+    defined as a sequence of four Point objects.
     Quad is used to display the selected text.
     """
     def __init__(self, s: str = ""):
@@ -460,6 +462,7 @@ class TextSelection:
 
     @text.setter
     def text(self, s: str):
+        s = re.sub(r"(\s\n){3,}", "\n", s.strip())
         self._text = s
 
     @property
@@ -469,6 +472,7 @@ class TextSelection:
     @quads.setter
     def quads(self, q):
         self._quads = q
+
 
 class BaseAnnotation:
     """Base class for annotation"""

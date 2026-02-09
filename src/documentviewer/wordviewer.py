@@ -40,19 +40,7 @@ class WordViewer(ViewerWidget):
         self.scroll_area.setWidget(self.viewer)
         self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # ---Add Action---
-        # Citation
-        self.action_cite.triggered.connect(lambda: self.cite(self.citation()))
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.action_cite)
-
-        # Snipping tool
-        self.capture_area.triggered.connect(lambda: self.capture(self.citation()))
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.capture_area)
-
-        # Create Signage
-        self._toolbar.insertAction(self._toolbar_spacer, self.action_create_child_signage)
-
-        self._toolbar.addSeparator()
+        # --- Custom action ---
 
         # Zoom
         zoom_in = QtGui.QAction(theme_icon_manager.get_icon(":zoom-in"), "Zoom In", self)
@@ -148,10 +136,16 @@ class WordViewer(ViewerWidget):
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"
     
-    def source(self) -> str:
+    def source(self) -> dict:
         title = self._document.title
-        source = f'{{"application":"InspectorMate", "module":"{self.viewerName()}", "item":"document", "item_title":"{title}"}}'
-        return source
+        return {"application":"InspectorMate",
+                "module":self.viewerName(),
+                "item":"document",
+                "item_title":title,
+                "filepath":self._document.filepath.as_posix()}
+    
+    def getAnchor(self):
+        return None
    
 
 

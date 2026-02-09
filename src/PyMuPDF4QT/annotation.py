@@ -37,6 +37,7 @@ class AnnotationModel(QSqlRelationalTableModel):
         self.setTable("annotations")
         self.initFields()
         self._cache_annotations = []
+        self.setSort(self.Fields.PageNumber.index, QtCore.Qt.SortOrder.AscendingOrder)
 
         if not self.select():
             logger.error(f"Fail to select data from database - Error: {self.lastError().text()}")

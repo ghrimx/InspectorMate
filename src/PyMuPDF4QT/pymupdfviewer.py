@@ -1,6 +1,6 @@
+import json
 import pymupdf
 import logging
-import json
 
 from enum import Enum
 
@@ -11,7 +11,6 @@ from PyMuPDF4QT.QtPymuPdf import (OutlineModel, OutlineItem, PageNavigator,
                                   ZoomSelector, SearchModel, SearchItem, MetaDataWidget, 
                                   TextSelection, RectItem, LinkBox)
 from PyMuPDF4QT.annotation import AnnotationModel, AnnotationPane
-
 from qt_theme_manager import theme_icon_manager
 
 
@@ -232,12 +231,6 @@ class PdfView(QtWidgets.QGraphicsView):
     def previous(self):
         self.pageNavigator().jump(self.pageNavigator().currentPno() - 1)
 
-    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
-        if event.key() == QtCore.Qt.Key.Key_Left:
-            self.previous()
-        elif event.key() == QtCore.Qt.Key.Key_Right:
-            self.next()
-
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         #Zoom : CTRL + wheel
         modifiers = QtWidgets.QApplication.keyboardModifiers()
@@ -298,7 +291,7 @@ class PdfView(QtWidgets.QGraphicsView):
             if rect.pno > self.pageNavigator().currentPno():
                 rect.setVisible(False)
             self.doc_scene.addItem(rect)
-
+        
     def getGraphicItems(self) -> dict:
         return self.graphic_items
     
@@ -384,6 +377,12 @@ class PdfView(QtWidgets.QGraphicsView):
                     result = self.removeAnnotation(item.uid)
                     if result:
                         self.sigRemoveAnnotation.emit(item.uid)
+                        
+        elif event.key() == QtCore.Qt.Key.Key_Left.value:
+            self.previous()
+
+        elif event.key() == QtCore.Qt.Key.Key_Right.value:
+            self.next()
 
     @Slot('qint64')
     def removeAnnotation(self, uid: int) -> bool:
@@ -429,12 +428,16 @@ class PdfViewer(ViewerWidget):
         self.annotation_model.setFilter(f"document_id={self.document.id}")
         if self.annotation_model.initCache(self.document.id):
             self.pdfview.loadGraphicItems(self.annotation_model.cache())
+        
+        self.pdfview.renderPage()
 
     def initViewer(self):
         self.pdfview = PdfView(self)
         self.outline_model = OutlineModel()
         self.search_model = SearchModel()
         self.annotation_model = AnnotationModel()
+
+        # --- Custom action ---
 
         # Toolbar button
         self.mouse_action_group = QtGui.QActionGroup(self)
@@ -446,9 +449,6 @@ class PdfViewer(ViewerWidget):
         self.text_selector.setCheckable(True)
         self.text_selector.setShortcut(QtGui.QKeySequence("ctrl+alt+t"))
         self.text_selector.triggered.connect(self.triggerMouseAction)
-
-        # Snipping tool
-        self.capture_area.triggered.connect(lambda: self.capture(self.citation()))
         
         # MarkPen
         self.mark_pen = QtGui.QAction(theme_icon_manager.get_icon(':mark_pen'), "Mark Text", self)
@@ -483,9 +483,6 @@ class PdfViewer(ViewerWidget):
         self.rotate_clockwise.setToolTip("Rotate clockwise")
         self.rotate_clockwise.triggered.connect(lambda: self.pdfview.setRotation(90))
 
-        # Citation
-        self.action_cite.triggered.connect(lambda: self.cite(self.citation()))
-
         # Add Action/Widget to toolbar
         self._toolbar.insertWidget(self.toolbarFreeSpace(), self.page_navigator)
         self._toolbar.insertSeparator(self.toolbarFreeSpace())
@@ -497,10 +494,9 @@ class PdfViewer(ViewerWidget):
         self._toolbar.insertAction(self.toolbarFreeSpace(), self.rotate_anticlockwise)
         self._toolbar.insertAction(self.toolbarFreeSpace(), self.rotate_clockwise)
         self._toolbar.insertSeparator(self.toolbarFreeSpace())
-        self._toolbar.insertAction(self._toolbar_spacer, self.action_create_child_signage)
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.action_cite)
+
         self._toolbar.insertAction(self.toolbarFreeSpace(), self.text_selector)
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.capture_area)
+
         # self._toolbar.insertAction(self.toolbarFreeSpace(), self.mark_pen) #TODO
 
         # Outline Tab
@@ -631,13 +627,21 @@ class PdfViewer(ViewerWidget):
         title = f'"{self.title.toPlainText()}"'
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), "PDF", page] if x)
         return f"[{citation}]"
-
-    def source(self) -> str:
+    
+    def getAnchor(self):
+        anchor = {"type": "pdf",
+                   "page": self.page_navigator.currentPageLabel()}
+        return anchor
+    
+    def source(self) -> dict:
         title = self._document.title
         page = self.page_navigator.currentPageLabel()
-        viewer = self.viewerName()
-        source = f'{{"application":"InspectorMate", "module":"{viewer}", "item":"document", "item_title":"{title}", "page":"{page}"}}'
-        return source
+        return {"application":"InspectorMate",
+                "module":self.viewerName(),
+                "item":"document",
+                "item_title":title,
+                "page":page,
+                "filepath":self._document.filepath.as_posix()}
     
     @Slot(object)
     def onAnnotationAdded(self, annot: RectItem):

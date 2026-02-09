@@ -70,15 +70,26 @@ def getTags(ps_script: str, section_id: str) -> list[OETag]:
         return []
     
     try:
-        data = json.loads(json_text)
+        raw: list[dict] = json.loads(json_text) 
     except Exception as e:
         logger.error(f"Cannot parse data into dict using json. Error={e}")
         return []
     
+    # normalize
+    if raw is None:
+        data: list[dict] = []
+    elif isinstance(raw, dict):
+        data = [raw]
+    elif isinstance(raw, list):
+        if not all(isinstance(t, dict) for t in raw):
+            logger.error("JSON list contains non-dict items")
+            return []
+        data = raw
+    
     try:
-        tags = [OETag(**t) for t in data]
+        tags = [OETag.from_dict(t) for t in data]
     except Exception as e:
-        logger.error(f"Cannot decrompress dict into dataclass")
+        logger.error(f"Cannot decrompress dict into dataclass. Error={e}\n\tData:{data}")
         return []
       
     return tags

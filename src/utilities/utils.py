@@ -38,10 +38,12 @@ def hexuuid():
 def timeuuid():
     return uuid.uuid1().time
 
-def createFolder(fpath: str):
+def createFolder(fpath: str) -> Path:
     _path = Path(fpath)
     if not _path.exists() and _path.parent.exists():
         _path.mkdir()
+    
+    return _path
             
 def open_file(filepath: Path|str, pathtype: Literal["file", "folder"] = "file") -> None:
     """Open file/folder using the operating system default app"""
@@ -445,3 +447,4 @@ def join_html_documents(html_files: list[str], add_headers=False, spacing_mm=10)
     
     merged_html += "</body>\n</html>"
     return merged_html
+
