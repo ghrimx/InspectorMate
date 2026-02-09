@@ -95,6 +95,74 @@ class StatusColorDelegate(QtWidgets.QStyledItemDelegate):
             option.palette.setColor(QtGui.QPalette.ColorRole.Text, QtGui.QColor(color_value))
 
 
+class CellBackgroundDelegate(QtWidgets.QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        color: str = (index.sibling(index.row(), SignageSqlModel.Fields.Background.index)
+                      .data(Qt.ItemDataRole.DisplayRole))
+
+        if color:
+            painter.save()
+            painter.fillRect(option.rect, QtGui.QColor(color))
+            painter.restore()
+
+        super().paint(painter, option, index)
+
+#TODO
+class RoundedColorDotDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def paint(self, painter, option, index):
+        # Only paint dot in the first column
+        if index.column() != 0:
+            super().paint(painter, option, index)
+            return
+
+        # Get color from model (Qt.UserRole + 1 for example)
+        color: str = index.sibling(index.row(), SignageSqlModel.Fields.Background.index).data(Qt.ItemDataRole.DisplayRole)
+        if color.strip() == "":
+            super().paint(painter, option, index)
+            return
+        
+        color = QtGui.QColor(color)
+
+        painter.save()
+
+        # Draw the default item (text)
+        super().paint(painter, option, index)
+
+        if not color:
+            painter.restore()
+            return
+
+        # Determine dot size & position
+        rect = option.rect
+        padding = 2
+        diameter = min(rect.height() - 2 * padding, 12)  # max ~12 px
+        radius = diameter / 2
+
+        center_x = rect.right() - padding - radius
+        center_y = rect.y() + rect.height() / 2
+
+        # Draw circle
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+        painter.setBrush(color)
+        painter.setPen(QtGui.QPen(QtGui.QColor("#202020"), 1))
+
+        painter.drawEllipse(
+            QtCore.QPointF(center_x, center_y),
+            radius,
+            radius
+        )
+
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        size.setHeight(max(size.height(), 18))  # Ensure space for dot
+        return size
+
+
 class VirtualProgressBarDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -195,9 +263,11 @@ class SignageTab(BaseTab):
         note_delegate = NoteColumnDelegate(self.table)
         public_note_delegate = NoteColumnDelegate(self.table, True)
         status_delegate = StatusColorDelegate(self.table)
+        cell_color_delegate = CellBackgroundDelegate(self.table)
         self.progress_delegate = VirtualProgressBarDelegate(self.table)
 
         self.table.setItemDelegate(status_delegate)
+        self.table.setItemDelegateForColumn(SignageSqlModel.Fields.Refkey.index, cell_color_delegate)
         self.table.setItemDelegateForColumn(SignageSqlModel.Fields.Note.index, note_delegate)
         self.table.setItemDelegateForColumn(SignageSqlModel.Fields.PublicNote.index, public_note_delegate)
         self.table.setItemDelegateForColumn(SignageSqlModel.Fields.Progress.index, self.progress_delegate)
@@ -293,6 +363,7 @@ class SignageTab(BaseTab):
         self.toolbar.insertAction(self.action_separator, self.toolbar.addSeparator())
         self.toolbar.insertAction(self.action_separator, self.action_cite)
         self.toolbar.insertAction(self.action_separator, self.action_reach_source)
+        self.toolbar.insertAction(self.action_separator, self.action_highlight)
 
         connector_menu_btn = QtWidgets.QToolButton(self)
         connector_menu_btn.setIcon(theme_icon_manager.get_icon(':links-line'))
@@ -377,6 +448,10 @@ class SignageTab(BaseTab):
                                          "Go to Source",
                                          self,
                                          triggered=self.reachSource)
+        self.action_highlight = QtGui.QAction(theme_icon_manager.get_icon(":mark_pen"),
+                                              "Highlight",
+                                              self,
+                                              triggered= self.colorCell)
         
     def selectedRows(self) -> set[int]:
         """Source model's selected rows"""
@@ -435,6 +510,7 @@ class SignageTab(BaseTab):
         menu.addAction(self.action_delete_signage)
         menu.addAction(self.action_cite)
         menu.addAction(self.action_reach_source)
+        menu.addAction(self.action_highlight)
         menu.exec(self.table.viewport().mapToGlobal(pos))
 
     def onCellClicked(self, index: QtCore.QModelIndex):
@@ -804,6 +880,30 @@ class SignageTab(BaseTab):
             elif module == "loadFromOnenote":
                 target = source_dict.get("link")
                 QtGui.QDesktopServices.openUrl(QtCore.QUrl(target))
+
+    def colorCell(self):
+        indexes = self.table.selectedIndexes()
+        
+        if not indexes:
+            return
+        
+        color: QtGui.QColor = QtWidgets.QColorDialog.getColor(QtGui.QColor(), self)
+        if not color.isValid():
+            return
+        
+        if (color.name(QtGui.QColor.NameFormat.HexRgb) == "#ffffff" 
+            and theme_icon_manager.get_theme() == Theme.LIGHT):
+            color_value = ""
+        elif (color.name(QtGui.QColor.NameFormat.HexRgb) == "#000000" 
+            and theme_icon_manager.get_theme() == Theme.DARK):
+            color_value = ""
+        else:
+            color_value = color.name(QtGui.QColor.NameFormat.HexRgb)
+        
+        for idx in indexes:
+            src_idx = self.proxymodel.mapToSource(idx)
+            bg_idx = src_idx.sibling(src_idx.row(), SignageSqlModel.Fields.Background.index)
+            self.model.setData(bg_idx, color_value, Qt.ItemDataRole.EditRole)
 
     def restoreTableColumnWidth(self):
         """Restore table column width upon GUI initialization"""
