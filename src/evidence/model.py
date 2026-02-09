@@ -116,19 +116,14 @@ class EvidenceModel(QSqlRelationalTableModel):
         self.setRelation(self.Fields.Type.index,
                          QtSql.QSqlRelation("document_type", "type_id", "icon"))       
 
-        self.setFilter(f"workspace_id={AppDatabase.activeWorkspace().id}")
-
-        if not self.select():
-            logger.error(f"Fail to select data from database - Error: {self.lastError().text()}")
-            return
-
         self._renameHeaders()
-        self.init_cache_files()
 
     def refresh(self):
         self.submitAll()
-        self.select()
+        if not self.select():
+            logger.error(f"Fail to select data from database - Error: {self.lastError().text()}")
         self.setFilter(f"workspace_id={AppDatabase.activeWorkspace().id}")
+        self.init_cache_files()
         return super().refresh()
 
     def init_cache_files(self):

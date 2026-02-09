@@ -72,7 +72,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer_dock_widget = QtAds.CDockWidget("Workspace", self)
         self.workspace_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
         self.workspace_explorer = FileSystem(AppDatabase.activeWorkspace().rootpath)
-        self.workspace_explorer.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
         self.workspace_explorer_dock_widget.setWidget(self.workspace_explorer)
         self.workspace_explorer_dock_widget.setMinimumSize(200, 150)
         self.workspace_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
@@ -223,9 +222,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_open_option = QtGui.QAction("Open document with system application",
                                               self.menubar,
                                               triggered=self.saveSettings)
-        self.edit_menu = self.menubar.addMenu("Edit")
         self.file_open_option.setCheckable(True)
-        self.file_open_option.setChecked(True)
+
+        self.edit_menu = self.menubar.addMenu("Edit")
         self.edit_menu.addAction(self.file_open_option)
 
         self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":onenote"),
@@ -252,6 +251,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_menu.addAction(self.notepad_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.listinsight_tab_dock_widget.toggleViewAction())
         self.view_menu.addSeparator()
+
+        self.alternating_table_row_color = QtGui.QAction("Alternating table row color",
+                                                         self.view_menu,
+                                                         triggered=self.saveSettings)
+        self.alternating_table_row_color.setCheckable(True)
+        self.view_menu.addAction(self.alternating_table_row_color)
 
         app_menu = QtWidgets.QMenu("Application FontSize", self.menubar)
         app_menu.addAction(QtGui.QAction("Small", self, triggered=lambda: self.setAppFont(9.0)))
@@ -305,6 +310,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def connectSignals(self):
         self.signage_tree_tab.sigSignageDoubleClicked.connect(self.onSignageDoubleClicked)
+        self.signage_tree_tab.sigOpenNote.connect(self.onOpenNoteTriggered)
         self.evidence_model.modelReset.connect(self.onEvidenceModelReset)
         self.evidence_tab.sigOpenDocument.connect(self.onOpenEvidenceTriggered)
         self.evidence_tab.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
@@ -371,10 +377,19 @@ class MainWindow(QtWidgets.QMainWindow):
             mconf.settings.setValue("regex", text)
 
     def loadSettings(self):
-        if mconf.settings.value("USE_DEFAULT_FILEOPENER") == 'false':
-            self.file_open_option.setChecked(False)
-        else:
-            self.file_open_option.setChecked(True)
+        self.file_open_option.setChecked(mconf.settings.value("USE_DEFAULT_FILEOPENER", False, bool))
+        self.alternating_table_row_color.setChecked(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
+        self.onSettingsChanged()
+
+    @Slot()
+    def saveSettings(self):
+        mconf.settings.setValue("USE_DEFAULT_FILEOPENER", self.file_open_option.isChecked())
+        mconf.settings.setValue("ALTERNATING_TABLE_ROW_COLOR", self.alternating_table_row_color.isChecked())
+        self.onSettingsChanged()
+    
+    def onSettingsChanged(self):
+        self.signage_tree_tab.table.setAlternatingRowColors(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
+        self.evidence_tab.table.setAlternatingRowColors(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
 
     @Slot(str)
     def onSignageDoubleClicked(self, refkey: str):
@@ -409,21 +424,16 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             status_signal.status_message.emit("Cannot open file", 7000)
 
-    @Slot(str)
-    def onOpenNoteTriggered(self, filepath):
-        self.notepad_tab.loadfile(filepath)
+    def onOpenNoteTriggered(self, filepath, anchor = ""):
+        self.notepad_tab.loadfile(filename=filepath, anchor=anchor)
         self.notepad_dock_widget.toggleView()
 
-    @Slot(str, str, str)
-    def onCreateSignageFromNotepad(self, title, source: str, hanchor: str):
+    @Slot(str, dict, str)
+    def onCreateSignageFromNotepad(self, title, source: dict, anchor: str):
         """Create a signage from Notepad/Notebook"""
         if self.signage_tree_tab.createSignage(title, source):
             signage = self.signage_tree_tab.signage_dialog.signage()
-            self.notepad_tab.insertSignage(signage, hanchor)         
-
-    @Slot()
-    def saveSettings(self):
-        mconf.settings.setValue("USE_DEFAULT_FILEOPENER", self.file_open_option.isChecked())
+            self.notepad_tab.insertSignage(signage, anchor)         
 
     def set_window_title(self, text=None):
         if text is not None:
@@ -532,7 +542,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Close all viewer tabs
         dockwidget: QtAds.CDockWidget
         for dockwidget in self.doc_viewers.copy().values():
-            dockwidget.closeDockWidget()  
+            dockwidget.closeDockWidget()
+        
+        status_signal.status_message.emit("Workspace changed!", 5000)
 
     @status_message('Connecting to OneNote...')
     @Slot()

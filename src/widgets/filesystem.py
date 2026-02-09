@@ -9,7 +9,7 @@ class FileSystem(QtWidgets.QTreeView):
         self._model: QtGui.QFileSystemModel = QtGui.QFileSystemModel()
         self.setModel(self._model)
         self.set_root_path(rootpath)
-        self.setColumnWidth(0,150)
+        self.setColumnWidth(0, 150)
         self.setMinimumWidth(150)
         self.setSortingEnabled(True)
         self.hide_columns(range(1, self._model.columnCount()))
@@ -33,6 +33,7 @@ class FileSystem(QtWidgets.QTreeView):
     def set_root_path(self, rootpath: str):
         index = self._model.setRootPath(rootpath)
         self.setRootIndex(index)
+        self.sortByColumn(0, Qt.SortOrder.AscendingOrder)
 
     def hide_columns(self, columns:list[int]):
         """Hide columns.

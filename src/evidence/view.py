@@ -10,6 +10,7 @@ from qtpy import Qt, QtGui, QtCore, Signal, Slot, QtWidgets, QtSql
 from database.database import AppDatabase
 
 from evidence.model import EvidenceModel
+from evidence.style import TABLE_STYLE
 from signage.model import SignageModel, SignageSqlModel
 
 from base_models import ProxyModel
@@ -27,6 +28,7 @@ from widgets.readonly_linedit import ReadOnlyLineEdit
 
 from utilities.config import settings
 from utilities.utils import queryFileNameByID, open_file
+from utilities.clipboard import ClipboardExporter
 from utilities.decorators import status_signal
 
 from qt_theme_manager import theme_icon_manager, Theme
@@ -193,8 +195,8 @@ class StatusColorDelegate(QtWidgets.QStyledItemDelegate):
 
 class EvidenceTab(BaseTab):
     sigOpenDocument = Signal(object, QtCore.QModelIndex)
-    sigCreateSignage = Signal(str, str)
-    sigCreateChildSignage = Signal(int, str)
+    sigCreateSignage = Signal(str, dict)
+    sigCreateChildSignage = Signal(int, dict)
     sigUpdateReviewProgress = Signal()
 
     def __init__(self,
@@ -257,6 +259,9 @@ class EvidenceTab(BaseTab):
         combo_delegate = CompositeDelegate([status_delegate, title_delegate], self.table)
         self.table.setItemDelegateForColumn(self._model.Fields.Title.index, combo_delegate)
 
+        if theme_icon_manager.get_theme() == Theme.LIGHT:
+            self.table.setStyleSheet(TABLE_STYLE)
+
         # --- Right Pane ---
         self.status = QtWidgets.QComboBox()
         self.status.setModel(self._model.relationModel(4))
@@ -310,6 +315,7 @@ class EvidenceTab(BaseTab):
         self.status.activated.connect(self.sigUpdateReviewProgress)
         self.refkey.editingFinished.connect(self.sigUpdateReviewProgress)
         self.refkey.editingFinished.connect(AppDatabase.update_document_signage_id)
+        self.refkey.editingFinished.connect(lambda: self._model.updateRefKey([self.table.currentIndex().row()], self.refkey.text()))
 
         # --- Toolbar ---
         self.toolbar.insertAction(self.action_separator, self.load_file)
@@ -344,17 +350,17 @@ class EvidenceTab(BaseTab):
                                        self,
                                        triggered=self.loadEvidence)
         self.action_auto_refkey = QtGui.QAction(theme_icon_manager.get_icon(":refkey"),
-                                           "Detect refkey",
-                                           self,
-                                           triggered=self.autoRefKey)
+                                                "Detect refkey",
+                                                self,
+                                                triggered=self.autoRefKey)
         self.action_filter_dlg = QtGui.QAction(theme_icon_manager.get_icon(":filter-line"),
-                                       "Filter",
-                                       self,
-                                       triggered=self.setFilters)
+                                               "Filter",
+                                               self,
+                                               triggered=self.setFilters)
         self.action_resetfilter = QtGui.QAction(theme_icon_manager.get_icon(":filter-off-line"),
-                                             "Reset Filters",
-                                             self,
-                                             triggered=self.onResetFilters)
+                                                "Reset Filters",
+                                                self,
+                                                triggered=self.onResetFilters)
         self.action_create_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line"),
                                                    "Create Signage (Ctrl + R)",
                                                    self,
@@ -529,8 +535,7 @@ class EvidenceTab(BaseTab):
         refkey = "refkey: " + refkey if refkey != "" else None
         title = f'"{title}"'
         citation = "; ".join(x for x in [refkey, title, subtitle, reference, extension] if x)
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(f"[{citation}]")
+        ClipboardExporter.toClipboard(filepath, f"[{citation}]")
 
     def copyPath(self):
         index: QtCore.QModelIndex = self.proxy_model.mapToSource(self.table.selectionModel().currentIndex())
@@ -569,7 +574,7 @@ class EvidenceTab(BaseTab):
         
         status_signal.status_message.emit("[Evidence: status updated]", 7000)
 
-        # Force refresh of the table view
+        # Force update of the table view
         self.table.viewport().update()
 
         if hasattr(self, "mapper"):
@@ -666,7 +671,7 @@ class EvidenceTab(BaseTab):
 
     @Slot()
     def createSignage(self):
-        source = f'{{"application":"InspectorMate", "module":"Evidence"}}'
+        source = {"application":"InspectorMate", "module":"Evidence"}
         self.sigCreateSignage.emit("", source)
 
     @Slot()
@@ -677,15 +682,22 @@ class EvidenceTab(BaseTab):
             return
 
         sidx = self.proxy_model.mapToSource(index)
-        signage_id = (sidx.sibling(sidx.row(),
+        r = sidx.row()
+        signage_id = (sidx.sibling(r,
                                    self._model.Fields.SignageID.index)
                                    .data(QtCore.Qt.ItemDataRole.DisplayRole))
         if not signage_id:
             return
 
-        title = sidx.sibling(sidx.row(), self._model.Fields.Title.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
-        uid = sidx.sibling(sidx.row(), self._model.Fields.ID.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
-        source = f'{{"application":"InspectorMate", "module":"Evidence", "item":"document", "item_title":"{title}", "item_id":"{uid}"}}'
+        title = sidx.sibling(r, self._model.Fields.Title.index).data(Qt.ItemDataRole.DisplayRole)
+        filepath = sidx.sibling(r, self._model.Fields.Filepath.index).data(Qt.ItemDataRole.DisplayRole)
+        uid = sidx.sibling(r, self._model.Fields.ID.index).data(Qt.ItemDataRole.DisplayRole)
+        source = {"application":"InspectorMate",
+             "module":"Evidence",
+             "item":"document",
+             "item_title":title,
+             "item_id":uid,
+             "filepath":filepath}       
         self.sigCreateChildSignage.emit(signage_id, source)
 
     def _on_load_ended(self, m:str = ""):
@@ -729,6 +741,7 @@ class EvidenceTab(BaseTab):
     def refresh(self):
         self._model.refresh()
         self.doc_filter.setRootPath(AppDatabase.activeWorkspace().evidence_path)
+        self.onResetFilters()
 
     def closeEvent(self, a0):
         self.saveTableColumnWidth()

@@ -54,6 +54,8 @@ class ImageViewer(ViewerWidget):
         self._imageView.setScaledContents(True)
         self.scroll_area.setWidgetResizable(False)
 
+        # --- Custom action ---
+
         # Zoom
         self.action_zoom_in = QtWidgets.QToolButton(self._toolbar)
         self.action_zoom_in.setIcon(QtGui.QIcon(":zoom-in"))
@@ -75,17 +77,6 @@ class ImageViewer(ViewerWidget):
         self.action_fit_window.setCheckable(True)
         self.action_fit_window.clicked.connect(self.fitToWindow)
         self._toolbar.insertWidget(self.toolbarFreeSpace(), self.action_fit_window)
-
-        # Citation
-        self.action_cite.triggered.connect(lambda: self.cite(self.citation()))
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.action_cite)
-
-        # Snipping tool
-        self.capture_area.triggered.connect(lambda: self.capture(self.citation()))
-        self._toolbar.insertAction(self.toolbarFreeSpace(), self.capture_area)
-
-        # Create Signage
-        self._toolbar.insertAction(self._toolbar_spacer, self.action_create_child_signage)
 
         self.normalSize()
 
@@ -115,6 +106,9 @@ class ImageViewer(ViewerWidget):
         title = f'"{self.title.toPlainText()}"'
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"
+    
+    def getAnchor(self):
+        return None
 
     Slot()
     def onActionZoomInTriggered(self):
@@ -139,8 +133,10 @@ class ImageViewer(ViewerWidget):
 
         self.updateActions()
     
-    def source(self) -> str:
+    def source(self) -> dict:
         title = self._document.title
-        viewer = self.viewerName()
-        source = f'{{"application":"InspectorMate", "module":"{viewer}", "item":"document", "item_title":"{title}"}}'
-        return source
+        return {"application":"InspectorMate",
+                "module":self.viewerName(),
+                "item":"document",
+                "item_title":title,
+                "filepath":self._document.filepath.as_posix()}

@@ -10,8 +10,9 @@ from widgets.toolbar import ToolBar
 from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.richtexteditor import RichTextEditor
 from widgets.readonly_linedit import ReadOnlyLineEdit
+from widgets.snippingtool import Screenshot
 
-from snipping.snippingtool import Capture
+from utilities.clipboard import ClipboardExporter
 
 from qt_theme_manager import theme_icon_manager
 
@@ -19,12 +20,13 @@ logger = logging.getLogger(__name__)
 
 
 class ViewerWidget(QtWidgets.QWidget):
-    sigCreateChildSignage = Signal(int, str, str)
+    sigCreateChildSignage = Signal(int, dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._document: Document = None
 
+        self.createAction()
         self.createToolbar(parent)
 
         self.left_pane_folded = False
@@ -69,8 +71,6 @@ class ViewerWidget(QtWidgets.QWidget):
         
         self.onFoldRightSidebarTriggered()
 
-        self.createAction()
-
     @classmethod
     def viewerName(cls):
         return cls.__name__
@@ -88,13 +88,23 @@ class ViewerWidget(QtWidgets.QWidget):
         self._document = doc
 
     def createAction(self):
-        self.capture_area = QtGui.QAction(theme_icon_manager.get_icon(":capture_area"), "Capture Area (Ctrl+Alt+S)", self)
+        self.capture_area = QtGui.QAction(theme_icon_manager.get_icon(":capture_area"),
+                                          "Capture Area (Ctrl+Alt+S)",
+                                          self,
+                                          triggered = self.captureArea)
         self.capture_area.setCheckable(False)
         self.capture_area.setShortcut(QtGui.QKeySequence("Ctrl+Alt+S"))
     
         self.action_cite = QtGui.QAction(theme_icon_manager.get_icon(":double-quotes"), "Copy citation (Ctrl+Alt+C)", self)
         self.action_cite.setShortcut(QtGui.QKeySequence("Ctrl+Alt+C"))
         self.action_cite.setToolTip("Copy citation (Ctrl+Alt+C)")
+        self.action_cite.triggered.connect(self.cite)
+
+        self.action_create_child_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line-child"),
+                                                         "Create Child Signage (Ctrl + N)",
+                                                         self,
+                                                         triggered = self.createChildSignage)
+        self.action_create_child_signage.setShortcut(QtGui.QKeySequence("Ctrl+N"))
 
     def createInfoTab(self):
         self.info_tab = QtWidgets.QWidget(self)
@@ -142,17 +152,15 @@ class ViewerWidget(QtWidgets.QWidget):
         spacer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         self.action_first_separator = self._toolbar.addSeparator()
 
+        # Default action
+        self.default_action_separator = self._toolbar.addSeparator()
+        self._toolbar.addAction(self.action_create_child_signage)
+        self._toolbar.addAction(self.action_cite)
+        self._toolbar.addAction(self.capture_area)
+
         # Spacer
         self._toolbar_spacer = self._toolbar.addWidget(spacer)
-
-        # Create Child Signage
-        # Action inserted to toolbar after init
-        self.action_create_child_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line-child"),
-                                                         "Create Child Signage (Ctrl + N)",
-                                                         self,
-                                                         triggered = self.createChildSignage)
-        self.action_create_child_signage.setShortcut(QtGui.QKeySequence("Ctrl+N"))
-
+        
         # Fold Right Pane
         self.fold_right_pane = QtGui.QAction(theme_icon_manager.get_icon(":sidebar-unfold-line"), "Fold right pane", self)
         self.fold_right_pane.triggered.connect(self.onFoldRightSidebarTriggered)
@@ -162,7 +170,7 @@ class ViewerWidget(QtWidgets.QWidget):
         return self._toolbar
 
     def toolbarFreeSpace(self):
-        return self._toolbar_spacer
+        return self.default_action_separator
     
     def createMapper(self, model: EvidenceModel, index: QtCore.QModelIndex):
         self.status_model = model.relationModel(model.Fields.Status.index)
@@ -221,18 +229,30 @@ class ViewerWidget(QtWidgets.QWidget):
             self.fold_right_pane.setIcon(theme_icon_manager.get_icon(':sidebar-unfold-line'))
 
     @abstractmethod
-    def citation(self):
+    def citation(self) -> str:
+        ...
+    
+    @abstractmethod
+    def getAnchor(self) -> dict|None:
         ...
 
     @Slot()
-    def cite(self, citation):
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(citation)
+    def cite(self):
+        ClipboardExporter.toClipboard(src_file=self._document.filepath.as_posix(),
+                                      caption=self.citation(),
+                                      anchor=self.getAnchor())
+
+    def onScreenCaptured(self, pixmap: QtGui.QPixmap):
+        ClipboardExporter.toClipboard(src_file=self._document.filepath.as_posix(),
+                                      caption=self.citation(),
+                                      anchor=self.getAnchor(),
+                                      pixmap=pixmap)
 
     @Slot()
-    def capture(self, citation):
-        self.capturer = Capture(source=citation)
-        self.capturer.show()
+    def captureArea(self):
+        self.screenshot = Screenshot()
+        self.screenshot.captured.connect(self.onScreenCaptured)
+        self.screenshot.show()
 
     def source(self) -> str:
         ...
@@ -246,7 +266,7 @@ class ViewerWidget(QtWidgets.QWidget):
         except Exception as e:
             signage_id = -1
 
-        self.sigCreateChildSignage.emit(signage_id, "", self.source())
+        self.sigCreateChildSignage.emit(signage_id, self.source())
 
     def showEvent(self, event: QtGui.QShowEvent):
         super().showEvent(event)
