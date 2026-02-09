@@ -412,6 +412,7 @@ class SignageSqlModel(QSqlRelationalTableModel):
         ID: DatabaseField
         ParentID: DatabaseField
         Workspace: DatabaseField
+        Background: DatabaseField
         DocCount: DatabaseField # virtual column
         Progress: DatabaseField # virtual column
 
@@ -459,6 +460,7 @@ class SignageSqlModel(QSqlRelationalTableModel):
         self.Fields.Source = DatabaseField('source', self.fieldIndex('source'), False)
         self.Fields.DocCount = DatabaseField('Doc', self.columnCount() - 2, False)
         self.Fields.Progress = DatabaseField('Progress', self.columnCount() - 1, True)
+        self.Fields.Background = DatabaseField('Background', self.fieldIndex('background'), False)
 
     def _renameHeaders(self):
         for field in self.Fields.fields():
