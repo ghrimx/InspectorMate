@@ -189,3 +189,5 @@ data/
 database.db
 requirements.txt
 tests/
+.compile.md
+version.txt
