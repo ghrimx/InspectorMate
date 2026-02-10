@@ -704,15 +704,17 @@ class SignageModel(TreeModel):
             except Exception as e:
                 logger.error(f"Fail to load json: '{source_json}'. error:{e}")
                 continue
-            application = source.get("application")
-            if application == "OneNote":
-                object_id = source.get("object_id")
-                self.connector_cache.setdefault("OneNote", set()).add(object_id)
-                connector_cnt += 1
-            elif application == "Docx":
-                object_id = source.get("object_id")
-                self.connector_cache.setdefault("Docx", set()).add(object_id)        
-                connector_cnt += 1
+
+            if isinstance(source, dict):
+                application = source.get("application")
+                if application == "OneNote":
+                    object_id = source.get("object_id")
+                    self.connector_cache.setdefault("OneNote", set()).add(object_id)
+                    connector_cnt += 1
+                elif application == "Docx":
+                    object_id = source.get("object_id")
+                    self.connector_cache.setdefault("Docx", set()).add(object_id)        
+                    connector_cnt += 1
 
         logger.info(f"Connector cache's size: {connector_cnt}")
 

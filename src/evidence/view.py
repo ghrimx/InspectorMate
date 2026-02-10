@@ -236,9 +236,7 @@ class EvidenceTab(BaseTab):
         self.table.customContextMenuRequested.connect(self.showContextMenu)
         self.table.setModel(self.proxy_model)
         self.table.setSortingEnabled(True)
-        self.table.sortByColumn(self._model.Fields.Refkey.index,
-                                Qt.SortOrder.AscendingOrder)
-
+        
         for field in self._model.Fields.fields():
             if not field.visible:
                 self.table.hideColumn(field.index)
@@ -700,9 +698,11 @@ class EvidenceTab(BaseTab):
              "filepath":filepath}       
         self.sigCreateChildSignage.emit(signage_id, source)
 
-    def _on_load_ended(self, m:str = ""):
+    def _on_load_ended(self, m: str = ""):
         self.sigUpdateReviewProgress.emit()
         self.stopSpinner(m)
+        self.table.sortByColumn(SignageSqlModel.Fields.Title.index, QtCore.Qt.SortOrder.AscendingOrder)
+        self.table.sortByColumn(self._model.Fields.Refkey.index, QtCore.Qt.SortOrder.AscendingOrder)
 
     @Slot()
     def loadEvidence(self):
