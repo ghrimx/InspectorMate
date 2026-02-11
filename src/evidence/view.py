@@ -701,8 +701,8 @@ class EvidenceTab(BaseTab):
     def _on_load_ended(self, m: str = ""):
         self.sigUpdateReviewProgress.emit()
         self.stopSpinner(m)
-        self.table.sortByColumn(SignageSqlModel.Fields.Title.index, QtCore.Qt.SortOrder.AscendingOrder)
-        self.table.sortByColumn(self._model.Fields.Refkey.index, QtCore.Qt.SortOrder.AscendingOrder)
+        self.table.sortByColumn(EvidenceModel.Fields.Title.index, QtCore.Qt.SortOrder.AscendingOrder)
+        self.table.sortByColumn(EvidenceModel.Fields.Refkey.index, QtCore.Qt.SortOrder.AscendingOrder)
 
     @Slot()
     def loadEvidence(self):
