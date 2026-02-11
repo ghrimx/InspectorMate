@@ -107,7 +107,7 @@ class CellBackgroundDelegate(QtWidgets.QStyledItemDelegate):
 
         super().paint(painter, option, index)
 
-#TODO
+#TODO: see CellBackgroundDelegate
 class RoundedColorDotDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
