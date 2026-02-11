@@ -42,6 +42,8 @@ class Document:
     workspace_id: int = 0
 
     def exists(self) -> bool:
+        if not self.filepath:
+            return False
         return self.filepath.exists()
     
     def extension(self) -> str:
