@@ -348,24 +348,44 @@ class TextEdit(QtWidgets.QTextEdit):
         image.save(path, "PNG")
         return path
     
-    def _insert_image_from_file(self, image_path: str, caption: str = ""):
+    #TODO: remove
+    def _insert_image_from_file(self, image_path: str, caption: str = "", image = None):
         url = QtCore.QUrl.fromLocalFile(image_path).toString()
-        html = f"<img src='{url}'>"
+
+        if image is None:
+            image = QtGui.QImage(image_path)
+
+        w = image.width()
+        h = image.height()
+
+        html = f"<img src='{url}' width='{w}' height='{h}'>"
+
         if caption:
             html = html + f'<p>{caption}</p>'
+
         self.textCursor().insertHtml(html)
 
     def insertFromMimeData(self, source: QtCore.QMimeData):
-        
         # Image + URL > link image to file
         if source.hasImage() and source.hasUrls():
+            image = QtGui.QImage(source.imageData())
             
             caption = source.text()
             url = source.urls()[0]
-            image = source.imageData()
-            image_path = self._persist_image(image)
-            href = url.toString()          
 
+            image_path = self._persist_image(image)
+
+            cursor = self.textCursor()
+
+            # insert image
+            fmt = QtGui.QTextImageFormat()
+            fmt.setName(image_path)
+            cursor.insertImage(fmt)
+
+            cursor.insertBlock()
+
+            # insert caption as hyperlink
+            href = url.toString()          
             if source.hasFormat("application/x-inspectormate-anchor"):
                 anchor = json.loads(
                     bytes(source.data("application/x-inspectormate-anchor"))
@@ -375,21 +395,44 @@ class TextEdit(QtWidgets.QTextEdit):
             else:
                 hlink = f'<a href="{href}">{caption}</a>'
 
-            if url.isLocalFile():
-                self._insert_image_from_file(image_path, hlink)
-                return
-            
-        # HTML already present > let Qt handle it
-        if source.hasHtml():
-            super().insertFromMimeData(source)
+            cursor.insertHtml(hlink)
             return
 
         # Image only > persist and link
         if source.hasImage():
-            image = source.imageData()
-            path = self._persist_image(image)
-            self._insert_image_from_file(path)
+            image = QtGui.QImage(source.imageData())
+            image_path = self._persist_image(image)
+            cursor = self.textCursor()
+
+            # insert image
+            fmt = QtGui.QTextImageFormat()
+            fmt.setName(image_path)
+            cursor.insertImage(fmt)
             return
+        
+        # Handle url
+        if source.hasText():
+            text = source.text().strip()
+
+            url = QtCore.QUrl.fromUserInput(text)
+            if url.isValid() and url.scheme():
+                cursor = self.textCursor()
+
+                fmt = QtGui.QTextCharFormat()
+                fmt.setAnchor(True)
+                fmt.setAnchorHref(url.toString())
+                fmt.setFontUnderline(True)
+                fmt.setForeground(QtGui.QColor("#003e92"))
+
+                cursor.insertText(text, fmt)
+
+                # reset formatting
+                txtfmt = QtGui.QTextCharFormat()
+                blockfmt = QtGui.QTextBlockFormat()
+                txtfmt.setAnchor(False)
+                cursor.setCharFormat(txtfmt)
+                cursor.insertBlock(blockfmt, txtfmt)
+                return
 
         # Fallback
         super().insertFromMimeData(source)
@@ -423,7 +466,6 @@ class TextEdit(QtWidgets.QTextEdit):
             return e
         finally:
             self.document().setModified(False)
-            return None
 
     def merge_format_on_word_or_selection(self, fmt: QtGui.QTextCharFormat):
         if not self._cursor.hasSelection():
@@ -442,27 +484,32 @@ class TextEdit(QtWidgets.QTextEdit):
 
     @classmethod
     def load(cls, filename: str):
-        fh = None
+        fh = QtCore.QFile(filename)
+
+        if not fh.open(QtCore.QIODevice.OpenModeFlag.ReadOnly):
+            error = fh.errorString()
+            logger.error(f"RichTextEditor -- Open Error: Failed to open {filename}: {error}")
+            QtWidgets.QMessageBox.warning(None, 
+                                          "RichTextEditor -- Open Error",
+                                          f"Failed to open {filename}:\n{error}"
+                                          )
+            return None
+
         try:
-            fh = QtCore.QFile(filename)
-            if not fh.open(QtCore.QIODevice.OpenModeFlag.ReadOnly):
-                logger.error(f"RichTextEditor -- Open Error:\nFailed to open {filename}: {IOError(fh.errorString())}")
-                QtWidgets.QMessageBox.warning(cls,
-                                              "RichTextEditor -- Open Error",
-                                              f"Failed to open {cls.filename}: {IOError(fh.errorString())}")
-                return
             stream = QtCore.QTextStream(fh)
             stream.setEncoding(QtCore.QStringConverter.Encoding.Utf8)
             text = stream.readAll()
-        except EnvironmentError as e:
-            QtWidgets.QMessageBox.warning(cls,
+        except Exception as e:
+            logger.error(f"RichTextEditor -- Load Error: {filename}: {e}")
+            QtWidgets.QMessageBox.warning(None,
                                           "RichTextEditor -- Load Error",
-                                          f"Failed to load {filename}: {e}")
-            return
+                                          f"Failed to load {filename}:\n{e}"
+                                          )
+            return None
         finally:
-            if fh is not None:
-                fh.close()
-            return cls(filename, text)
+            fh.close()
+
+        return cls(filename, text)
     
     @Slot()
     def textBold(self):
@@ -1298,6 +1345,8 @@ class Notebook(QtWidgets.QWidget):
     @Slot()
     def editLink(self):
         cursor = self.active_mdi_child().textCursor()
+        if not cursor.hasSelection():
+            cursor.select(QtGui.QTextCursor.SelectionType.LineUnderCursor)
         fmt: QtGui.QTextCharFormat = cursor.charFormat()
 
         if fmt.isAnchor():

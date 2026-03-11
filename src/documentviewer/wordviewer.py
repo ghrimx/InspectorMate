@@ -131,7 +131,7 @@ class WordViewer(ViewerWidget):
 
     Slot()
     def citation(self) -> str:
-        refkey =  "refkey: " + self.refKey.text() if self.refKey.text() != "" else None
+        refkey =  "refkey=" + self.refKey.text() if self.refKey.text() != "" else None
         title = f'"{self.title.toPlainText()}"'
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"

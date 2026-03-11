@@ -20,6 +20,7 @@ def main() -> int:
         int: The exit status code.
     """
     # Initialize the App
+    QtGui.QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.Round)
     app: QtWidgets.QApplication = QtWidgets.QApplication(sys.argv)
     app.setOrganizationName("FAMHP")
     app.setOrganizationDomain("famhp.net")
