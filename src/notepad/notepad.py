@@ -364,8 +364,17 @@ class TextEdit(QtWidgets.QTextEdit):
             html = html + f'<p>{caption}</p>'
 
         self.textCursor().insertHtml(html)
+    
+    def isWebUrl(self, text: str) -> bool:
+        text_lower = text.lower()
+        for w in ['www', 'http', 'https', 'href']:
+            if w.lower() in text_lower:
+                return True
+        return False
 
+    #TODO: to review
     def insertFromMimeData(self, source: QtCore.QMimeData):
+        cursor = self.textCursor()
         # Image + URL > link image to file
         if source.hasImage() and source.hasUrls():
             image = QtGui.QImage(source.imageData())
@@ -375,7 +384,6 @@ class TextEdit(QtWidgets.QTextEdit):
 
             image_path = self._persist_image(image)
 
-            cursor = self.textCursor()
 
             # insert image
             fmt = QtGui.QTextImageFormat()
@@ -402,7 +410,6 @@ class TextEdit(QtWidgets.QTextEdit):
         if source.hasImage():
             image = QtGui.QImage(source.imageData())
             image_path = self._persist_image(image)
-            cursor = self.textCursor()
 
             # insert image
             fmt = QtGui.QTextImageFormat()
@@ -410,13 +417,17 @@ class TextEdit(QtWidgets.QTextEdit):
             cursor.insertImage(fmt)
             return
         
+        if source.hasHtml() and not source.hasImage():
+            html = source.html()
+            cursor.insertHtml(html)
+            return
+        
         # Handle url
         if source.hasText():
             text = source.text().strip()
 
-            url = QtCore.QUrl.fromUserInput(text)
-            if url.isValid() and url.scheme():
-                cursor = self.textCursor()
+            if self.isWebUrl(text):
+                url = QtCore.QUrl.fromUserInput(text)
 
                 fmt = QtGui.QTextCharFormat()
                 fmt.setAnchor(True)
@@ -432,7 +443,10 @@ class TextEdit(QtWidgets.QTextEdit):
                 txtfmt.setAnchor(False)
                 cursor.setCharFormat(txtfmt)
                 cursor.insertBlock(blockfmt, txtfmt)
-                return
+            else:
+                cursor.insertText(text)
+            
+            return
 
         # Fallback
         super().insertFromMimeData(source)

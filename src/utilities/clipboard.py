@@ -10,6 +10,11 @@ class ClipboardExporter:
 
     @staticmethod
     def toClipboard(src_file: str, caption = "", anchor: dict = None, pixmap: QtGui.QPixmap = None):
+        """
+            src_file: source from where the capture is made
+            caption: text underneath the capture
+            anchor: position on the src_file e.g. page
+        """
         clipboard = QtWidgets.QApplication.clipboard()
 
         def _do_copy():
