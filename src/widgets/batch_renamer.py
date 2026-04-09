@@ -109,6 +109,19 @@ class BatchRenameWidget(QWidget):
         options_layout.addWidget(self.position_box)
         layout.addLayout(options_layout)
 
+        # Slicing
+        slice_layout = QHBoxLayout()
+        self.start_slicing = QLineEdit('0')
+        self.end_slicing = QLineEdit('0')
+        slicing_validator = QIntValidator(0, 99)
+        self.start_slicing.setValidator(slicing_validator)
+        self.end_slicing.setValidator(slicing_validator)
+        slice_layout.addWidget(QLabel("Slice:"))
+        slice_layout.addWidget(self.start_slicing)
+        slice_layout.addWidget(QLabel(":"))
+        slice_layout.addWidget(self.end_slicing)
+        layout.addLayout(slice_layout)
+
         # Add string
         add_str_layout = QHBoxLayout()
         add_str_layout.addWidget(QLabel("Prefix:"))
@@ -187,6 +200,8 @@ class BatchRenameWidget(QWidget):
         self.regex_repl_input.textChanged.connect(self.preview_renames)
         self.position_box.currentIndexChanged.connect(self.preview_renames)
         self.regex_checkbox.stateChanged.connect(self.preview_renames)
+        self.start_slicing.textChanged.connect(self.preview_renames)
+        self.end_slicing.textChanged.connect(self.preview_renames)
 
     @Slot(Qt.CheckState)
     def update_checkbox(self, state: Qt.CheckState):
@@ -281,7 +296,9 @@ class BatchRenameWidget(QWidget):
         replacement = self.replace_input.text()
         prefix = self.prefix_input.text()
         suffix = self.suffix_input.text()
-        position = self.position_box.currentText()
+        position = self.position_box.currentText()    
+        start_slicing = int(self.start_slicing.text()) if self.start_slicing.text() else 0
+        end_slicing = int(self.end_slicing.text()) if self.end_slicing.text() else 0
 
         use_regex = self.regex_checkbox.isChecked()
         regex_pattern = self.regex_pattern_input.text()
@@ -314,8 +331,15 @@ class BatchRenameWidget(QWidget):
                         name = replacement + name[count:]
                     else:
                         name = name[:-count] + replacement if count <= len(name) else replacement
+                
 
                 name = prefix + name + suffix
+
+                if end_slicing > 0:
+                    name = name[start_slicing:end_slicing]
+                else:
+                    name = name[start_slicing:len(name)]
+
                 new_path = path.with_name(name + ext)
 
                 if path != new_path:
