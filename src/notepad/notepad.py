@@ -904,7 +904,8 @@ class Notebook(QtWidgets.QWidget):
         self.mdi.subWindowActivated.connect(self.onSubWindowActivated)
 
     def createActions(self):
-        self.action_addnote = QtGui.QAction(theme_icon_manager.get_icon(':file_add'), "Add note (Ctrl+N)", self, triggered=self.addNote)
+        self.action_addnote = QtGui.QAction(theme_icon_manager.get_icon(':file_add'), "Add blank note (Ctrl+N)", self, triggered=self.addNote)
+        self.action_addNoteFromTemplate = QtGui.QAction(theme_icon_manager.get_icon(''), "Add from template", self, triggered=self.addNoteFromTemplate)
         self.action_editnote = QtGui.QAction(theme_icon_manager.get_icon(':file-edit-line'), "Edit note (Ctrl+O)", self, triggered=self.editNote)
 
         self.action_minimizeAll = QtGui.QAction(theme_icon_manager.get_icon(':folder-2-line'), "Minimize", self, triggered=self.minimizeAll)
@@ -983,6 +984,16 @@ class Notebook(QtWidgets.QWidget):
     def createToolbar(self):
         self.toolbar = QtWidgets.QToolBar(self)
 
+        file_toolbutton = QtWidgets.QToolButton(self)
+        file_toolbutton.setIcon(theme_icon_manager.get_icon(':file_add'))
+        file_toolbutton.setText("File")
+        file_toolbutton.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
+        file_menu = QtWidgets.QMenu("File menu", self)
+        file_menu.addAction(self.action_addnote)
+        file_menu.addAction(self.action_addNoteFromTemplate)
+        file_menu.addAction(self.action_editnote)
+        file_toolbutton.setMenu(file_menu)
+
         # View menu
         viewmenu_toolbutton = QtWidgets.QToolButton(self)
         viewmenu_toolbutton.setIcon(theme_icon_manager.get_icon(':eye-line'))
@@ -1049,8 +1060,7 @@ class Notebook(QtWidgets.QWidget):
         self.line_spacing_toolbutton.setMenu(self.line_spacing_menu)
         
         # Add to Toolbar
-        self.toolbar.addAction(self.action_addnote)
-        self.toolbar.addAction(self.action_editnote)
+        self.toolbar.addWidget(file_toolbutton)
         self.toolbar.addWidget(viewmenu_toolbutton)
         self.toolbar.addWidget(self.windowmenu_toolbutton)
         self.toolbar.addSeparator()
@@ -1450,6 +1460,21 @@ class Notebook(QtWidgets.QWidget):
             f.close()
 
         self.loadfile(fname[0], fname[0])
+
+    def addNoteFromTemplate(self):
+        template = QtWidgets.QFileDialog.getOpenFileName(parent=None,
+                                                         caption="Select template",
+                                                         directory=mconf.Config.app_data_path.joinpath("template").as_posix(),
+                                                         filter="Text files (*.html *.*)")
+        
+        if template[0] == "":
+            return
+        
+        fname, ok = QtWidgets.QInputDialog.getText(self, "Input filename", "Title:")
+        if ok and fname.strip() != "":
+            import shutil
+            fcopy = shutil.copy2(template[0], f"{AppDatabase.activeWorkspace().notebook_path}/{fname}.html")    
+            self.loadfile(fcopy, fname)
 
     def editNote(self):
         fname = QtWidgets.QFileDialog.getOpenFileName(parent=None,
