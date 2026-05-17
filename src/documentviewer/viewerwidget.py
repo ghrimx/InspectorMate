@@ -70,6 +70,7 @@ class ViewerWidget(QtWidgets.QWidget):
         self.setLayout(self.vbox)
         
         self.onFoldRightSidebarTriggered()
+        self.onFoldLeftSidebarTriggered()
 
     @classmethod
     def viewerName(cls):

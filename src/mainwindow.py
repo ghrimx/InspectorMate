@@ -1,4 +1,4 @@
-from qtpy import (QtCore, Qt, QtGui, QtWidgets, QtAds, Slot, QtSql)
+from qtpy import (QtCore, Qt, QtGui, QtWidgets, QtAds, Slot)
 from qt_theme_manager import theme_icon_manager, Theme
 import logging
  
@@ -18,6 +18,7 @@ from onenote.view import OnenotePickerDialog
 
 from documentviewer.viewerfactory import ViewerFactory
 from documentviewer.viewerwidget import ViewerWidget
+from documentviewer.viewermanager import DockInDockWidget
 
 from notepad.notepad import Notebook
 
@@ -46,26 +47,24 @@ from pyqtspinner import WaitingSpinner
 
 class MainWindow(QtWidgets.QMainWindow):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.force_close = False
         self.signage_treemodel = SignageModel()
         self.evidence_model = EvidenceModel()
         self.viewer_factory = ViewerFactory(self.evidence_model, self)
         self.workspace_manager =  None
         self.connector_model = ConnectorModel()
-        self.doc_viewers = {}
-
-    def initUI(self):
-        """Initialize the MainWindow User Interface"""
 
         QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.OpaqueSplitterResize, True)
         QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.XmlCompressionEnabled, False)
         QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)
-        QtAds.CDockManager.setAutoHideConfigFlags(QtAds.CDockManager.eAutoHideFlag.DefaultAutoHideConfig)
+        QtAds.CDockManager.setAutoHideConfigFlag(QtAds.CDockManager.eAutoHideFlag.DefaultAutoHideConfig, True)
         self.dock_manager = QtAds.CDockManager(self)
-       
-        self.setGeometry(100, 100, 800, 600)
+
+    def initUI(self):
+        """Initialize the MainWindow User Interface"""
+           
         self.set_window_title(AppDatabase.activeWorkspace().name)
 
         # Workspace FileSystem Sidebar
@@ -75,7 +74,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer_dock_widget.setWidget(self.workspace_explorer)
         self.workspace_explorer_dock_widget.setMinimumSize(200, 150)
         self.workspace_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
-        self.workspace_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.workspace_explorer_dock_widget)
+        self.workspace_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft,
+                                                                                      self.workspace_explorer_dock_widget)
         self.workspace_doc_widget_container.setMinimumWidth(250)
 
         # Evidence Explorer FileSystem Sidebar
@@ -85,7 +85,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.evidence_explorer_dock_widget.setWidget(self.evidence_explorer)
         self.evidence_explorer_dock_widget.setMinimumSize(200, 150)
         self.evidence_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
-        self.evidence_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.evidence_explorer_dock_widget)
+        self.evidence_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft,
+                                                                                     self.evidence_explorer_dock_widget)
         self.evidence_doc_widget_container.setMinimumWidth(250)
 
         # Notebook Explorer FileSystem Sidebar
@@ -95,37 +96,43 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notebook_explorer_dock_widget.setWidget(self.notebook_explorer)
         self.notebook_explorer_dock_widget.setMinimumSize(200, 150)
         self.notebook_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
-        self.notebook_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.notebook_explorer_dock_widget)
+        self.notebook_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft,
+                                                                                     self.notebook_explorer_dock_widget)
         self.notebook_doc_widget_container.setMinimumWidth(250)
 
+        # Emoji Sidebar
         self.emoji_widget_dock_widget = QtAds.CDockWidget("Emoji", self)
         self.emoji_widget = EmojiGridWidget()
         self.emoji_widget_dock_widget.setWidget(self.emoji_widget)
         self.emoji_widget_dock_widget.setMinimumSize(200, 150)
         self.emoji_widget_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
-        self.emoji_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft, self.emoji_widget_dock_widget)
+        self.emoji_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft,
+                                                                                  self.emoji_widget_dock_widget)
         self.emoji_doc_widget_container.setMinimumWidth(250)
         self.emoji_widget_dock_widget.toggleView(False)
 
         # Signage      
-        self.signage_dock_widget = QtAds.CDockWidget("Signage", self)
+        self.signage_dock_widget = QtAds.CDockWidget("Signage")
         self.signage_tree_tab = SignageTab(self.signage_treemodel, self.startSpinner, self.stopSpinner)
         self.signage_dock_widget.setWidget(self.signage_tree_tab)
         self.signage_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.signage_dock_widget.resize(250, 150)
         self.signage_dock_widget.setMinimumSize(200, 150)
-        self.signage_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.LeftDockWidgetArea, self.signage_dock_widget)
+        main_dock_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
+                                                         self.signage_dock_widget)
         if theme_icon_manager.get_theme() == Theme.DARK:
-            self.signage_area.setStyleSheet("color: white;")
+            main_dock_area.setStyleSheet("color: white;")
 
-         # Notebook widget
+        # Notebook widget
         self.notepad_tab = Notebook(self)
         self.notepad_dock_widget = QtAds.CDockWidget("Notebook", self)
         self.notepad_dock_widget.setWidget(self.notepad_tab)
         self.notepad_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.notepad_dock_widget.resize(250, 150)
         self.notepad_dock_widget.setMinimumSize(200, 150)
-        self.notepad_area = self.dock_manager.addDockWidgetTabToArea(self.notepad_dock_widget, self.signage_area)
+        self.notepad_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
+                                                            self.notepad_dock_widget,
+                                                            main_dock_area)
         self.notepad_tab.sigCreateSignage.connect(self.onCreateSignageFromNotepad)
 
         # Document widget
@@ -138,7 +145,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.evidence_tab_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.evidence_tab_dock_widget.resize(250, 150)
         self.evidence_tab_dock_widget.setMinimumSize(200, 150)
-        self.evidence_tab_area = self.dock_manager.addDockWidgetTabToArea(self.evidence_tab_dock_widget, self.signage_area)
+        self.evidence_tab_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
+                                                                 self.evidence_tab_dock_widget,
+                                                                 main_dock_area)
 
         # Listinsight widget
         self.listinsight = ListinsightWidget(f"{AppDatabase.activeWorkspace().rootpath}/ListInsight", self)
@@ -147,8 +156,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.listinsight_tab_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
         self.listinsight_tab_dock_widget.resize(250, 150)
         self.listinsight_tab_dock_widget.setMinimumSize(200, 150)
-        self.listinsight_tab_area = self.dock_manager.addDockWidgetTabToArea(self.listinsight_tab_dock_widget, self.signage_area)
+        self.listinsight_tab_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
+                                                                    self.listinsight_tab_dock_widget,
+                                                                    main_dock_area)
         self.listinsight_tab_dock_widget.toggleView(False)
+
+        # Viewer manager
+        self.viewer_manager = DockInDockWidget(self)
+        self.viewer_manager_cdock = QtAds.CDockWidget("Document Viewer", self)
+        self.viewer_manager_cdock.setWidget(self.viewer_manager)
+        self.dock_manager = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
+                                                            self.viewer_manager_cdock,
+                                                            main_dock_area)
+        self.viewer_manager_cdock.toggleView(False)
 
         # Menubar
         self.createMenubar()
@@ -250,6 +270,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_menu.addAction(self.evidence_tab_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.notepad_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.listinsight_tab_dock_widget.toggleViewAction())
+        self.view_menu.addAction(self.viewer_manager_cdock.toggleViewAction())
+        self.view_menu.addSeparator()
+        self.view_menu.addAction(QtGui.QAction("Close all document viewer",
+                                               self,
+                                               triggered=self.viewer_manager.closeAllTabWidget))
         self.view_menu.addSeparator()
 
         self.alternating_table_row_color = QtGui.QAction("Alternating table row color",
@@ -406,21 +431,12 @@ class MainWindow(QtWidgets.QMainWindow):
             utils.open_file(doc.filepath)
             return
 
-        if doc.id in self.doc_viewers:
-            self.doc_viewers[doc.id].toggleView(True)
-            return
-
         self.viewer = self.viewer_factory.viewer(doc, index)
 
         if self.viewer is not None:
-            doc_dock_widget = QtAds.CDockWidget(doc.title[:15])
-            doc_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetDeleteOnClose, True)
-            doc_dock_widget.closed.connect(self.evidence_tab_dock_widget.setAsCurrentTab) #  Activate Evidence tab after closing a document viewer
-            doc_dock_widget.setWidget(self.viewer)
-            self.dock_manager.addDockWidgetTabToArea(doc_dock_widget, self.evidence_tab_area)
-            self.doc_viewers[doc.id] = doc_dock_widget
             self.viewer.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
-            doc_dock_widget.closed.connect(lambda: self.onViewerClosed(doc_dock_widget.widget().document.id))
+            self.viewer_manager.addTabWidget(self.viewer, doc.title)
+            self.viewer_manager_cdock.toggleView(True)
         else:
             status_signal.status_message.emit("Cannot open file", 7000)
 
@@ -440,26 +456,24 @@ class MainWindow(QtWidgets.QMainWindow):
             self.setWindowTitle(f'{mconf.config.app_name} - {text}')
     
     @Slot()
-    def onViewerClosed(self, id: int):
-        """Remove the document viewer from the dict when tab is closed"""
-        self.doc_viewers.pop(id)
-
-    @Slot()
     def onEvidenceModelReset(self):
         """Reset the DataWidgetMapper index after loading file into the document model
 
         Index is lost after refreshing the model.
         Therefore, it's necessary to reset the index of the viewer mapper to keep mapper synchronization.
         """
+        dw_list = self.viewer_manager.getManager().allDockWidgets(True, True)
+
         for row in range(self.evidence_model.rowCount()):
             index = self.evidence_model.index(row, self.evidence_model.Fields.ID.index)
             doc_id = index.data(Qt.ItemDataRole.DisplayRole)
-
-            if doc_id in self.doc_viewers:
-                dock_widget: QtAds.CDockWidget = self.doc_viewers.get(doc_id)
-                if dock_widget:
-                    widget: ViewerWidget = dock_widget.widget()
-                    widget.setMapperIndex(index)
+            
+            dw : QtAds.CDockWidget
+            for _, dw in dw_list:
+                widget: ViewerWidget = dw.widget()
+                if isinstance(widget, ViewerWidget):
+                    if widget.document.id == doc_id:
+                        widget.setMapperIndex(index)
 
     @Slot()
     def openWorkspaceManager(self):
@@ -538,11 +552,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.notebook_explorer.set_root_path(AppDatabase.activeWorkspace().notebook_path)
         self.set_window_title(AppDatabase.activeWorkspace().name)
         self.notepad_tab.close_all()
-
-        # Close all viewer tabs
-        dockwidget: QtAds.CDockWidget
-        for dockwidget in self.doc_viewers.copy().values():
-            dockwidget.closeDockWidget()
+        self.listinsight.setRootPath(f"{AppDatabase.activeWorkspace().rootpath}/ListInsight")
+        self.viewer_manager.closeAllTabWidget()
         
         status_signal.status_message.emit("Workspace changed!", 5000)
 
