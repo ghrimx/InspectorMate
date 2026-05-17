@@ -576,7 +576,7 @@ class TextEdit(QtWidgets.QTextEdit):
     
     @Slot()
     def insertTime(self):
-        now = datetime.now().strftime("%H:%M:%S")
+        now = datetime.now().strftime("%H:%M")
         self._cursor.insertText(now)
 
     @Slot()
@@ -905,7 +905,7 @@ class Notebook(QtWidgets.QWidget):
 
     def createActions(self):
         self.action_addnote = QtGui.QAction(theme_icon_manager.get_icon(':file_add'), "Add blank note (Ctrl+N)", self, triggered=self.addNote)
-        self.action_addNoteFromTemplate = QtGui.QAction(theme_icon_manager.get_icon(''), "Add from template", self, triggered=self.addNoteFromTemplate)
+        self.action_addNoteFromTemplate = QtGui.QAction(theme_icon_manager.get_icon(':file-text-line'), "Add from template", self, triggered=self.addNoteFromTemplate)
         self.action_editnote = QtGui.QAction(theme_icon_manager.get_icon(':file-edit-line'), "Edit note (Ctrl+O)", self, triggered=self.editNote)
 
         self.action_minimizeAll = QtGui.QAction(theme_icon_manager.get_icon(':folder-2-line'), "Minimize", self, triggered=self.minimizeAll)
@@ -1472,8 +1472,16 @@ class Notebook(QtWidgets.QWidget):
         
         fname, ok = QtWidgets.QInputDialog.getText(self, "Input filename", "Title:")
         if ok and fname.strip() != "":
+
+            folder = QtWidgets.QFileDialog.getExistingDirectory(parent=None,
+                                                                caption="Select folder",
+                                                                directory=AppDatabase.activeWorkspace().notebook_path)
+
+            if folder == "":
+                return
+
             import shutil
-            fcopy = shutil.copy2(template[0], f"{AppDatabase.activeWorkspace().notebook_path}/{fname}.html")    
+            fcopy = shutil.copy2(template[0], f"{folder}/{fname}.html")    
             self.loadfile(fcopy, fname)
 
     def editNote(self):
