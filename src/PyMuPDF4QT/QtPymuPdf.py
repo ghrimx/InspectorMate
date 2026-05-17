@@ -19,7 +19,7 @@ class ZoomSelector(QtWidgets.QWidget):
     zoomModeChanged = Signal(ZoomMode)
     zoomFactorChanged = Signal(float)
     zoom_levels = ["Fit Width", "Fit Page", "12%", "25%", "33%", "50%", "66%", "75%", "100%", "125%", "150%", "200%", "400%"]
-    max_zoom_factor = 3.0
+    max_zoom_factor = 5.0
     min_zoom_factor = 0.5
     zoom_factor_step = 0.25
 
