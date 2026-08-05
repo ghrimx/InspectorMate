@@ -76,7 +76,7 @@ def main() -> int:
 
     splash.showMessage("Connecting to the database ...")
 
-    logger.info(f"Starting InspectorMate...")
+    logger.info("Starting InspectorMate...")
 
     # Connect to database
     AppDatabase.connect(mconf.config.db_path.as_posix())

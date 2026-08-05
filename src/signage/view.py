@@ -233,7 +233,7 @@ class SignageTab(BaseTab):
         self.table = QtWidgets.QTreeView(self)
         self.table.setAlternatingRowColors(False)
         self.table.setModel(self.proxymodel)
-        # self.table.header().sortIndicatorChanged.connect(self.table.model().sortTree)
+        # self.table.header().sortIndicatorChanged.connect(self.proxymodel.sortTree)
         self.table.setSortingEnabled(True)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers) # ReadOnly
         self.table.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)

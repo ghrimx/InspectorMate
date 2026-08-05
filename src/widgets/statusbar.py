@@ -1,5 +1,6 @@
 from qtpy import QtWidgets
 
+#TODO: remove
 class Statusbar(QtWidgets.QStatusBar):
     def __init__(self, parent = None):
         super().__init__(parent=parent)
