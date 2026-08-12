@@ -1,11 +1,14 @@
-from qtpy import (Qt, QtCore, QtWidgets, QtGui, Slot, Signal)
+from qtpy import Qt, QtCore, QtGui, QtWidgets, Signal, Slot
+from urllib import parse
+from utilities.clipboard import ClipboardExporter
+
 
 class FileSystem(QtWidgets.QTreeView):
     sigOpenFile = Signal(str)
     sigOpenNote = Signal(str)
 
     def __init__(self, rootpath: str, parent=None):
-        super(FileSystem, self).__init__(parent)
+        super().__init__(parent)
         self._model: QtGui.QFileSystemModel = QtGui.QFileSystemModel()
         self.setModel(self._model)
         self.set_root_path(rootpath)
@@ -26,8 +29,14 @@ class FileSystem(QtWidgets.QTreeView):
                                                     self,
                                                     triggered=self.openPathEntry)
 
+        self.copy_path = QtGui.QAction(QtGui.QIcon(":slash-commands-2"),
+                                                    "Copy path",
+                                                    self,
+                                                    triggered=self.copyPath) 
+
         self.addAction(self.action_delete)
         self.addAction(self.action_open_externally)
+        self.addAction(self.copy_path)
         self.doubleClicked.connect(self.openPathEntry)
 
     def set_root_path(self, rootpath: str):
@@ -75,4 +84,9 @@ class FileSystem(QtWidgets.QTreeView):
         else:
             self.sigOpenFile.emit(filepath)
         
+    def copyPath(self):
+        """Copy the file path as formatted link into the Clipboard"""
+        index = self.selectionModel().currentIndex()
+        filepath = self._model.filePath(index)
 
+        ClipboardExporter.toClipboard(filepath, filepath)

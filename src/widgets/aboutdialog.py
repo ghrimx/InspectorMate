@@ -1,11 +1,12 @@
-from qtpy import QtCore, QtWidgets, QtGui
+from importlib.metadata import version
+
+from qtpy import QtCore, QtGui, QtWidgets
 from utilities import config as mconf
-from importlib.metadata import version 
 
 
 class About(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        super(About, self).__init__(parent)
+        super().__init__(parent)
 
         self.setWindowTitle("About InspectorMate")
         layout = QtWidgets.QGridLayout()
@@ -17,8 +18,8 @@ class About(QtWidgets.QDialog):
         layout.addWidget(icon_label, 0, 0, 3, 1)
 
         version_label = QtWidgets.QLabel(f"InspectorMate version {mconf.config.app_version}")
-        listinsight_label = QtWidgets.QLabel(f"Listinsight version {version("listinsight")}")
-        software_id_label = QtWidgets.QLabel(f"Instance ID: {mconf.settings.value("InstanceId")}")
+        listinsight_label = QtWidgets.QLabel(f"Listinsight version {version('listinsight')}")
+        software_id_label = QtWidgets.QLabel(f"Instance ID: {mconf.settings.value('InstanceId')}")
         software_id_label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
 
         layout.addWidget(version_label, 0, 1)

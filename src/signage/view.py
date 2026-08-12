@@ -1,31 +1,26 @@
 import logging
-from json import loads, dumps
 from base64 import b64decode
 from functools import partial
-from qtpy import Qt, QtGui, QtCore, Signal, Slot, QtWidgets, QtSql
+from json import dumps, loads
 
+from qt_theme_manager import Theme, theme_icon_manager
+
+from base_delegates import CompositeDelegate, NoteColumnDelegate
+from common import ConnectorType, Signage, SignageStatus
 from database.database import AppDatabase
-
+from qtpy import Qt, QtCore, QtGui, QtSql, QtWidgets, Signal, Slot
+from signage.connector_model import ConnectorModel
+from signage.dialogs import ExportDialog, FilterDialog, ImportDialog, SignageDialog
+from signage.model import DataService, SignageModel, SignageProxyModel, SignageSqlModel
+from signage.signage_style import DARK_TABLE_STYLE, TABLE_STYLE
 from utilities import config as mconf
 from utilities.config import settings
 from utilities.decorators import status_signal
 from utilities.utils import open_file
-from common import Signage, SignageStatus, ConnectorType
-from base_delegates import NoteColumnDelegate, CompositeDelegate
-
-from signage.model import SignageModel, SignageSqlModel, SignageProxyModel, DataService
-from signage.signage_style import TABLE_STYLE, DARK_TABLE_STYLE
-from signage.connector_model import ConnectorModel
-from signage.dialogs import SignageDialog, FilterDialog, ExportDialog, ImportDialog
-
 from widgets.basetab import BaseTab
-from widgets.richtexteditor import RichTextEditor
 from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.readonly_linedit import ReadOnlyLineEdit
-
-
-from qt_theme_manager import theme_icon_manager, Theme
-
+from widgets.richtexteditor import RichTextEditor
 
 logger = logging.getLogger(__name__)
 
@@ -300,8 +295,9 @@ class SignageTab(BaseTab):
         private_note_layout = QtWidgets.QVBoxLayout()
         private_note_widget = QtWidgets.QWidget()
         private_note_widget.setLayout(private_note_layout)
-        to_private = QtWidgets.QPushButton(theme_icon_manager.get_icon(':share-forward-2-line'),
-                                           "Sent to private note")
+        to_private = QtWidgets.QPushButton(
+            theme_icon_manager.get_icon(":share-forward-2-line"), "Sent to private note"
+        )
         
         to_private.clicked.connect(self.sentToPrivate)
         private_note_layout.addWidget(to_private)

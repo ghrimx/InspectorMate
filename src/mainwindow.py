@@ -1,48 +1,40 @@
-from qtpy import (QtCore, Qt, QtGui, QtWidgets, QtAds, Slot)
-from qt_theme_manager import theme_icon_manager, Theme
 import logging
- 
-
-from signage.dialogs import OwnerDialog
-from signage.connector_widget import ConnectorManagerDialog
-from signage.connector_model import ConnectorModel
-
-from signage.model import SignageModel
-from signage.view import SignageTab
-
-from evidence.model import EvidenceModel
-from evidence.view import EvidenceTab
-
-from workspace.view import WorkspaceManagerDialog
-from onenote.view import OnenotePickerDialog
-
-from documentviewer.viewerfactory import ViewerFactory
-from documentviewer.viewerwidget import ViewerWidget
-from documentviewer.viewermanager import DockInDockWidget
-
-from notepad.notepad import Notebook
-
-from widgets.filesystem import FileSystem
-from widgets.filedialog import ConcatExcelDialog, UnzipDialog
-from widgets.summarydialog import SummaryDialog
-from widgets.aboutdialog import About
-from widgets.debuglogviewer import DebugLogViewer
-from widgets.batch_renamer import BatchRenameWidget
-from widgets.emoji_picker import EmojiGridWidget
-
-from utilities import utils
-from utilities import config as mconf
-from database.database import AppDatabase
-from base_models import SummaryModel
-
-from common import Document
 
 from listinsight import ListinsightWidget
 from listinsight.gui import status_signal as listinsight_status_signal
-
-from utilities.decorators import status_message, status_signal
-from widgets.app_updater import Updater, get_latest_release
+from pyqt6_notebook.notepad import Notebook
 from pyqtspinner import WaitingSpinner
+from qt_theme_manager import Theme, theme_icon_manager
+
+from base_models import SummaryModel
+from common import Document, Signage
+from database.database import AppDatabase
+from documentviewer.viewerfactory import ViewerFactory
+from documentviewer.viewermanager import DockInDockWidget
+from documentviewer.viewerwidget import ViewerWidget
+from evidence.model import EvidenceModel
+from evidence.view import EvidenceTab
+
+# from notepad.notepad import Notebook
+from onenote.view import OnenotePickerDialog
+from qtpy import Qt, QtAds, QtCore, QtGui, QtWidgets, Slot
+from signage.connector_model import ConnectorModel
+from signage.connector_widget import ConnectorManagerDialog
+from signage.dialogs import OwnerDialog
+from signage.model import SignageModel
+from signage.view import SignageTab
+from utilities import config as mconf
+from utilities import utils
+from utilities.decorators import status_message, status_signal
+from widgets.aboutdialog import About
+from widgets.app_updater import Updater, get_latest_release
+from widgets.batch_renamer import BatchRenameWidget
+from widgets.debuglogviewer import DebugLogViewer
+from widgets.emoji_picker import EmojiGridWidget
+from widgets.filedialog import ConcatExcelDialog, UnzipDialog
+from widgets.filesystem import FileSystem
+from widgets.summarydialog import SummaryDialog
+from workspace.view import WorkspaceManagerDialog
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -124,7 +116,13 @@ class MainWindow(QtWidgets.QMainWindow):
             main_dock_area.setStyleSheet("color: white;")
 
         # Notebook widget
-        self.notepad_tab = Notebook(self)
+        # self.notepad_tab = Notebook(self)
+        self.notepad_tab = Notebook(
+            base_folder=AppDatabase.activeWorkspace().notebook_path,
+            template_folder=f"{mconf.config.app_data_path}/template",
+            settings=mconf.settings,
+            parent=self
+        )
         self.notepad_dock_widget = QtAds.CDockWidget("Notebook", self)
         self.notepad_dock_widget.setWidget(self.notepad_tab)
         self.notepad_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
@@ -275,6 +273,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_menu.addAction(QtGui.QAction("Close all document viewer",
                                                self,
                                                triggered=self.viewer_manager.closeAllTabWidget))
+        self.view_menu.addAction(QtGui.QAction("Close all other document viewer",
+                                               self,
+                                               triggered=self.viewer_manager.closeAllOtherTabWidget))
         self.view_menu.addSeparator()
 
         self.alternating_table_row_color = QtGui.QAction("Alternating table row color",
@@ -438,18 +439,23 @@ class MainWindow(QtWidgets.QMainWindow):
             self.viewer_manager.addTabWidget(self.viewer, doc.title)
             self.viewer_manager_cdock.toggleView(True)
         else:
-            status_signal.status_message.emit("Cannot open file", 7000)
+            status_signal.status_message.emit("Cannot open file with InspectorMate - Trying with system app...", 7000)
+            utils.open_file(doc.filepath)
 
     def onOpenNoteTriggered(self, filepath, anchor = ""):
-        self.notepad_tab.loadfile(filename=filepath, anchor=anchor)
+        self.notepad_tab.loadfile(file_path=filepath, anchor=anchor)
         self.notepad_dock_widget.toggleView()
 
     @Slot(str, dict, str)
     def onCreateSignageFromNotepad(self, title, source: dict, anchor: str):
         """Create a signage from Notepad/Notebook"""
         if self.signage_tree_tab.createSignage(title, source):
-            signage = self.signage_tree_tab.signage_dialog.signage()
-            self.notepad_tab.insertSignage(signage, anchor)         
+            signage: Signage = self.signage_tree_tab.signage_dialog.signage()
+            icon = AppDatabase.cache_signage_type.get(signage.type).icon
+            color = AppDatabase.cache_signage_type.get(signage.type).color
+            self.notepad_tab.insertSignage(
+                icon, color, signage.type, signage.refkey, signage.title, anchor
+            )
 
     def set_window_title(self, text=None):
         if text is not None:

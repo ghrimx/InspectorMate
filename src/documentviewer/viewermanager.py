@@ -111,3 +111,19 @@ class DockInDockWidget(QWidget):
             else:
                 # Fallback: request closing via QWidget API
                 dw.close()
+
+    def closeAllOtherTabWidget(self):     
+        to_close = []
+
+        dw: QtAds.CDockWidget
+        for _, dw in self.__mgr.allDockWidgets(True, True):
+            if dw.isCurrentTab():
+                continue
+            to_close.append(dw)
+
+        for dw in to_close:
+            if hasattr(dw, "closeDockWidget"):
+                dw.closeDockWidget()
+            else:
+                # Fallback: request closing via QWidget API
+                dw.close()
