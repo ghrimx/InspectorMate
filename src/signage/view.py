@@ -3,6 +3,7 @@ from base64 import b64decode
 from functools import partial
 from json import dumps, loads
 
+from pyqt6_richtexteditor import RichTextEdit
 from qt_theme_manager import Theme, theme_icon_manager
 
 from base_delegates import CompositeDelegate, NoteColumnDelegate
@@ -20,7 +21,6 @@ from utilities.utils import open_file
 from widgets.basetab import BaseTab
 from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.readonly_linedit import ReadOnlyLineEdit
-from widgets.richtexteditor import RichTextEditor
 
 logger = logging.getLogger(__name__)
 
@@ -290,7 +290,7 @@ class SignageTab(BaseTab):
         self.creation_date = ReadOnlyLineEdit()
 
         # Private & Public Note
-        self.note = RichTextEditor.fromMapper(bar=False, parent=self)
+        self.note = RichTextEdit(":memory", ":memory", "")
 
         private_note_layout = QtWidgets.QVBoxLayout()
         private_note_widget = QtWidgets.QWidget()
@@ -301,8 +301,8 @@ class SignageTab(BaseTab):
         
         to_private.clicked.connect(self.sentToPrivate)
         private_note_layout.addWidget(to_private)
-        self.public_note = RichTextEditor.fromMapper(bar=False, parent=self)
-        self.public_note.editor.setStyleSheet("border: 2px solid red;")
+        self.public_note = RichTextEdit(":memory", ":memory", "")
+        self.public_note.setStyleSheet("border: 2px solid red;")
         private_note_layout.addWidget(self.public_note)
 
         formlayout = QtWidgets.QFormLayout()
@@ -340,8 +340,9 @@ class SignageTab(BaseTab):
         self.mapper.addMapping(self.id_label, SignageSqlModel.Fields.ID.index)
         self.mapper.addMapping(self.parentid_label, SignageSqlModel.Fields.ParentID.index)
         self.mapper.addMapping(self.creation_date, SignageSqlModel.Fields.CreationDatetime.index)
-        self.mapper.addMapping(self.note.editor, SignageSqlModel.Fields.Note.index)
-        self.mapper.addMapping(self.public_note.editor, SignageSqlModel.Fields.PublicNote.index)
+        self.mapper.addMapping(self.note, SignageSqlModel.Fields.Note.index)
+        # self.mapper.addMapping(self.public_note.editor, SignageSqlModel.Fields.PublicNote.index)
+        self.mapper.addMapping(self.public_note, SignageSqlModel.Fields.PublicNote.index)
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
 
         self.refkey_field.editingFinished.connect(self.updateReviewProgess)
@@ -784,8 +785,8 @@ class SignageTab(BaseTab):
         clipboard.setText(f"{citation}")
 
     def sentToPrivate(self):
-        public_text = self.public_note.editor.toHtml()
-        self.note.editor.append(public_text)
+        public_text = self.public_note.toHtml()
+        self.note.append(public_text)
 
         index = self.table.selectionModel().currentIndex()
         src_index = self.proxymodel.mapToSource(index)
@@ -793,8 +794,8 @@ class SignageTab(BaseTab):
         public_note_index = src_index.sibling(src_index.row(), SignageSqlModel.Fields.PublicNote.index)
         private_note_index = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Note.index)
 
-        if self.model.setData(private_note_index, self.note.editor.toHtml(), Qt.ItemDataRole.EditRole):
-            self.public_note.editor.clear()
+        if self.model.setData(private_note_index, self.note.toHtml(), Qt.ItemDataRole.EditRole):
+            self.public_note.clear()
             self.model.setData(public_note_index, "", Qt.ItemDataRole.EditRole)
 
     @Slot()
@@ -849,32 +850,29 @@ class SignageTab(BaseTab):
 
         app = source_dict.get("application")
         module = source_dict.get("module")
-        target = None
+        target = source_dict.get("target", None)
+        anchor = source_dict.get("anchor", "")
+
+        if target is None:
+            return
 
         if app == "InspectorMate":
-            if module == "Notebook":
-                target = source_dict.get("item_title")
-                anchor = source_dict.get("anchor", "")
-                if target:
-                    fpath = f"{AppDatabase.activeWorkspace().notebook_path}/{target}"
-                    self.sigOpenNote.emit(fpath, anchor)
+            if module == "RichTextEditor":
+                # fpath = f"{AppDatabase.activeWorkspace().notebook_path}/{target}"
+                self.sigOpenNote.emit(target, anchor)
             else:
-                target = source_dict.get("filepath")
-                if target:
-                    status_signal.status_message.emit("Opening target...", 5000)
-                    try:
-                        open_file(target)
-                    except Exception as e:
-                        logger.error(e)
-                    else:
-                        status_signal.status_message.emit("Target opened!", 3000)
+                status_signal.status_message.emit("Opening target...", 5000)
+                try:
+                    open_file(target)
+                except Exception as e:
+                    logger.error(e)
+                else:
+                    status_signal.status_message.emit("Target opened!", 3000)
 
         else:
             if module == "loadFromDocx":
-                target = source_dict.get("file")
                 open_file(target)
             elif module == "loadFromOnenote":
-                target = source_dict.get("link")
                 QtGui.QDesktopServices.openUrl(QtCore.QUrl(target))
 
     def colorCell(self):
