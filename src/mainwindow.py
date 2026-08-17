@@ -2,7 +2,6 @@ import logging
 
 from listinsight import ListinsightWidget
 from listinsight.gui import status_signal as listinsight_status_signal
-from pyqt6_notebook.notepad import Notebook
 from pyqtspinner import WaitingSpinner
 from qt_theme_manager import Theme, theme_icon_manager
 
@@ -14,8 +13,6 @@ from documentviewer.viewermanager import DockInDockWidget
 from documentviewer.viewerwidget import ViewerWidget
 from evidence.model import EvidenceModel
 from evidence.view import EvidenceTab
-
-# from notepad.notepad import Notebook
 from onenote.view import OnenotePickerDialog
 from qtpy import Qt, QtAds, QtCore, QtGui, QtWidgets, Slot
 from signage.connector_model import ConnectorModel
@@ -33,6 +30,7 @@ from widgets.debuglogviewer import DebugLogViewer
 from widgets.emoji_picker import EmojiGridWidget
 from widgets.filedialog import ConcatExcelDialog, UnzipDialog
 from widgets.filesystem import FileSystem
+from widgets.richtexteditor import RichTextEditor
 from widgets.summarydialog import SummaryDialog
 from workspace.view import WorkspaceManagerDialog
 
@@ -116,8 +114,7 @@ class MainWindow(QtWidgets.QMainWindow):
             main_dock_area.setStyleSheet("color: white;")
 
         # Notebook widget
-        # self.notepad_tab = Notebook(self)
-        self.notepad_tab = Notebook(
+        self.notepad_tab = RichTextEditor(
             base_folder=AppDatabase.activeWorkspace().notebook_path,
             template_folder=f"{mconf.config.app_data_path}/template",
             settings=mconf.settings,
@@ -436,7 +433,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if self.viewer is not None:
             self.viewer.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
-            self.viewer_manager.addTabWidget(self.viewer, doc.title)
+            self.viewer_manager.addTabWidget(self.viewer, doc.title) 
             self.viewer_manager_cdock.toggleView(True)
         else:
             status_signal.status_message.emit("Cannot open file with InspectorMate - Trying with system app...", 7000)
