@@ -1,11 +1,13 @@
 import logging
 from pathlib import Path
 
-from qtpy import Signal, QtCore, Qt, QtSql, QSqlRelationalTableModel
-
-from database.database import AppDatabase
 from common import DatabaseField
-from utilities import utils, config as mconf
+from database.database import AppDatabase
+from qtpy import QSqlRelationalTableModel, Qt, QtCore, QtSql, Signal
+from utilities import config as mconf
+from utilities import utils
+
+from datetime import datetime
 
 
 logger = logging.getLogger(__name__)
@@ -61,6 +63,7 @@ class InsertDocumentsWorker(QtCore.QRunnable):
                 r.setValue(self.fields.ModificationDatetime.index, str(file.stat().st_mtime))
                 r.setValue(self.fields.FileID.index, fileid)
                 r.setValue(self.fields.Workspace.index, AppDatabase.activeWorkspace().id)
+                r.setValue(self.fields.UploadedDatetime.index, str(datetime.now()))
                 self.signals.result.emit(r)
         except Exception as e:
             logger.exception("Worker failed")
@@ -93,6 +96,7 @@ class EvidenceModel(QSqlRelationalTableModel):
         ID = DatabaseField
         SignageID = DatabaseField
         Workspace = DatabaseField
+        UploadedDatetime = DatabaseField
 
         @classmethod
         def fields(self) -> list["DatabaseField"]:
@@ -103,7 +107,7 @@ class EvidenceModel(QSqlRelationalTableModel):
             ]
         
     def __init__(self):
-        super(EvidenceModel, self).__init__()
+        super().__init__()
         self.setEditStrategy(QtSql.QSqlTableModel.EditStrategy.OnFieldChange)
         self.cache_files: set = set()
         self.status_color_cache = {}
@@ -161,6 +165,7 @@ class EvidenceModel(QSqlRelationalTableModel):
         self.Fields.ID = DatabaseField('id', self.fieldIndex('id'), False)
         self.Fields.SignageID = DatabaseField('signage_id', self.fieldIndex('signage_id'), False)
         self.Fields.Workspace = DatabaseField('workspace_id', self.fieldIndex('workspace_id'), False)
+        self.Fields.UploadedDatetime = DatabaseField('uploaded_on', self.fieldIndex('uploaded_on'), False)
         
     def _renameHeaders(self):
         for field in self.Fields.fields():
