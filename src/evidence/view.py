@@ -1,37 +1,27 @@
-# Standard library imports.
 import logging
 from pathlib import Path
 
-# Related third party imports.
-from qtpy import Qt, QtGui, QtCore, Signal, Slot, QtWidgets, QtSql
+from pyqt6_richtexteditor import RichTextEdit
+from qt_theme_manager import Theme, theme_icon_manager
 
-
-# Local application/library specific imports.
+from base_delegates import CompositeDelegate, NoteColumnDelegate
+from base_models import ProxyModel
+from common import Document
 from database.database import AppDatabase
-
 from evidence.model import EvidenceModel
 from evidence.style import TABLE_STYLE
+from qtpy import Qt, QtCore, QtGui, QtSql, QtWidgets, Signal, Slot
 from signage.model import SignageModel, SignageSqlModel
-
-from base_models import ProxyModel
-from base_delegates import NoteColumnDelegate, CompositeDelegate
-
-from common import Document
-
+from utilities.clipboard import ClipboardExporter
+from utilities.config import settings
+from utilities.decorators import status_signal
+from utilities.utils import open_file, queryFileNameByID
 from widgets.basetab import BaseTab
-from widgets.richtexteditor import RichTextEditor
-from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.combobox import CheckableComboBox
-from widgets.tooltip_widget import QToolTipper
+from widgets.fitcontenteditor import FitContentTextEdit
 from widgets.folder_explorer import FolderExplorer
 from widgets.readonly_linedit import ReadOnlyLineEdit
-
-from utilities.config import settings
-from utilities.utils import queryFileNameByID, open_file
-from utilities.clipboard import ClipboardExporter
-from utilities.decorators import status_signal
-
-from qt_theme_manager import theme_icon_manager, Theme
+from widgets.tooltip_widget import QToolTipper
 
 logger = logging.getLogger(__name__)
 
@@ -269,11 +259,12 @@ class EvidenceTab(BaseTab):
         self.refkey = QtWidgets.QLineEdit()
         self.subtitle = QtWidgets.QLineEdit()
         self.reference = QtWidgets.QLineEdit()
-        self.filename = FitContentTextEdit(True)
-        self.filename.setStyleSheet("color: grey;")
-        self.note = RichTextEditor.fromMapper(bar=False, parent=self)
+        self.filepath_edit = FitContentTextEdit(True)
+        self.filepath_edit.setStyleSheet("color: grey;")
+        self.note = RichTextEdit(":memory", ":memory", "")
         
         self.signage_id = ReadOnlyLineEdit()
+        self.uploaded_on_edit = ReadOnlyLineEdit()
 
         formlayout = QtWidgets.QFormLayout()
         info_widget = QtWidgets.QWidget()
@@ -283,8 +274,10 @@ class EvidenceTab(BaseTab):
         formlayout.addRow("Title", self.title)
         formlayout.addRow("SubTitle", self.subtitle)
         formlayout.addRow("Reference", self.reference)
-        formlayout.addRow("Filename", self.filename)
+        formlayout.addRow("Filepath", self.filepath_edit)
         formlayout.addRow("Signage id", self.signage_id)
+        formlayout.addRow("Uploaded on", self.uploaded_on_edit)
+
         spacer = QtWidgets.QSpacerItem(20,
                                        40,
                                        QtWidgets.QSizePolicy.Policy.Minimum,
@@ -301,8 +294,9 @@ class EvidenceTab(BaseTab):
         self.mapper.addMapping(self.title, self._model.Fields.Title.index, b"plainText")
         self.mapper.addMapping(self.subtitle, self._model.Fields.Subtitle.index)
         self.mapper.addMapping(self.reference, self._model.Fields.Reference.index)
-        self.mapper.addMapping(self.filename, self._model.Fields.Filepath.index, b"plainText")
-        self.mapper.addMapping(self.note.editor, self._model.Fields.Note.index)
+        self.mapper.addMapping(self.filepath_edit, self._model.Fields.Filepath.index, b"plainText")
+        self.mapper.addMapping(self.uploaded_on_edit, self._model.Fields.UploadedDatetime.index)
+        self.mapper.addMapping(self.note, self._model.Fields.Note.index)
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
         self.mapper.currentIndexChanged.connect(self._on_mapper_index_changed)
   
