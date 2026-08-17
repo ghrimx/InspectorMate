@@ -1,14 +1,15 @@
-import sys
 import logging
 import logging.config
+import sys
 from uuid import uuid4
-from qtpy import (QtWidgets, QtGui, Qt, QtCore)
+
+from qt_theme_manager import Theme, theme_icon_manager
+
 from database.database import AppDatabase
 from mainwindow import MainWindow
+from qtpy import Qt, QtCore, QtGui, QtWidgets
 from utilities import config as mconf
 from utilities.utils import trim_file
-from qt_theme_manager import theme_icon_manager, Theme
-
 
 logger = logging.getLogger(__name__)
 
