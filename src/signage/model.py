@@ -287,7 +287,7 @@ class DataService:
                         signage.type = 3 if line[0] == '!' else 0
                         signage.workspace_id = AppDatabase.activeWorkspace().id
                         src = (f'{{"application":"Docx", "module":"loadFromDocx",' 
-                               f'"file":"{connector.value}", "object_id":"{lid}"}}')
+                               f'"target":"{connector.value}", "object_id":"{lid}"}}')
                         signage.source = src
                         cache.get("Docx").add(lid)
                         yield signage
@@ -338,7 +338,7 @@ class DataService:
                     src = (f'{{"application":"OneNote", "module":"loadFromOnenote",'
                            f'"section":"{section_name}", "page":"{tag.PageName}",'
                            f'"object_id":"{tag.ID}",'
-                           f'"link":"{tag.Link}"}}')
+                           f'"target":"{tag.Link}"}}')
                     signage.source = src
                     signage.creation_datetime = (datetime.fromisoformat(tag.CreationTime[:-1])
                                                  .astimezone(timezone.utc).strftime('%Y-%m-%d'))
