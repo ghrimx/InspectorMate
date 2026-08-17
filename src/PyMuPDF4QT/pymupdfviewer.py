@@ -1,18 +1,25 @@
 import json
-import pymupdf
 import logging
-
 from enum import Enum
 
-from qtpy import QtWidgets, QtGui, QtCore, Signal, Slot
-from documentviewer.viewerwidget import ViewerWidget
-
-from PyMuPDF4QT.QtPymuPdf import (OutlineModel, OutlineItem, PageNavigator, 
-                                  ZoomSelector, SearchModel, SearchItem, MetaDataWidget, 
-                                  TextSelection, RectItem, LinkBox)
-from PyMuPDF4QT.annotation import AnnotationModel, AnnotationPane
+import pymupdf
 from qt_theme_manager import theme_icon_manager
 
+from documentviewer.viewerwidget import ViewerWidget
+from PyMuPDF4QT.annotation import AnnotationModel, AnnotationPane
+from PyMuPDF4QT.QtPymuPdf import (
+    LinkBox,
+    MetaDataWidget,
+    OutlineItem,
+    OutlineModel,
+    PageNavigator,
+    RectItem,
+    SearchItem,
+    SearchModel,
+    TextSelection,
+    ZoomSelector,
+)
+from qtpy import QtCore, QtGui, QtWidgets, Signal, Slot
 
 SUPPORTED_FORMART = (".pdf", ".epub")
 
@@ -47,11 +54,12 @@ class PdfView(QtWidgets.QGraphicsView):
     sig_annotation_selected = Signal(object)
 
     def __init__(self, parent=None):
-        super(PdfView, self).__init__(parent)
+        super().__init__(parent)
         screen = self.window().windowHandle().screen()
         self.dpr = screen.devicePixelRatio() if screen else 1.0
 
         # Mouse coordinate
+        self.cursor_position = None
         self.mouse_interaction = MouseInteraction()
         self.a0 = QtCore.QPointF()
         self.b1 = QtCore.QPointF()
