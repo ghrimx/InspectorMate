@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+from my_pyqt_widgets import FileSystem
 from pyqt6_richtexteditor import RichTextEdit
 from qt_theme_manager import Theme, theme_icon_manager
 
@@ -19,7 +20,6 @@ from utilities.utils import open_file, queryFileNameByID
 from widgets.basetab import BaseTab
 from widgets.combobox import CheckableComboBox
 from widgets.fitcontenteditor import FitContentTextEdit
-from widgets.folder_explorer import FolderExplorer
 from widgets.readonly_linedit import ReadOnlyLineEdit
 from widgets.tooltip_widget import QToolTipper
 
@@ -209,9 +209,8 @@ class EvidenceTab(BaseTab):
 
     def initUI(self):
         # --- Left Pane ---
-        self.doc_filter = FolderExplorer()
-        self.doc_filter.setRootPath(AppDatabase.activeWorkspace().evidence_path)
-        self.doc_filter.rowClicked.connect(self.onFolderFilterClicked)
+        self.doc_filter = FileSystem(AppDatabase.activeWorkspace().evidence_path, mode=FileSystem.Mode.FolderOnly, read_only=True)
+        self.doc_filter.sigSingleClicked.connect(self.onFolderFilterClicked)
         self.left_pane.addTab(self.doc_filter, theme_icon_manager.get_icon(":node-tree"), "")
 
         self.signage_filter = SignageFilter(self.signage_model)
@@ -734,7 +733,7 @@ class EvidenceTab(BaseTab):
     @Slot()
     def refresh(self):
         self._model.refresh()
-        self.doc_filter.setRootPath(AppDatabase.activeWorkspace().evidence_path)
+        self.doc_filter.set_root_path(AppDatabase.activeWorkspace().evidence_path)
         self.onResetFilters()
 
     def closeEvent(self, a0):

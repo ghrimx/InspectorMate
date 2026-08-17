@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from listinsight import ListinsightWidget
 from listinsight.gui import status_signal as listinsight_status_signal
@@ -29,7 +30,8 @@ from widgets.batch_renamer import BatchRenameWidget
 from widgets.debuglogviewer import DebugLogViewer
 from widgets.emoji_picker import EmojiGridWidget
 from widgets.filedialog import ConcatExcelDialog, UnzipDialog
-from widgets.filesystem import FileSystem
+
+from my_pyqt_widgets import FileSystem
 from widgets.richtexteditor import RichTextEditor
 from widgets.summarydialog import SummaryDialog
 from workspace.view import WorkspaceManagerDialog
@@ -60,7 +62,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Workspace FileSystem Sidebar
         self.workspace_explorer_dock_widget = QtAds.CDockWidget("Workspace", self)
         self.workspace_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
-        self.workspace_explorer = FileSystem(AppDatabase.activeWorkspace().rootpath)
+        self.workspace_explorer = FileSystem(AppDatabase.activeWorkspace().rootpath, read_only=False)
         self.workspace_explorer_dock_widget.setWidget(self.workspace_explorer)
         self.workspace_explorer_dock_widget.setMinimumSize(200, 150)
         self.workspace_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
@@ -71,7 +73,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Evidence Explorer FileSystem Sidebar
         self.evidence_explorer_dock_widget = QtAds.CDockWidget("Evidence", self)
         self.evidence_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
-        self.evidence_explorer = FileSystem(AppDatabase.activeWorkspace().evidence_path)
+        self.evidence_explorer = FileSystem(AppDatabase.activeWorkspace().evidence_path, read_only=False)
         self.evidence_explorer_dock_widget.setWidget(self.evidence_explorer)
         self.evidence_explorer_dock_widget.setMinimumSize(200, 150)
         self.evidence_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
@@ -82,7 +84,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Notebook Explorer FileSystem Sidebar
         self.notebook_explorer_dock_widget = QtAds.CDockWidget("Notebook", self)
         self.notebook_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
-        self.notebook_explorer = FileSystem(AppDatabase.activeWorkspace().notebook_path)
+        self.notebook_explorer = FileSystem(AppDatabase.activeWorkspace().notebook_path, read_only=False)
         self.notebook_explorer_dock_widget.setWidget(self.notebook_explorer)
         self.notebook_explorer_dock_widget.setMinimumSize(200, 150)
         self.notebook_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
@@ -333,18 +335,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def connectSignals(self):
         self.signage_tree_tab.sigSignageDoubleClicked.connect(self.onSignageDoubleClicked)
-        self.signage_tree_tab.sigOpenNote.connect(self.onOpenNoteTriggered)
+        self.signage_tree_tab.sigOpenNote.connect(self.onOpenFileTriggered)
         self.evidence_model.modelReset.connect(self.onEvidenceModelReset)
         self.evidence_tab.sigOpenDocument.connect(self.onOpenEvidenceTriggered)
         self.evidence_tab.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
         self.evidence_tab.sigCreateSignage.connect(self.signage_tree_tab.createSignage)
         self.evidence_tab.sigUpdateReviewProgress.connect(self.signage_tree_tab.updateReviewProgess)
         self.evidence_model.sigUpdateReviewProgress.connect(self.signage_tree_tab.updateReviewProgess)
+
+        # Open files
         self.notebook_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
-        self.notebook_explorer.sigOpenNote.connect(self.onOpenNoteTriggered)
+        self.notebook_explorer.sigDoubleClicked.connect(self.onOpenFileTriggered)
         self.workspace_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
-        self.workspace_explorer.sigOpenNote.connect(self.onOpenNoteTriggered)
+        self.workspace_explorer.sigDoubleClicked.connect(self.onOpenFileTriggered)
         self.evidence_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
+        self.evidence_explorer.sigDoubleClicked.connect(self.onOpenFileTriggered)
 
     @Slot()
     def showAbout(self):
@@ -420,8 +425,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.evidence_tab_dock_widget.toggleView(True)
 
     @Slot(str)
-    def onOpenFileTriggered(self, filepath):
-        utils.open_file(filepath)
+    def onOpenFileTriggered(self, filepath, anchor: str = ""):
+        fpath = Path(filepath)
+        if not fpath.is_file() or fpath.is_dir():
+            return
+
+        if fpath.suffix == ".html":
+            self.notepad_tab.loadfile(file_path=filepath, anchor=anchor)
+            self.notepad_dock_widget.toggleView()
+        else:
+            utils.open_file(filepath)
 
     @Slot(object, QtCore.QModelIndex)
     def onOpenEvidenceTriggered(self, doc: Document, index):
