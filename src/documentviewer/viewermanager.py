@@ -2,6 +2,8 @@ import PyQt6Ads as QtAds
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from PyQt6.QtGui import QIcon
 
+from documentviewer.viewerwidget import ViewerWidget
+
 
 class DockInDockManager(QtAds.CDockManager):
     def __init__(self, parent: 'DockInDockWidget'):
@@ -80,18 +82,21 @@ class DockInDockWidget(QWidget):
             self._center_area = area
             area.destroyed.connect(lambda: setattr(self, "_center_area", None))
 
-    def addTabWidget(self, widget: QWidget, name: str, icon=QIcon()):
+    def addTabWidget(self, new_viewer: ViewerWidget, name: str, icon=QIcon()):
         self.ensure_center_anchor()
 
         # show if already exists
+        existing: QtAds.CDockWidget
         for _, existing in self.getManager().allDockWidgets(True, True):
-            if existing.objectName() == name:
-                existing.toggleView(True)
-                return self._center_area
+            current_widget = existing.widget()
+            if isinstance(current_widget, ViewerWidget):  # noqa: SIM102
+                if current_widget.document == new_viewer.document:
+                    existing.toggleView(True)
+                    return self._center_area
 
         dock = QtAds.CDockWidget(name)
         dock.setObjectName(name)
-        dock.setWidget(widget)
+        dock.setWidget(new_viewer)
         dock.setIcon(icon)
         dock.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetDeleteOnClose, True)
 
