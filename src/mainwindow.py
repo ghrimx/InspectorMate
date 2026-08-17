@@ -470,13 +470,12 @@ class MainWindow(QtWidgets.QMainWindow):
         for row in range(self.evidence_model.rowCount()):
             index = self.evidence_model.index(row, self.evidence_model.Fields.ID.index)
             doc_id = index.data(Qt.ItemDataRole.DisplayRole)
-            
-            dw : QtAds.CDockWidget
+
+            dw: QtAds.CDockWidget
             for _, dw in dw_list:
                 widget: ViewerWidget = dw.widget()
-                if isinstance(widget, ViewerWidget):
-                    if widget.document.id == doc_id:
-                        widget.setMapperIndex(index)
+                if isinstance(widget, ViewerWidget) and widget.document.id == doc_id:
+                    widget.setMapperIndex(index)
 
     @Slot()
     def openWorkspaceManager(self):
@@ -563,14 +562,20 @@ class MainWindow(QtWidgets.QMainWindow):
     @status_message('Connecting to OneNote...')
     @Slot()
     def open_onenote_picker(self):
-        onenote_warning = QtWidgets.QMessageBox.warning(self,
-                                                        "Warning",
-                                                        (f"Establishing a connection to OneNote before opening " 
-                                                        f"the application may put the application in a hang state"
-                                                        f"\n\nIt's recommended to open OneNote app "
-                                                        f"before establishing a connection"),
-                                                        buttons=(QtWidgets.QMessageBox.StandardButton.Ignore | 
-                                                                 QtWidgets.QMessageBox.StandardButton.Cancel))
+        onenote_warning = QtWidgets.QMessageBox.warning(
+            self,
+            "Warning",
+            (
+                "Establishing a connection to OneNote before opening "
+                "the application may put the application in a hang state"
+                "\n\nIt's recommended to open OneNote app "
+                "before establishing a connection"
+            ),
+            buttons=(
+                QtWidgets.QMessageBox.StandardButton.Ignore
+                | QtWidgets.QMessageBox.StandardButton.Cancel
+            ),
+        )
 
         if onenote_warning == QtWidgets.QMessageBox.StandardButton.Cancel:
             return
