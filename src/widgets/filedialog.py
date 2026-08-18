@@ -3,9 +3,7 @@ import logging
 from qtpy import (QtWidgets, Slot, Signal, QtCore)
 from database.database import AppDatabase
 from utilities.utils import (mergeExcelFiles, unpackZip)
-from utilities.decorators import status_signal
 
-from widgets.fileselectiondialog import selectFilesDialog
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +113,12 @@ class ConcatExcelDialog(QtWidgets.QDialog):
     
     @Slot()
     def selectFiles(self):
-        self._files = selectFilesDialog("*.xls*", AppDatabase.activeWorkspace().rootpath)
+        self._files, _ = QtWidgets.QFileDialog.getOpenFileNames(
+            self,
+            caption="Select files",
+            directory=AppDatabase.activeWorkspace().rootpath,
+            filter="*.xls*",
+        )
         self.selected_file.setText(f"{len(self._files)} files")
         self.updateButtonState()
 
@@ -197,7 +200,12 @@ class UnzipDialog(QtWidgets.QDialog):
     
     @Slot()
     def selectFiles(self):
-        self._files = selectFilesDialog("*.zip", self._source_dir)
+        self._files, _ = QtWidgets.QFileDialog.getOpenFileNames(
+            self,
+            caption="Select files",
+            directory=self._source_dir,
+            filter="*.zip",
+        )
         self.selected_file.setText(f"{len(self._files)} files")
         self.updateButtonState()
 

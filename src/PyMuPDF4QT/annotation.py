@@ -1,13 +1,12 @@
 import logging
 from dataclasses import dataclass
-from qtpy import QtCore, QtSql, QtWidgets, QtCore, Signal, Slot, QSqlRelationalTableModel
 
-
-from common import DatabaseField
-from base_models import ProxyModel
+from my_pyqt_widgets import FitContentTextEdit
 from qt_theme_manager import theme_icon_manager
 
-from widgets.fitcontenteditor import FitContentTextEdit
+from base_models import ProxyModel
+from common import DatabaseField
+from qtpy import QSqlRelationalTableModel, QtCore, QtSql, QtWidgets, Signal, Slot
 
 logger = logging.getLogger(__name__)
 

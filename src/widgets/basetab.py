@@ -1,6 +1,5 @@
 from qtpy import (Qt, QtWidgets, QtGui)
 
-from widgets.toolbar import ToolBar
 from qt_theme_manager import theme_icon_manager
 
 class BaseTab(QtWidgets.QWidget):
@@ -30,7 +29,7 @@ class BaseTab(QtWidgets.QWidget):
         self.setLayout(self.vbox)
 
     def createToolbar(self, parent=None) :
-        self.toolbar = ToolBar(parent, icon_size=(24,24))
+        self.toolbar = QtWidgets.QToolBar(parent)
 
         # Fold Left Pane
         self.fold_left_pane = QtGui.QAction(theme_icon_manager.get_icon(':sidebar-fold-line'), "Fold left pane", self, triggered=self.onFoldLeftSidebarTriggered)
@@ -46,7 +45,9 @@ class BaseTab(QtWidgets.QWidget):
         self.toolbar.addSeparator()
 
         # Spacer
-        self.action_separator = self.toolbar.add_spacer()
+        spacer = QtWidgets.QWidget(self)
+        spacer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.action_separator = self.toolbar.addWidget(spacer)
 
         # Fold Right Pane
         self.fold_right_pane = QtGui.QAction(theme_icon_manager.get_icon(":sidebar-unfold-line"),

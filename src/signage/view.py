@@ -3,6 +3,7 @@ from base64 import b64decode
 from functools import partial
 from json import dumps, loads
 
+from my_pyqt_widgets import FitContentTextEdit, ReadOnlyLineEdit
 from pyqt6_richtexteditor import RichTextEdit
 from qt_theme_manager import Theme, theme_icon_manager
 
@@ -19,8 +20,6 @@ from utilities.config import settings
 from utilities.decorators import status_signal
 from utilities.utils import open_file
 from widgets.basetab import BaseTab
-from widgets.fitcontenteditor import FitContentTextEdit
-from widgets.readonly_linedit import ReadOnlyLineEdit
 
 logger = logging.getLogger(__name__)
 

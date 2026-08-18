@@ -6,11 +6,8 @@ from PyQt6.QtSql import QSqlRelationalDelegate
 from evidence.model import EvidenceModel
 from common import Document
 
-from widgets.toolbar import ToolBar
-from widgets.fitcontenteditor import FitContentTextEdit
-from widgets.richtexteditor import RichTextEditor
-from widgets.readonly_linedit import ReadOnlyLineEdit
-from widgets.snippingtool import Screenshot
+from my_pyqt_widgets import FitContentTextEdit, ReadOnlyLineEdit, SnippingTool
+from pyqt6_richtexteditor import RichTextEdit
 
 from utilities.clipboard import ClipboardExporter
 
@@ -136,7 +133,8 @@ class ViewerWidget(QtWidgets.QWidget):
         ...
 
     def createNoteTab(self):
-        self.note_tab = RichTextEditor.fromMapper(bar=False, parent=self)
+        # self.note_tab = RichTextEditor.fromMapper(bar=False, parent=self)
+        self.note_tab = RichTextEdit(":memory", ":memory", "", parent=self)
         self.right_pane.addTab(self.note_tab, "Note")
 
     def createToolbar(self, parent=None) :
@@ -167,7 +165,7 @@ class ViewerWidget(QtWidgets.QWidget):
         self.fold_right_pane.triggered.connect(self.onFoldRightSidebarTriggered)
         self._toolbar.addAction(self.fold_right_pane)
 
-    def toolbar(self) -> ToolBar:
+    def toolbar(self):
         return self._toolbar
 
     def toolbarFreeSpace(self):
@@ -191,7 +189,7 @@ class ViewerWidget(QtWidgets.QWidget):
         self.mapper.addMapping(self.filename, model.Fields.Filepath.index, b"plainText")
 
         # Note tab
-        self.mapper.addMapping(self.note_tab.editor, model.Fields.Note.index)
+        self.mapper.addMapping(self.note_tab, model.Fields.Note.index)
         self.mapper.setCurrentModelIndex(index)
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
         self._on_mapper_index_changed(index.row())
@@ -251,9 +249,7 @@ class ViewerWidget(QtWidgets.QWidget):
 
     @Slot()
     def captureArea(self):
-        self.screenshot = Screenshot()
-        self.screenshot.captured.connect(self.onScreenCaptured)
-        self.screenshot.show()
+        SnippingTool.capture(self, self.onScreenCaptured)
 
     def source(self) -> str:
         ...

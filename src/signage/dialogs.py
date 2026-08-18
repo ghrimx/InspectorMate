@@ -1,17 +1,12 @@
-from qtpy import (QtCore,
-                  QtWidgets,
-                  QtGui,
-                  Slot)
+from my_pyqt_widgets import FitContentTextEdit
+from qt_theme_manager import theme_icon_manager
 
-from widgets.fitcontenteditor import FitContentTextEdit
+from common import Signage, SignageStatus, SignageType
+from database.database import AppDatabase
+from qtpy import QtCore, QtGui, QtWidgets, Slot
 from utilities import config as mconf
 from utilities.utils import increment_refKey
-
-from database.database import AppDatabase
-from common import Signage, SignageType, SignageStatus
 from widgets.combobox import CheckableComboBox
-
-from qt_theme_manager import theme_icon_manager
 
 
 class SignageDialog(QtWidgets.QDialog):

@@ -1,7 +1,13 @@
 import logging
 from pathlib import Path
 
-from my_pyqt_widgets import FileSystem
+from my_pyqt_widgets import (
+    FileSystem,
+    FitContentTextEdit,
+    MultiCheckableComboWidget,
+    QToolTipper,
+    ReadOnlyLineEdit,
+)
 from pyqt6_richtexteditor import RichTextEdit
 from qt_theme_manager import Theme, theme_icon_manager
 
@@ -18,10 +24,6 @@ from utilities.config import settings
 from utilities.decorators import status_signal
 from utilities.utils import open_file, queryFileNameByID
 from widgets.basetab import BaseTab
-from widgets.combobox import CheckableComboBox
-from widgets.fitcontenteditor import FitContentTextEdit
-from widgets.readonly_linedit import ReadOnlyLineEdit
-from widgets.tooltip_widget import QToolTipper
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +41,8 @@ class FilterDialog(QtWidgets.QDialog):
         form = QtWidgets.QFormLayout()
         self.setLayout(form)
 
-        self.status_combobox = CheckableComboBox()
-        for item in statuses:
-            self.status_combobox.addItem(item)
+        self.status_combobox = MultiCheckableComboWidget()
+        self.status_combobox.addItems(statuses)
 
         form.addRow("Status:", self.status_combobox)
         form.addWidget(self.buttonBox)
@@ -50,10 +51,27 @@ class FilterDialog(QtWidgets.QDialog):
         super().accept()
 
     def statusFilter(self):
-        return [x for x in self.status_combobox.currentData()]
+        # return [x for x in self.status_combobox.currentData()]
+        return self.status_combobox.checkedData()
     
     def resetFields(self):
-        self.status_combobox.clearSelection()
+        # self.status_combobox.clearSelection()
+        self.status_combobox.clearChecks()
+
+    def popupNear(self, anchor: QtWidgets.QWidget) -> None:
+        """
+        Position the dialog just below `anchor`, clamped to the screen's
+        available geometry — mirrors QMenu's default popup placement.
+        """
+        self.adjustSize()
+        pos = anchor.mapToGlobal(QtCore.QPoint(0, anchor.height()))
+        screen = anchor.screen() or QtGui.QGuiApplication.primaryScreen()
+        available = screen.availableGeometry()
+
+        pos.setX(min(max(pos.x(), available.left()), available.right() - self.width()))
+        pos.setY(min(max(pos.y(), available.top()), available.bottom() - self.height()))
+
+        self.move(pos)
 
 
 class SignageFilter(QtWidgets.QWidget):
@@ -595,7 +613,11 @@ class EvidenceTab(BaseTab):
             dh = self.filter_dialog.height()   
             self.filter_dialog.setGeometry(px + int(dw / 2), py + (ph * 2) + (dh * 2), dw, dh )
 
-        self.filter_dialog.exec()
+        # self.filter_dialog.show()
+        button = self.toolbar.widgetForAction(self.action_filter_dlg)
+        if button is not None:
+            self.filter_dialog.popupNear(button)
+            self.filter_dialog.show()
 
     @Slot()
     def applyFilters(self):

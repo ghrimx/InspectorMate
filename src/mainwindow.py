@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-
+from importlib.metadata import version
 from listinsight import ListinsightWidget
 from listinsight.gui import status_signal as listinsight_status_signal
 from pyqtspinner import WaitingSpinner
@@ -24,14 +24,12 @@ from signage.view import SignageTab
 from utilities import config as mconf
 from utilities import utils
 from utilities.decorators import status_message, status_signal
-from widgets.aboutdialog import About
+
 from widgets.app_updater import Updater, get_latest_release
 from widgets.batch_renamer import BatchRenameWidget
-from widgets.debuglogviewer import DebugLogViewer
-from widgets.emoji_picker import EmojiGridWidget
 from widgets.filedialog import ConcatExcelDialog, UnzipDialog
 
-from my_pyqt_widgets import FileSystem
+from my_pyqt_widgets import FileSystem, About, EmojiPickerWidget, LogViewer
 from widgets.richtexteditor import RichTextEditor
 from widgets.summarydialog import SummaryDialog
 from workspace.view import WorkspaceManagerDialog
@@ -94,7 +92,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Emoji Sidebar
         self.emoji_widget_dock_widget = QtAds.CDockWidget("Emoji", self)
-        self.emoji_widget = EmojiGridWidget()
+        self.emoji_widget = EmojiPickerWidget()
         self.emoji_widget_dock_widget.setWidget(self.emoji_widget)
         self.emoji_widget_dock_widget.setMinimumSize(200, 150)
         self.emoji_widget_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
@@ -208,7 +206,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.concat_excel_dialog: ConcatExcelDialog = None
         self.onenote_manager: OnenotePickerDialog = None
         self.summary_dialogs: SummaryDialog = None
-        self.log_viewer: DebugLogViewer = None
+        self.log_viewer: LogViewer = None
 
     def createMenubar(self):
         """Create Application Menubar"""
@@ -353,15 +351,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @Slot()
     def showAbout(self):
-        about = About()
-        about.exec()
+        text = f"""InspectorMate version {mconf.config.app_version}
+        Listinsight version {version("listinsight")}
+        Instance ID: {mconf.settings.value("InstanceId")}
+        """
+        about = About("About InspectorMate", text, ":mylogo", parent=self)
+        about.show()
 
     @Slot()
     def showDebugOutput(self):
         """
         Show Debug Output
         """
-        self.log_viewer = DebugLogViewer()
+        self.log_viewer = LogViewer.load_from_file(mconf.config.log_path.as_posix(), "Debug log")
         self.log_viewer.showMaximized()
     
     @Slot()
