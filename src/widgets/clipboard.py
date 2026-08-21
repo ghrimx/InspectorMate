@@ -1,8 +1,8 @@
-import json
 import base64
+import json
 from urllib import parse
 
-from qtpy import (QtWidgets, QtGui, QtCore)
+from qtpy import QtCore, QtGui, QtWidgets
 
 
 class ClipboardExporter:

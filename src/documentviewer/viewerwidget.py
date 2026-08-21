@@ -1,23 +1,21 @@
 import logging
 from abc import abstractmethod
-from qtpy import Qt, QtCore, QtWidgets, QtGui, Slot, Signal
-from PyQt6.QtSql import QSqlRelationalDelegate
-
-from evidence.model import EvidenceModel
-from common import Document
 
 from my_pyqt_widgets import FitContentTextEdit, ReadOnlyLineEdit, SnippingTool
+from PyQt6.QtSql import QSqlRelationalDelegate
 from pyqt6_richtexteditor import RichTextEdit
-
-from utilities.clipboard import ClipboardExporter
-
 from qt_theme_manager import theme_icon_manager
+
+from common import Document, SignageOrigin
+from evidence.model import EvidenceModel
+from qtpy import Qt, QtCore, QtGui, QtWidgets, Signal, Slot
+from widgets.clipboard import ClipboardExporter
 
 logger = logging.getLogger(__name__)
 
 
 class ViewerWidget(QtWidgets.QWidget):
-    sigCreateChildSignage = Signal(int, dict)
+    sigCreateChildSignage = Signal(int, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -231,10 +229,6 @@ class ViewerWidget(QtWidgets.QWidget):
     def citation(self) -> str:
         ...
     
-    @abstractmethod
-    def getAnchor(self) -> dict|None:
-        ...
-
     @Slot()
     def cite(self):
         ClipboardExporter.toClipboard(src_file=self._document.filepath.as_posix(),
@@ -251,7 +245,7 @@ class ViewerWidget(QtWidgets.QWidget):
     def captureArea(self):
         SnippingTool.capture(self, self.onScreenCaptured)
 
-    def source(self) -> str:
+    def source(self) -> SignageOrigin:
         ...
 
     @Slot()

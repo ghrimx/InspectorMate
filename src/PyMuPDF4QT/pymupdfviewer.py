@@ -5,7 +5,7 @@ from enum import Enum
 import pymupdf
 from qt_theme_manager import theme_icon_manager
 
-from documentviewer.viewerwidget import ViewerWidget
+from documentviewer.viewerwidget import ViewerWidget, SignageOrigin
 from PyMuPDF4QT.annotation import AnnotationModel, AnnotationPane
 from PyMuPDF4QT.QtPymuPdf import (
     LinkBox,
@@ -396,19 +396,18 @@ class PdfView(QtWidgets.QGraphicsView):
     def removeAnnotation(self, uid: int) -> bool:
         items = self.doc_scene.items()
         for item in items:
-            if isinstance(item, RectItem):
-                if item.uid == uid:
-                    try:
-                        self.doc_scene.removeItem(item)
-                    except Exception as e:
-                        logger.exception(e)
-                        return False  
+            if isinstance(item, RectItem) and item.uid == uid:
+                try:
+                    self.doc_scene.removeItem(item)
+                except Exception as e:
+                    logger.exception(e)
+                    return False  
         return True
 
 
 class PdfViewer(ViewerWidget):
     def __init__(self, parent=None):
-        super(PdfViewer, self).__init__(parent)
+        super().__init__(parent)
     
     @classmethod
     def supportedFormats(cls) -> list[str]:
@@ -598,9 +597,7 @@ class PdfViewer(ViewerWidget):
         super().showEvent(event)
 
     def eventFilter(self, object: QtCore.QObject, event: QtCore.QEvent):
-        if object == self and event.type() == QtCore.QEvent.Type.Wheel:
-            return True
-        return False
+        return bool(object == self and event.type() == QtCore.QEvent.Type.Wheel)
     
     @Slot()
     def searchFor(self):
@@ -636,20 +633,17 @@ class PdfViewer(ViewerWidget):
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), "PDF", page] if x)
         return f"[{citation}]"
     
-    def getAnchor(self):
-        anchor = {"type": "pdf",
-                   "page": self.page_navigator.currentPageLabel()}
-        return anchor
-    
-    def source(self) -> dict:
-        title = self._document.title
-        page = self.page_navigator.currentPageLabel()
-        return {"application":"InspectorMate",
-                "module":self.viewerName(),
-                "item":"document",
-                "item_title":title,
-                "page":page,
-                "filepath":self._document.filepath.as_posix()}
+    def source(self) -> SignageOrigin:
+        source_origin = SignageOrigin(
+            "InspectorMate",
+            "DocViewer",
+            self.viewerName(),
+            self._document.title,
+            self._document.id,
+            self._document.filepath.as_posix(),
+            self.page_navigator.currentPageLabel(),
+        )
+        return source_origin
     
     @Slot(object)
     def onAnnotationAdded(self, annot: RectItem):

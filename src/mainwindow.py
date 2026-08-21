@@ -1,13 +1,21 @@
 import logging
-from pathlib import Path
 from importlib.metadata import version
+from pathlib import Path
+
 from listinsight import ListinsightWidget
 from listinsight.gui import status_signal as listinsight_status_signal
+from my_pyqt_widgets import (
+    About,
+    EmojiPickerWidget,
+    FileSystem,
+    LogViewer,
+    create_action,
+)
 from pyqtspinner import WaitingSpinner
 from qt_theme_manager import Theme, theme_icon_manager
 
 from base_models import SummaryModel
-from common import Document, Signage
+from common import Document, Signage, SignageOrigin
 from database.database import AppDatabase
 from documentviewer.viewerfactory import ViewerFactory
 from documentviewer.viewermanager import DockInDockWidget
@@ -21,73 +29,98 @@ from signage.connector_widget import ConnectorManagerDialog
 from signage.dialogs import OwnerDialog
 from signage.model import SignageModel
 from signage.view import SignageTab
-from utilities import config as mconf
 from utilities import utils
 from utilities.decorators import status_message, status_signal
-
+from utilities.settings import get_settings
 from widgets.app_updater import Updater, get_latest_release
 from widgets.batch_renamer import BatchRenameWidget
 from widgets.filedialog import ConcatExcelDialog, UnzipDialog
-
-from my_pyqt_widgets import FileSystem, About, EmojiPickerWidget, LogViewer
 from widgets.richtexteditor import RichTextEditor
 from widgets.summarydialog import SummaryDialog
 from workspace.view import WorkspaceManagerDialog
 
 
 class MainWindow(QtWidgets.QMainWindow):
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.force_close = False
         self.signage_treemodel = SignageModel()
         self.evidence_model = EvidenceModel()
         self.viewer_factory = ViewerFactory(self.evidence_model, self)
-        self.workspace_manager =  None
+        self.workspace_manager = None
         self.connector_model = ConnectorModel()
 
-        QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.OpaqueSplitterResize, True)
-        QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.XmlCompressionEnabled, False)
-        QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)
-        QtAds.CDockManager.setAutoHideConfigFlag(QtAds.CDockManager.eAutoHideFlag.DefaultAutoHideConfig, True)
+        QtAds.CDockManager.setConfigFlag(
+            QtAds.CDockManager.eConfigFlag.OpaqueSplitterResize, True
+        )
+        QtAds.CDockManager.setConfigFlag(
+            QtAds.CDockManager.eConfigFlag.XmlCompressionEnabled, False
+        )
+        QtAds.CDockManager.setConfigFlag(
+            QtAds.CDockManager.eConfigFlag.FocusHighlighting, True
+        )
+        QtAds.CDockManager.setAutoHideConfigFlag(
+            QtAds.CDockManager.eAutoHideFlag.DefaultAutoHideConfig, True
+        )
         self.dock_manager = QtAds.CDockManager(self)
 
     def initUI(self):
         """Initialize the MainWindow User Interface"""
-           
+
         self.set_window_title(AppDatabase.activeWorkspace().name)
 
         # Workspace FileSystem Sidebar
         self.workspace_explorer_dock_widget = QtAds.CDockWidget("Workspace", self)
-        self.workspace_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
-        self.workspace_explorer = FileSystem(AppDatabase.activeWorkspace().rootpath, read_only=False)
+        self.workspace_explorer_dock_widget.setFeature(
+            QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False
+        )
+        self.workspace_explorer = FileSystem(
+            AppDatabase.activeWorkspace().rootpath, read_only=False
+        )
         self.workspace_explorer_dock_widget.setWidget(self.workspace_explorer)
         self.workspace_explorer_dock_widget.setMinimumSize(200, 150)
-        self.workspace_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
-        self.workspace_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft,
-                                                                                      self.workspace_explorer_dock_widget)
+        self.workspace_explorer_dock_widget.setMinimumSizeHintMode(
+            QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize
+        )
+        self.workspace_doc_widget_container = self.dock_manager.addAutoHideDockWidget(
+            QtAds.SideBarLocation.SideBarLeft, self.workspace_explorer_dock_widget
+        )
         self.workspace_doc_widget_container.setMinimumWidth(250)
 
         # Evidence Explorer FileSystem Sidebar
         self.evidence_explorer_dock_widget = QtAds.CDockWidget("Evidence", self)
-        self.evidence_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
-        self.evidence_explorer = FileSystem(AppDatabase.activeWorkspace().evidence_path, read_only=False)
+        self.evidence_explorer_dock_widget.setFeature(
+            QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False
+        )
+        self.evidence_explorer = FileSystem(
+            AppDatabase.activeWorkspace().evidence_path, read_only=False
+        )
         self.evidence_explorer_dock_widget.setWidget(self.evidence_explorer)
         self.evidence_explorer_dock_widget.setMinimumSize(200, 150)
-        self.evidence_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
-        self.evidence_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft,
-                                                                                     self.evidence_explorer_dock_widget)
+        self.evidence_explorer_dock_widget.setMinimumSizeHintMode(
+            QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize
+        )
+        self.evidence_doc_widget_container = self.dock_manager.addAutoHideDockWidget(
+            QtAds.SideBarLocation.SideBarLeft, self.evidence_explorer_dock_widget
+        )
         self.evidence_doc_widget_container.setMinimumWidth(250)
 
         # Notebook Explorer FileSystem Sidebar
         self.notebook_explorer_dock_widget = QtAds.CDockWidget("Notebook", self)
-        self.notebook_explorer_dock_widget.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
-        self.notebook_explorer = FileSystem(AppDatabase.activeWorkspace().notebook_path, read_only=False)
+        self.notebook_explorer_dock_widget.setFeature(
+            QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False
+        )
+        self.notebook_explorer = FileSystem(
+            AppDatabase.activeWorkspace().notebook_path, read_only=False
+        )
         self.notebook_explorer_dock_widget.setWidget(self.notebook_explorer)
         self.notebook_explorer_dock_widget.setMinimumSize(200, 150)
-        self.notebook_explorer_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
-        self.notebook_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft,
-                                                                                     self.notebook_explorer_dock_widget)
+        self.notebook_explorer_dock_widget.setMinimumSizeHintMode(
+            QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize
+        )
+        self.notebook_doc_widget_container = self.dock_manager.addAutoHideDockWidget(
+            QtAds.SideBarLocation.SideBarLeft, self.notebook_explorer_dock_widget
+        )
         self.notebook_doc_widget_container.setMinimumWidth(250)
 
         # Emoji Sidebar
@@ -95,74 +128,100 @@ class MainWindow(QtWidgets.QMainWindow):
         self.emoji_widget = EmojiPickerWidget()
         self.emoji_widget_dock_widget.setWidget(self.emoji_widget)
         self.emoji_widget_dock_widget.setMinimumSize(200, 150)
-        self.emoji_widget_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize)
-        self.emoji_doc_widget_container = self.dock_manager.addAutoHideDockWidget(QtAds.SideBarLocation.SideBarLeft,
-                                                                                  self.emoji_widget_dock_widget)
+        self.emoji_widget_dock_widget.setMinimumSizeHintMode(
+            QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidgetMinimumSize
+        )
+        self.emoji_doc_widget_container = self.dock_manager.addAutoHideDockWidget(
+            QtAds.SideBarLocation.SideBarLeft, self.emoji_widget_dock_widget
+        )
         self.emoji_doc_widget_container.setMinimumWidth(250)
         self.emoji_widget_dock_widget.toggleView(False)
 
-        # Signage      
+        # Signage
         self.signage_dock_widget = QtAds.CDockWidget("Signage")
-        self.signage_tree_tab = SignageTab(self.signage_treemodel, self.startSpinner, self.stopSpinner)
+        self.signage_tree_tab = SignageTab(
+            self.signage_treemodel, self.startSpinner, self.stopSpinner
+        )
         self.signage_dock_widget.setWidget(self.signage_tree_tab)
-        self.signage_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
+        self.signage_dock_widget.setMinimumSizeHintMode(
+            QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget
+        )
         self.signage_dock_widget.resize(250, 150)
         self.signage_dock_widget.setMinimumSize(200, 150)
-        main_dock_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
-                                                         self.signage_dock_widget)
+        main_dock_area = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.CenterDockWidgetArea, self.signage_dock_widget
+        )
         if theme_icon_manager.get_theme() == Theme.DARK:
             main_dock_area.setStyleSheet("color: white;")
 
         # Notebook widget
         self.notepad_tab = RichTextEditor(
             base_folder=AppDatabase.activeWorkspace().notebook_path,
-            template_folder=f"{mconf.config.app_data_path}/template",
-            settings=mconf.settings,
-            parent=self
+            template_folder=f"{get_settings().APP_DATA_PATH}/template",
+            settings=get_settings().qsettings,
+            parent=self,
         )
         self.notepad_dock_widget = QtAds.CDockWidget("Notebook", self)
         self.notepad_dock_widget.setWidget(self.notepad_tab)
-        self.notepad_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
+        self.notepad_dock_widget.setMinimumSizeHintMode(
+            QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget
+        )
         self.notepad_dock_widget.resize(250, 150)
         self.notepad_dock_widget.setMinimumSize(200, 150)
-        self.notepad_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
-                                                            self.notepad_dock_widget,
-                                                            main_dock_area)
+        self.notepad_area = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.CenterDockWidgetArea,
+            self.notepad_dock_widget,
+            main_dock_area,
+        )
         self.notepad_tab.sigCreateSignage.connect(self.onCreateSignageFromNotepad)
 
         # Document widget
-        self.evidence_tab = EvidenceTab(model=self.evidence_model,
-                                        signage_model=self.signage_treemodel,
-                                        startSpinner=self.startSpinner,
-                                        stopSpinner=self.stopSpinner)
+        self.evidence_tab = EvidenceTab(
+            model=self.evidence_model,
+            signage_model=self.signage_treemodel,
+            startSpinner=self.startSpinner,
+            stopSpinner=self.stopSpinner,
+        )
         self.evidence_tab_dock_widget = QtAds.CDockWidget("Evidence", self)
         self.evidence_tab_dock_widget.setWidget(self.evidence_tab)
-        self.evidence_tab_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
+        self.evidence_tab_dock_widget.setMinimumSizeHintMode(
+            QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget
+        )
         self.evidence_tab_dock_widget.resize(250, 150)
         self.evidence_tab_dock_widget.setMinimumSize(200, 150)
-        self.evidence_tab_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
-                                                                 self.evidence_tab_dock_widget,
-                                                                 main_dock_area)
+        self.evidence_tab_area = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.CenterDockWidgetArea,
+            self.evidence_tab_dock_widget,
+            main_dock_area,
+        )
 
         # Listinsight widget
-        self.listinsight = ListinsightWidget(f"{AppDatabase.activeWorkspace().rootpath}/ListInsight", self)
+        self.listinsight = ListinsightWidget(
+            f"{AppDatabase.activeWorkspace().rootpath}/ListInsight", self
+        )
         self.listinsight_tab_dock_widget = QtAds.CDockWidget("ListInsight")
         self.listinsight_tab_dock_widget.setWidget(self.listinsight)
-        self.listinsight_tab_dock_widget.setMinimumSizeHintMode(QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
+        self.listinsight_tab_dock_widget.setMinimumSizeHintMode(
+            QtAds.CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget
+        )
         self.listinsight_tab_dock_widget.resize(250, 150)
         self.listinsight_tab_dock_widget.setMinimumSize(200, 150)
-        self.listinsight_tab_area = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
-                                                                    self.listinsight_tab_dock_widget,
-                                                                    main_dock_area)
+        self.listinsight_tab_area = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.CenterDockWidgetArea,
+            self.listinsight_tab_dock_widget,
+            main_dock_area,
+        )
         self.listinsight_tab_dock_widget.toggleView(False)
 
         # Viewer manager
         self.viewer_manager = DockInDockWidget(self)
         self.viewer_manager_cdock = QtAds.CDockWidget("Document Viewer", self)
         self.viewer_manager_cdock.setWidget(self.viewer_manager)
-        self.dock_manager = self.dock_manager.addDockWidget(QtAds.DockWidgetArea.CenterDockWidgetArea,
-                                                            self.viewer_manager_cdock,
-                                                            main_dock_area)
+        self.dock_manager = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.CenterDockWidgetArea,
+            self.viewer_manager_cdock,
+            main_dock_area,
+        )
         self.viewer_manager_cdock.toggleView(False)
 
         # Menubar
@@ -179,28 +238,38 @@ class MainWindow(QtWidgets.QMainWindow):
                                       """)
         self.setStatusBar(self.status_bar)
         status_signal.status_message.connect(self.status_bar.showMessage)
-        self.status_bar.showMessage('✔️ Ready!', 30000)
+        self.status_bar.showMessage("✔️ Ready!", 30000)
         listinsight_status_signal.status_message.connect(self.status_bar.showMessage)
 
         self.spinner = WaitingSpinner(self, True, True)
         self.onWorkspaceChanged()
 
-    def startSpinner(self, msg = "", msec = 7000):
-        self.spinner.start()
+    def startSpinner(self, msg="", msec=7000):
         status_signal.status_message.emit(msg, msec)
+        self.spinner.start()
         QtWidgets.QApplication.processEvents()
 
-    def stopSpinner(self, msg = "", msec = 7000):
+    def stopSpinner(self, msg="", msec=7000):
         self.spinner.stop()
         status_signal.status_message.emit(msg, msec)
 
     def checkUpdate(self):
+        if not get_settings().get_update_show_option():
+            return
+
         self.startSpinner("Checking for update...")
         release = get_latest_release()
+
         if release:
             self.updater = Updater(release, self)
             self.updater.show()
-        self.stopSpinner()
+        else:
+            msg = "No updates found!"
+        self.stopSpinner(msg)
+
+    def onCheckForUpdatesTriggered(self):
+        get_settings().set_update_show_option(True)
+        self.checkUpdate()
 
     def setupDialogs(self):
         self.concat_excel_dialog: ConcatExcelDialog = None
@@ -215,49 +284,99 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # File Menu
         self.file_menu = self.menubar.addMenu("File")
-        self.action_workspace_manager = QtGui.QAction(theme_icon_manager.get_icon(":archive-2-line"),"Manage Workspace",
-                                               self.menubar,
-                                               triggered=self.openWorkspaceManager)
+        self.action_workspace_manager = create_action(
+            self,
+            "manage_workspace",
+            "Manage Workspace",
+            self.openWorkspaceManager,
+            theme_icon_manager.get_icon(":archive-2-line"),
+            "Manage Workspace",
+        )
         self.file_menu.addAction(self.action_workspace_manager)
-        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":signpost-line"),
-                                               "Create Signage",
-                                               self.menubar,
-                                               shortcut=QtGui.QKeySequence("Ctrl+R"),
-                                               triggered=lambda: self.signage_tree_tab.createSignage("", '{"application":"InspectorMate", "module":"MainWindow"}')))
-        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":share-forward-2-line"),
-                                               "Export Signage",
-                                               self.menubar,
-                                               triggered=self.signage_tree_tab.onExportTriggered))
-        self.file_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":download-2-line"),
-                                               "Import Signage",
-                                               self.menubar,
-                                               triggered=self.signage_tree_tab.onImportTriggered))
+
+        signage_source = SignageOrigin(get_settings().APP_NAME, "MainWindow")
+        self.action_create_signage = create_action(
+            self,
+            "create_signage",
+            "Create Signage",
+            lambda: self.signage_tree_tab.createSignage(signage_source, ""),
+            theme_icon_manager.get_icon(":signpost-line"),
+            "Ctrl+R",
+            context=Qt.ShortcutContext.ApplicationShortcut,
+        )
+        self.file_menu.addAction(self.action_create_signage)
+        self.signage_tree_tab.toolbar.register_action(
+            "create_signage", self.action_create_signage, "create_child_signage"
+        )
+        self.evidence_tab.toolbar.register_action(
+            "create_signage", self.action_create_signage, "create_child_signage"
+        )
+
+        self.action_export_signage = create_action(
+            self,
+            "export_signage",
+            "Export Signage",
+            self.signage_tree_tab.onExportTriggered,
+            theme_icon_manager.get_icon(":share-forward-2-line"),
+        )
+        self.file_menu.addAction(self.action_export_signage)
+
+        self.action_import_signage = create_action(
+            self,
+            "import_signage",
+            "Import Signage",
+            self.signage_tree_tab.onImportTriggered,
+            theme_icon_manager.get_icon(":download-2-line"),
+        )
+        self.file_menu.addAction(self.action_import_signage)
 
         # Edit Menu
-        self.file_open_option = QtGui.QAction("Open document with system application",
-                                              self.menubar,
-                                              triggered=self.saveSettings)
-        self.file_open_option.setCheckable(True)
-
         self.edit_menu = self.menubar.addMenu("Edit")
-        self.edit_menu.addAction(self.file_open_option)
 
-        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":onenote"),
-                                               "OneNote Test connection",
-                                               self,
-                                               triggered=self.open_onenote_picker))
-        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":key-2-line"),
-                                               "Edit Refkey Detection Pattern",
-                                               self.menubar,
-                                               triggered=self.onEditRefkeyRegexTriggered))
-        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":user-line"),
-                                               "Add/Remove Owner",
-                                               self.menubar,
-                                               triggered=self.addRemoveOwner))
-        self.edit_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":links-line"),
-                                               "Manage Signage Connectors",
-                                               self.menubar,
-                                               triggered=self.manageConnectors))
+        self.action_file_open_option = create_action(
+            self,
+            "file_open_option",
+            "Open document with system application",
+            self.saveSettings,
+            checkable=True,
+        )
+        self.edit_menu.addAction(self.action_file_open_option)
+
+        self.action_onenote_test_connection = create_action(
+            self,
+            "onenote_test_connection",
+            "OneNote Test connection",
+            self.open_onenote_picker,
+            theme_icon_manager.get_icon(":onenote"),
+        )
+        self.edit_menu.addAction(self.action_onenote_test_connection)
+
+        self.action_edit_refkey_pattern = create_action(
+            self,
+            "edit_refkey_pattern",
+            "Edit Refkey Detection Pattern",
+            self.onEditRefkeyRegexTriggered,
+            theme_icon_manager.get_icon(":key-2-line"),
+        )
+        self.edit_menu.addAction(self.action_edit_refkey_pattern)
+
+        self.action_edit_owner = create_action(
+            self,
+            "edit_owner",
+            "Add/Remove Owner",
+            self.addRemoveOwner,
+            theme_icon_manager.get_icon(":user-line"),
+        )
+        self.edit_menu.addAction(self.action_edit_owner)
+
+        self.action_edit_signage_connectors = create_action(
+            self,
+            "edit_signage_connector",
+            "Manage Signage Connectors",
+            self.manageConnectors,
+            theme_icon_manager.get_icon(":links-line"),
+        )
+        self.edit_menu.addAction(self.action_edit_signage_connectors)
 
         # View Menu
         self.view_menu = self.menubar.addMenu("View")
@@ -267,79 +386,171 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_menu.addAction(self.listinsight_tab_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.viewer_manager_cdock.toggleViewAction())
         self.view_menu.addSeparator()
-        self.view_menu.addAction(QtGui.QAction("Close all document viewer",
-                                               self,
-                                               triggered=self.viewer_manager.closeAllTabWidget))
-        self.view_menu.addAction(QtGui.QAction("Close all other document viewer",
-                                               self,
-                                               triggered=self.viewer_manager.closeAllOtherTabWidget))
+
+        self.action_close_all_viewer_tab = create_action(
+            self,
+            "close_all_viewer_tab",
+            "Close all document viewer",
+            self.viewer_manager.closeAllTabWidget,
+        )
+        self.view_menu.addAction(self.action_close_all_viewer_tab)
+
+        self.action_close_all_other_tabs = create_action(
+            self,
+            "close_all_others",
+            "Close all other document viewers",
+            self.viewer_manager.closeAllOtherTabWidget,
+        )
+        self.view_menu.addAction(self.action_close_all_other_tabs)
+
         self.view_menu.addSeparator()
 
-        self.alternating_table_row_color = QtGui.QAction("Alternating table row color",
-                                                         self.view_menu,
-                                                         triggered=self.saveSettings)
-        self.alternating_table_row_color.setCheckable(True)
-        self.view_menu.addAction(self.alternating_table_row_color)
+        self.action_set_alternating_color = create_action(
+            self,
+            "set_alternating_color",
+            "Alternating table row color",
+            self.saveSettings,
+            checkable=True,
+        )
+        self.view_menu.addAction(self.action_set_alternating_color)
 
-        app_menu = QtWidgets.QMenu("Application FontSize", self.menubar)
-        app_menu.addAction(QtGui.QAction("Small", self, triggered=lambda: self.setAppFont(9.0)))
-        app_menu.addAction(QtGui.QAction("Medium", self, triggered=lambda: self.setAppFont(10.0)))
-        app_menu.addAction(QtGui.QAction("Large", self, triggered=lambda: self.setAppFont(11.0)))
-        app_menu.addAction(QtGui.QAction("Extra Large", self, triggered=lambda: self.setAppFont(13.0)))
-        self.view_menu.addMenu(app_menu) 
+        self.font_menu = QtWidgets.QMenu("Application FontSize", self.menubar)
+
+        self.font_menu.addAction(
+            QtGui.QAction("Small", self, triggered=lambda: self.setAppFont(9.0))
+        )
+        self.font_menu.addAction(
+            QtGui.QAction("Medium", self, triggered=lambda: self.setAppFont(10.0))
+        )
+        self.font_menu.addAction(
+            QtGui.QAction("Large", self, triggered=lambda: self.setAppFont(11.0))
+        )
+        self.font_menu.addAction(
+            QtGui.QAction("Extra Large", self, triggered=lambda: self.setAppFont(13.0))
+        )
+        self.view_menu.addMenu(self.font_menu)
 
         # Tools Menu
         self.tools_menu = self.menubar.addMenu("Tools")
-        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":git-merge-line"),
-                                                "Concatenate Excel files",
-                                                self.menubar,
-                                                triggered=self.concatExcelFiles))
-        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":inbox-unarchive-line"),
-                                                "Unzip archive",
-                                                self.menubar,
-                                                triggered=self.unzipArchive))
-        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":file-zip-line"),
-                                                "Unpack PDF",
-                                                self.menubar,
-                                                triggered=self.unpackPDF))
-        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":input-field"),
-                                                "Batch Rename file",
-                                                self.menubar,
-                                                triggered=self.batchRenameFile))
-        self.tools_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":emoji-sticker-line"),
-                                                "Emoji Dialog",
-                                                self.menubar,
-                                                shortcut=QtGui.QKeySequence("Ctrl+E"),
-                                                triggered=lambda: self.emoji_widget_dock_widget.toggleView(not self.emoji_widget_dock_widget.isVisible())))
-        
+        self.action_concat_excel = create_action(
+            self,
+            "concat_xls",
+            "Concatenate Excel files",
+            self.concatExcelFiles,
+            theme_icon_manager.get_icon(":git-merge-line"),
+        )
+        self.tools_menu.addAction(self.action_concat_excel)
+        self.tools_menu.addAction(
+            QtGui.QAction(
+                theme_icon_manager.get_icon(":inbox-unarchive-line"),
+                "Unzip archive",
+                self.menubar,
+                triggered=self.unzipArchive,
+            )
+        )
+        self.tools_menu.addAction(
+            QtGui.QAction(
+                theme_icon_manager.get_icon(":file-zip-line"),
+                "Unpack PDF",
+                self.menubar,
+                triggered=self.unpackPDF,
+            )
+        )
+        self.tools_menu.addAction(
+            QtGui.QAction(
+                theme_icon_manager.get_icon(":input-field"),
+                "Batch Rename file",
+                self.menubar,
+                triggered=self.batchRenameFile,
+            )
+        )
+        self.action_toggle_emoji = create_action(
+            self,
+            "toggle_emoji",
+            "Emoji Dialog",
+            lambda: self.emoji_widget_dock_widget.toggleView(
+                not self.emoji_widget_dock_widget.isVisible()
+            ),
+            theme_icon_manager.get_icon(":emoji-sticker-line"),
+            "Ctrl+E",
+            context=Qt.ShortcutContext.ApplicationShortcut,
+        )
+        self.tools_menu.addAction(self.action_toggle_emoji)
+
         # Help menu
         self.help_menu = self.menubar.addMenu("Help")
-        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":table-2"),
-                                               "Summary",
-                                                self.menubar,
-                                                triggered=self.showSummary))
-        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":information-2-line"),
-                                               "About InspectorMate",
-                                                self.menubar,
-                                                triggered=self.showAbout))
-        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":bug-line"),
-                                               "View Debug Output",
-                                                self.menubar,
-                                                triggered=self.showDebugOutput))
-        self.help_menu.addAction(QtGui.QAction(theme_icon_manager.get_icon(":folder-open-line"),
-                                               "Open App folder",
-                                                self.menubar,
-                                                triggered=self.openAppFolder))
+        self.help_menu.addAction(
+            QtGui.QAction(
+                theme_icon_manager.get_icon(":table-2"),
+                "Summary",
+                self.menubar,
+                triggered=self.showSummary,
+            )
+        )
+        self.help_menu.addAction(
+            QtGui.QAction(
+                theme_icon_manager.get_icon(":information-2-line"),
+                "About InspectorMate",
+                self.menubar,
+                triggered=self.showAbout,
+            )
+        )
+        self.help_menu.addAction(
+            QtGui.QAction(
+                theme_icon_manager.get_icon(":bug-line"),
+                "View Debug Output",
+                self.menubar,
+                triggered=self.showDebugOutput,
+            )
+        )
+        self.help_menu.addAction(
+            QtGui.QAction(
+                theme_icon_manager.get_icon(":folder-open-line"),
+                "Open App folder",
+                self.menubar,
+                triggered=self.openAppFolder,
+            )
+        )
+
+        self.action_check_updates_onStartUp = create_action(
+            self,
+            "check_update_onStartUp",
+            "Check for updates on StartUp",
+            lambda: get_settings().set_update_show_option(
+                self.action_check_updates_onStartUp.isChecked()
+            ),
+            checkable=True,
+        )
+        self.action_check_updates_onStartUp.setChecked(
+            get_settings().get_update_show_option()
+        )
+        self.help_menu.addAction(self.action_check_updates_onStartUp)
+
+        self.action_check_updates = create_action(
+            self,
+            "check_update",
+            "Check for updates...",
+            self.onCheckForUpdatesTriggered,
+        )
+        self.help_menu.addAction(self.action_check_updates)
 
     def connectSignals(self):
-        self.signage_tree_tab.sigSignageDoubleClicked.connect(self.onSignageDoubleClicked)
+        self.signage_tree_tab.sigSignageDoubleClicked.connect(
+            self.onSignageDoubleClicked
+        )
         self.signage_tree_tab.sigOpenNote.connect(self.onOpenFileTriggered)
         self.evidence_model.modelReset.connect(self.onEvidenceModelReset)
         self.evidence_tab.sigOpenDocument.connect(self.onOpenEvidenceTriggered)
-        self.evidence_tab.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
+        self.evidence_tab.sigCreateChildSignage.connect(
+            self.signage_tree_tab.createChildSignage
+        )
         self.evidence_tab.sigCreateSignage.connect(self.signage_tree_tab.createSignage)
-        self.evidence_tab.sigUpdateReviewProgress.connect(self.signage_tree_tab.updateReviewProgess)
-        self.evidence_model.sigUpdateReviewProgress.connect(self.signage_tree_tab.updateReviewProgess)
+        self.evidence_tab.sigUpdateReviewProgress.connect(
+            self.signage_tree_tab.updateReviewProgess
+        )
+        self.evidence_model.sigUpdateReviewProgress.connect(
+            self.signage_tree_tab.updateReviewProgess
+        )
 
         # Open files
         self.notebook_explorer.sigOpenFile.connect(self.onOpenFileTriggered)
@@ -351,34 +562,35 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @Slot()
     def showAbout(self):
-        text = f"""InspectorMate version {mconf.config.app_version}
+        text = f"""InspectorMate version {get_settings().APP_VERSION}
         Listinsight version {version("listinsight")}
-        Instance ID: {mconf.settings.value("InstanceId")}
+        Instance ID: {get_settings().instance_id()}
+        Author: {get_settings().APP_AUTHOR}\n
+        Property of {get_settings().ORG_NAME}
         """
         about = About("About InspectorMate", text, ":mylogo", parent=self)
+        about.setMinimumWidth(250)
         about.show()
 
     @Slot()
     def showDebugOutput(self):
-        """
-        Show Debug Output
-        """
-        self.log_viewer = LogViewer.load_from_file(mconf.config.log_path.as_posix(), "Debug log")
+        """Show Debug Output"""
+        self.log_viewer = LogViewer.load_from_file(
+            get_settings().LOG_PATH.as_posix(), "Debug log"
+        )
         self.log_viewer.showMaximized()
-    
+
     @Slot()
     def openAppFolder(self):
-        """
-        Open Application Folder
-        """
-        utils.open_file(mconf.config.app_data_path)
+        """Open Application Folder"""
+        utils.open_file(get_settings().APP_DATA_PATH)
 
     @Slot()
     def setAppFont(self, fontsize: float):
         font = QtGui.QFont()
         font.setPointSizeF(fontsize)
         QtWidgets.QApplication.setFont(font)
-        mconf.settings.setValue("app_fontsize", fontsize)
+        get_settings().set_app_font_size(fontsize)
 
     @Slot()
     def addRemoveOwner(self):
@@ -393,33 +605,36 @@ class MainWindow(QtWidgets.QMainWindow):
     @Slot()
     def onEditRefkeyRegexTriggered(self):
         """Edit Refkey Detection RegEx Pattern"""
-        if mconf.settings.value("regex") is None or mconf.settings.value("regex") == "":
-            regex = mconf.default_regex
-        else:
-            regex = mconf.settings.value("regex")
-
-        text, ok = QtWidgets.QInputDialog.getText(self,
-                                                  "Signage/Evidence Refkey Detection Pattern",
-                                                  f"Actual RegEx pattern: {mconf.settings.value("regex")}\nNew RegEx:",
-                                                  QtWidgets.QLineEdit.EchoMode.Normal,
-                                                  regex)
+        regx = get_settings().get_signage_pattern()
+        text, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "Signage/Evidence Refkey Detection Pattern",
+            f"Actual RegEx pattern: {regx}\nNew RegEx:",
+            QtWidgets.QLineEdit.EchoMode.Normal,
+            regx,
+        )
         if ok:
-            mconf.settings.setValue("regex", text)
+            get_settings().set_signage_pattern(text)
 
     def loadSettings(self):
-        self.file_open_option.setChecked(mconf.settings.value("USE_DEFAULT_FILEOPENER", False, bool))
-        self.alternating_table_row_color.setChecked(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
+        self.action_file_open_option.setChecked(get_settings().get_file_open_option())
+        self.action_set_alternating_color.setChecked(
+            get_settings().get_alternating_row_coloring()
+        )
         self.onSettingsChanged()
 
     @Slot()
     def saveSettings(self):
-        mconf.settings.setValue("USE_DEFAULT_FILEOPENER", self.file_open_option.isChecked())
-        mconf.settings.setValue("ALTERNATING_TABLE_ROW_COLOR", self.alternating_table_row_color.isChecked())
+        get_settings().set_file_open_option(self.action_file_open_option.isChecked())
+        get_settings().set_alternating_row_coloring(
+            self.action_set_alternating_color.isChecked()
+        )
         self.onSettingsChanged()
-    
+
     def onSettingsChanged(self):
-        self.signage_tree_tab.table.setAlternatingRowColors(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
-        self.evidence_tab.table.setAlternatingRowColors(mconf.settings.value("ALTERNATING_TABLE_ROW_COLOR", False, bool))
+        coloring = get_settings().get_alternating_row_coloring()
+        self.signage_tree_tab.table.setAlternatingRowColors(coloring)
+        self.evidence_tab.table.setAlternatingRowColors(coloring)
 
     @Slot(str)
     def onSignageDoubleClicked(self, refkey: str):
@@ -440,23 +655,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @Slot(object, QtCore.QModelIndex)
     def onOpenEvidenceTriggered(self, doc: Document, index):
-        if self.file_open_option.isChecked():
+        if self.action_file_open_option.isChecked():
             utils.open_file(doc.filepath)
             return
 
         self.viewer = self.viewer_factory.viewer(doc, index)
 
         if self.viewer is not None:
-            self.viewer.sigCreateChildSignage.connect(self.signage_tree_tab.createChildSignage)
-            self.viewer_manager.addTabWidget(self.viewer, doc.title) 
+            self.viewer.sigCreateChildSignage.connect(
+                self.signage_tree_tab.createChildSignage
+            )
+            self.viewer_manager.addTabWidget(self.viewer, doc.title)
             self.viewer_manager_cdock.toggleView(True)
         else:
-            status_signal.status_message.emit("Cannot open file with InspectorMate - Trying with system app...", 7000)
+            status_signal.status_message.emit(
+                "Cannot open file with InspectorMate - Trying with system app...", 7000
+            )
             utils.open_file(doc.filepath)
-
-    def onOpenNoteTriggered(self, filepath, anchor = ""):
-        self.notepad_tab.loadfile(file_path=filepath, anchor=anchor)
-        self.notepad_dock_widget.toggleView()
 
     @Slot(str, dict, str)
     def onCreateSignageFromNotepad(self, title, source: dict, anchor: str):
@@ -471,8 +686,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def set_window_title(self, text=None):
         if text is not None:
-            self.setWindowTitle(f'{mconf.config.app_name} - {text}')
-    
+            self.setWindowTitle(f"{get_settings().APP_NAME} - {text}")
+
     @Slot()
     def onEvidenceModelReset(self):
         """Reset the DataWidgetMapper index after loading file into the document model
@@ -501,16 +716,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @Slot()
     def concatExcelFiles(self):
-        self.concat_excel_dialog = ConcatExcelDialog(start_process=self.startSpinner,
-                                                     process_ended=self.stopSpinner)     
+        self.concat_excel_dialog = ConcatExcelDialog(
+            start_process=self.startSpinner, process_ended=self.stopSpinner
+        )
         self.concat_excel_dialog.exec()
 
     @Slot()
     def unzipArchive(self):
-        self.unzip_dialog = UnzipDialog(source=AppDatabase.activeWorkspace().rootpath,
-                                        dest=AppDatabase.activeWorkspace().evidence_path,
-                                        start_process=self.startSpinner,
-                                        process_ended=self.stopSpinner)
+        self.unzip_dialog = UnzipDialog(
+            source=AppDatabase.activeWorkspace().rootpath,
+            dest=AppDatabase.activeWorkspace().evidence_path,
+            start_process=self.startSpinner,
+            process_ended=self.stopSpinner,
+        )
         self.unzip_dialog.exec()
 
     @Slot()
@@ -520,7 +738,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @Slot()
     def unpackPDF(self):
-        file = QtWidgets.QFileDialog.getOpenFileName(caption="Select file", directory=AppDatabase.activeWorkspace().evidence_path, filter="*.pdf")
+        file = QtWidgets.QFileDialog.getOpenFileName(
+            caption="Select file",
+            directory=AppDatabase.activeWorkspace().evidence_path,
+            filter="*.pdf",
+        )
 
         if file[0] != "":
             err = utils.unpackPDF(file[0])
@@ -528,7 +750,9 @@ class MainWindow(QtWidgets.QMainWindow):
             if isinstance(err, Exception):
                 QtWidgets.QMessageBox.critical(self, "unpackPDF -- Error", f"{err}")
             elif err:
-                QtWidgets.QMessageBox.information(self, "unpackPDF -- Success", "PDF successfully unpacked")
+                QtWidgets.QMessageBox.information(
+                    self, "unpackPDF -- Success", "PDF successfully unpacked"
+                )
 
     def disable_all(self):
         self.evidence_tab.setEnabled(False)
@@ -549,9 +773,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_explorer.setEnabled(True)
         for menu in self.menuBar().findChildren(QtWidgets.QMenu):
             for action in menu.actions():
-               action.setEnabled(True)
+                action.setEnabled(True)
 
-    @status_message('Updating Workspace...', 10000)
+    @status_message("Updating Workspace...", 10000)
     @Slot()
     def onWorkspaceChanged(self):
         if AppDatabase.activeWorkspace().id == 0:
@@ -565,16 +789,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.signage_treemodel.updateReviewProgess()
         self.connector_model.refresh()
         self.workspace_explorer.set_root_path(AppDatabase.activeWorkspace().rootpath)
-        self.evidence_explorer.set_root_path(AppDatabase.activeWorkspace().evidence_path)
-        self.notebook_explorer.set_root_path(AppDatabase.activeWorkspace().notebook_path)
+        self.evidence_explorer.set_root_path(
+            AppDatabase.activeWorkspace().evidence_path
+        )
+        self.notebook_explorer.set_root_path(
+            AppDatabase.activeWorkspace().notebook_path
+        )
         self.set_window_title(AppDatabase.activeWorkspace().name)
         self.notepad_tab.close_all()
-        self.listinsight.setRootPath(f"{AppDatabase.activeWorkspace().rootpath}/ListInsight")
+        self.listinsight.setRootPath(
+            f"{AppDatabase.activeWorkspace().rootpath}/ListInsight"
+        )
         self.viewer_manager.closeAllTabWidget()
-        
+
         status_signal.status_message.emit("Workspace changed!", 5000)
 
-    @status_message('Connecting to OneNote...')
+    @status_message("Connecting to OneNote...")
     @Slot()
     def open_onenote_picker(self):
         onenote_warning = QtWidgets.QMessageBox.warning(
@@ -614,7 +844,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.refreshSummary()
         self.summary_dialogs.adjust_size()
         self.summary_dialogs.show()
-    
+
     def refreshSummary(self):
         s_data, s_vheaders, s_hheaders = self.signage_treemodel.summary()
         e_data, e_vheaders, e_hheaders = self.evidence_model.summary()
@@ -622,10 +852,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.evidence_summary_model.loadData(e_data, e_vheaders, e_hheaders)
 
     def closeDialogs(self):
-        if self.concat_excel_dialog: self.concat_excel_dialog.close()
-        if self.onenote_manager: self.onenote_manager.close()
-        if self.summary_dialogs: self.summary_dialogs.close()
-        if self.log_viewer: self.log_viewer.close()
+        if self.concat_excel_dialog:
+            self.concat_excel_dialog.close()
+        if self.onenote_manager:
+            self.onenote_manager.close()
+        if self.summary_dialogs:
+            self.summary_dialogs.close()
+        if self.log_viewer:
+            self.log_viewer.close()
 
     def closeEvent(self, event: QtCore.QEvent):
         # If forced programmatic close, skip confirmation
@@ -644,10 +878,11 @@ class MainWindow(QtWidgets.QMainWindow):
         msg = "Are you sure you want to exit the program?"
         reply = QtWidgets.QMessageBox.question(
             self,
-            f'Closing {mconf.config.app_name}',
+            f"Closing {get_settings().APP_NAME}",
             msg,
-            QtWidgets.QMessageBox.StandardButton.Ok | QtWidgets.QMessageBox.StandardButton.No,
-            QtWidgets.QMessageBox.StandardButton.No
+            QtWidgets.QMessageBox.StandardButton.Ok
+            | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
 
         if reply == QtWidgets.QMessageBox.StandardButton.Ok:

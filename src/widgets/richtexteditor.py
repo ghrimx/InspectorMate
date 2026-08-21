@@ -8,11 +8,13 @@ from PyQt6.QtGui import (
 )
 from pyqt6_richtexteditor import RichTextEditManager, create_action
 
+from common import SignageOrigin
+from utilities.settings import get_settings
 from utilities.utils import timeuuid
 
 
 class RichTextEditor(RichTextEditManager):
-    sigCreateSignage = Signal(str, dict, str)
+    sigCreateSignage = Signal(str, object, str)
 
     def __init__(self, base_folder="", template_folder="", settings=None, parent=None):
         super().__init__(base_folder, template_folder, settings, parent)
@@ -36,15 +38,14 @@ class RichTextEditor(RichTextEditManager):
 
         title = textedit.textCursor().selectedText()
         anchor = str(timeuuid())
-        source = {
-            "application": "InspectorMate",
-            "module": "RichTextEditor",
-            "item": "RichTextEdit",
-            "item_title": textedit.userFriendlyFilename(),
-            "target": textedit.filepath(),
-            "anchor": anchor,
-        }
-
+        source = SignageOrigin(
+            get_settings().APP_NAME,
+            "RichTextEditor",
+            "RichTextEdit",
+            textedit.userFriendlyFilename(),
+            textedit.filepath(),
+            anchor
+        )
         self.sigCreateSignage.emit(title, source, anchor)
 
     def insertSignage(

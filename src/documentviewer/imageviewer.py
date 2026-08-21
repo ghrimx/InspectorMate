@@ -1,8 +1,7 @@
 import logging
-from qtpy import (QtCore, QtWidgets, QtGui, Slot)
 
-from documentviewer.viewerwidget import ViewerWidget
-
+from documentviewer.viewerwidget import SignageOrigin, ViewerWidget
+from qtpy import QtCore, QtGui, QtWidgets, Slot
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +105,6 @@ class ImageViewer(ViewerWidget):
         title = f'"{self.title.toPlainText()}"'
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"
-    
-    def getAnchor(self):
-        return None
 
     Slot()
     def onActionZoomInTriggered(self):
@@ -134,9 +130,11 @@ class ImageViewer(ViewerWidget):
         self.updateActions()
     
     def source(self) -> dict:
-        title = self._document.title
-        return {"application":"InspectorMate",
-                "module":self.viewerName(),
-                "item":"document",
-                "item_title":title,
-                "filepath":self._document.filepath.as_posix()}
+        source_origin = SignageOrigin(
+            "InspectorMate",
+            "DocViewer",
+            self.viewerName(),
+            self._document.title,
+            self._document.filepath.as_posix(),
+        )
+        return source_origin

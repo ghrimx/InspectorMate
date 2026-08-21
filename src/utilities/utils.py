@@ -287,6 +287,9 @@ def line_id(line: str) -> str:
 def extract_hash_lines(docx_path) -> dict:
     """
     Extract all lines starting with '#' or '! from a Word (.docx) document using mammoth.
+
+    Return:
+        dict{line id, line text}
     """
     try:
         with open(docx_path, "rb") as docx_file:

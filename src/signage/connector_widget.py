@@ -1,11 +1,12 @@
 import logging
-from qtpy import QtWidgets
 
-from signage.connector_model import ConnectorModel, Connector, AppDatabase
-from common import ConnectorType
-
-from onenote.view import OnenotePickerDialog
+from my_pyqt_widgets import ReadOnlyLineEdit
 from qt_theme_manager import theme_icon_manager
+
+from common import ConnectorType
+from onenote.view import OnenotePickerDialog
+from qtpy import QtWidgets
+from signage.connector_model import AppDatabase, Connector, ConnectorModel
 
 logger = logging.getLogger(__name__)
 
@@ -108,17 +109,15 @@ class ConnectorEditDialog(QtWidgets.QDialog):
 
         self.source_btn = QtWidgets.QPushButton("Select source")
 
-        self.name_lineedit = QtWidgets.QLineEdit()
-        self.name_lineedit.setReadOnly(True)
-        self.value_lineedit = QtWidgets.QLineEdit()
-        self.value_lineedit.setReadOnly(True)
+        self.name_lineedit = ReadOnlyLineEdit()
+        self.value_lineedit = ReadOnlyLineEdit()
 
         self.setMinimumWidth(500)
 
         form.addRow(QtWidgets.QLabel("Type"), self.connector_type)
+        form.addWidget(self.source_btn)
         form.addRow(QtWidgets.QLabel("Name"), self.name_lineedit)
         form.addRow(QtWidgets.QLabel("Value"), self.value_lineedit)
-        form.addWidget(self.source_btn)
         form.addWidget(self.buttonBox)
 
         # Connections

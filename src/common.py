@@ -1,9 +1,10 @@
 import json
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass, field, fields
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from datetime import datetime
-from dataclasses import dataclass, field, fields
-from typing import TypeVar, Generic, Dict, Optional, Iterable, Tuple
+from typing import Generic, Optional, TypeVar
 
 
 @dataclass
@@ -88,7 +89,7 @@ class Signage:
 
     def __post_init__(self):
         if self.creation_datetime == "":
-            self.creation_datetime = datetime.now().strftime("%Y-%m-%d")
+            self.creation_datetime = datetime.now()
 
 
 @dataclass
@@ -129,7 +130,7 @@ class SignageStatus:
     icon: str = ""
 
 
-@dataclass
+@dataclass(frozen=True)
 class DocumentStatus:
     uid: int
     name: str
@@ -189,8 +190,8 @@ class Cache(Generic[K_int, K_str, V]):
     """
 
     def __init__(self):
-        self._int_to_value: Dict[K_int, V] = {}
-        self._str_to_int: Dict[K_str, K_int] = {}
+        self._int_to_value: dict[K_int, V] = {}
+        self._str_to_int: dict[K_str, K_int] = {}
 
     # -----------------------------
     # Core API
@@ -205,7 +206,7 @@ class Cache(Generic[K_int, K_str, V]):
         self._int_to_value[int_key] = value
         self._str_to_int[str_key] = int_key
 
-    def get(self, key: K_int | K_str, default: Optional[V] = None) -> Optional[V]:
+    def get(self, key: K_int | K_str, default: V | None = None) -> V | None:
         """Retrieve value by either int or str key."""
         if isinstance(key, int):
             return self._int_to_value.get(key, default)
@@ -262,7 +263,7 @@ class Cache(Generic[K_int, K_str, V]):
     def intkeys(self) -> Iterable[K_int]:
         return self._str_to_int.values()
 
-    def items(self) -> Iterable[Tuple[K_int, V]]:
+    def items(self) -> Iterable[tuple[K_int, V]]:
         return self._int_to_value.items()
 
     def values(self) -> Iterable[V]:
@@ -290,8 +291,24 @@ class Cache(Generic[K_int, K_str, V]):
                 raise KeyError(f"Integer key {key!r} not found. Use add() to insert new items.")
             self._int_to_value[key] = value
         else:
-            raise ValueError("Cannot set value with string key alone (requires both keys).")
+            raise TypeError("Cannot set value with string key alone (requires both keys).")
 
     def __repr__(self) -> str:
         return f"<Cache size={len(self)}>"
 
+
+@dataclass
+class SignageOrigin:
+    application: str
+    module: str
+    item: str|None = None
+    item_title: str|None = None
+    item_id: str|None = None
+    target: str|None = None
+    anchor: str|None = None
+
+    def as_dict(self):
+        return asdict(self)
+
+    def as_str(self):
+        return str(asdict(self))

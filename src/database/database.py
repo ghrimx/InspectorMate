@@ -69,6 +69,7 @@ class AppDatabase:
     def initCache(cls):
         cls._cacheSignageType()
         cls._cacheSignageStatus()
+        cls.cacheDocStatus()
 
     @classmethod
     def setActiveWorkspace(cls):
@@ -212,7 +213,7 @@ class AppDatabase:
                                         icon=query.value(3),
                                         eol=query.value(4))
                 cls.cache_document_status.add(status.uid, status.name, status)
-            logger.info(f"Success! - Cache's size={cls.cache_document_status.len()}")
+            logger.info(f"Success! - Cache's size={len(cls.cache_document_status)}")
 
     @classmethod
     def queryEvidenceReview(cls):

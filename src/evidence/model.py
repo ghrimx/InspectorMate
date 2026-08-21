@@ -1,14 +1,12 @@
 import logging
+from datetime import datetime
 from pathlib import Path
 
 from common import DatabaseField
 from database.database import AppDatabase
 from qtpy import QSqlRelationalTableModel, Qt, QtCore, QtSql, Signal
-from utilities import config as mconf
 from utilities import utils
-
-from datetime import datetime
-
+from utilities.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +185,7 @@ class EvidenceModel(QSqlRelationalTableModel):
                             on_finished: callable):
         evidence_path = AppDatabase.activeWorkspace().evidence_path
         cache_files = self.cache_files
-        pattern = mconf.default_regex if mconf.settings.value("regex") is None else mconf.settings.value("regex")
+        pattern = get_settings().get_signage_pattern()
 
         pool = QtCore.QThreadPool().globalInstance()
         worker = InsertDocumentsWorker(model=self,
@@ -257,7 +255,7 @@ class EvidenceModel(QSqlRelationalTableModel):
             - Get the Refkey from the filepath
             - Update the filepath and the refkey 
         """
-        regex = mconf.default_regex if mconf.settings.value("regex") is None else mconf.settings.value("regex")
+        pattern = get_settings().get_signage_pattern()
         self.refresh()
         for row in rows:
             update_filepath = False
@@ -273,7 +271,7 @@ class EvidenceModel(QSqlRelationalTableModel):
                     update_filepath = True
                     filepath = new_filepath
 
-            refkey = utils.findRefKeyFromPath(filepath, regex, AppDatabase.activeWorkspace().evidence_path)
+            refkey = utils.findRefKeyFromPath(filepath, pattern, AppDatabase.activeWorkspace().evidence_path)
             
             logger.debug(f'refkey:{refkey}')
 

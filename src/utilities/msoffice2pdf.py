@@ -1,15 +1,16 @@
 import logging
-from pathlib import Path
-from utilities.config import config as msconf
 import subprocess
+from pathlib import Path
+
+from utilities.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
 
 def office2pdf(source: Path, output_dir: Path) -> Path | Exception:
     """Convert Microsoft Office document using Powershell and Interop ComObject"""
-    
-    ps1 = msconf.app_data_path.joinpath("MsOfficeConverter.ps1").as_posix()
+
+    ps1 = get_settings().APP_DATA_PATH.joinpath("MsOfficeConverter.ps1").as_posix()
 
     output_file = output_dir.joinpath("." + source.name).with_suffix(".pdf")
 
@@ -18,15 +19,13 @@ def office2pdf(source: Path, output_dir: Path) -> Path | Exception:
         return output_file
 
     try:
-        process = subprocess.run(["powershell",
-                                  "-File",
-                                  ps1,
-                                  source.as_posix(),
-                                  output_file.as_posix()],
-                                  shell=True,
-                                  check=True,
-                                  capture_output=True,
-                                  text=True)
+        subprocess.run(
+            ["powershell", "-File", ps1, source.as_posix(), output_file.as_posix()],
+            shell=True,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
     except Exception as e:
         logger.error(f"Fail to execute script. Error={e}")
         return None

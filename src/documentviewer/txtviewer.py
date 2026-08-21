@@ -1,9 +1,9 @@
 import logging
 
-from qtpy import (QtWidgets, QtCore, QtGui, Slot)
-
-from documentviewer.viewerwidget import ViewerWidget
 from qt_theme_manager import theme_icon_manager
+
+from documentviewer.viewerwidget import SignageOrigin, ViewerWidget
+from qtpy import QtCore, QtGui, QtWidgets, Slot
 
 logger = logging.getLogger(__name__)
 
@@ -97,13 +97,13 @@ class TxtViewer(ViewerWidget):
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"
     
-    def getAnchor(self):
-        return None
-    
-    def source(self) -> dict:
+    def source(self) -> SignageOrigin:
         title = self._document.title
-        return {"application":"InspectorMate",
-                "module":self.viewerName(),
-                "item":"document",
-                "item_title":title,
-                "filepath":self._document.filepath.as_posix()}
+        source_origin = SignageOrigin(
+            "InspectorMate",
+            "DocViewer",
+            self.viewerName(),
+            title,
+            self._document.filepath.as_posix(),
+        )
+        return source_origin

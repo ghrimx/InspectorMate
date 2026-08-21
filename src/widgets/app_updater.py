@@ -1,17 +1,16 @@
-import sys, os, requests, subprocess, feedparser
-import logging
-from pathlib import Path
-import shutil
 import datetime
-from packaging.version import Version
-from PyQt6.QtWidgets import (
-    QApplication, QDialog, QVBoxLayout, QLabel,
-    QProgressBar, QMessageBox,
-    QDialogButtonBox
-)
-from PyQt6.QtCore import QThread, pyqtSignal
+import logging
+import os
+import shutil
+import subprocess
+from pathlib import Path
 
-from utilities.config import config
+import feedparser
+import requests
+from packaging.version import Version
+
+from qtpy import QtCore, QtWidgets, Signal
+from utilities.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +39,11 @@ def get_latest_release() -> str | None:
         # Extract version/tag from the entry ID (last part of the URL)
         tag = latest.id.rsplit("/", 1)[-1]
 
-        if Version(tag) > Version(config.app_version):
-            logger.info(f"\n\tCurrent version: {config.app_version}\n\tNew release available. Version: {tag}")
+        if Version(tag) > Version(get_settings().APP_VERSION):
+            logger.info(f"\n\tCurrent version: {get_settings().APP_VERSION}\n\tNew release available. Version: {tag}")
             return tag
         
-        logger.info(f"Current version is latest")
+        logger.info("Current version is latest")
 
     except Exception as e:
         logger.warning(f"Update check failed: {e}")
@@ -63,9 +62,9 @@ def backup_file(file_path: Path, backup_dir: Path):
     logger.error(f"Backed up {file_path} >>> {backup_file}")
 
 
-class Downloader(QThread):
-    progress = pyqtSignal(int)
-    finished = pyqtSignal(str)
+class Downloader(QtCore.QThread):
+    progress = Signal(int)
+    finished = Signal(str)
 
     def __init__(self, url, dest):
         super().__init__()
@@ -111,7 +110,7 @@ class Downloader(QThread):
             self.finished.emit(err)
 
 
-class Updater(QDialog):
+class Updater(QtWidgets.QDialog):
     def __init__(self, release, parent = None):
         super().__init__(parent)
         self._parent = parent
@@ -120,21 +119,29 @@ class Updater(QDialog):
         self.setWindowTitle("Update Available")
         self.setFixedSize(350, 150)
 
-        vbox = QVBoxLayout(self)
-        self.label = QLabel(f"Version {release} is available.\nDo you want to install it?")
+        vbox = QtWidgets.QVBoxLayout(self)
+        self.label = QtWidgets.QLabel(f"Version {release} is available.\nDo you want to install it?")
         vbox.addWidget(self.label)
 
-        self.progress = QProgressBar()
+        self.show_again_checkbox = QtWidgets.QCheckBox("Show again")
+        self.show_again_checkbox.setChecked(get_settings().get_update_show_option())
+        self.show_again_checkbox.checkStateChanged.connect(self.onShowAgainChanged)
+        vbox.addWidget(self.show_again_checkbox)
+
+        self.progress = QtWidgets.QProgressBar()
         self.progress.setVisible(False)
         vbox.addWidget(self.progress)
 
-        self.buttons = (QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        self.buttonBox = QDialogButtonBox(self.buttons)
+        self.buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        self.buttonBox = QtWidgets.QDialogButtonBox(self.buttons)
 
         self.buttonBox.accepted.connect(self.start_update)
         self.buttonBox.rejected.connect(self.reject)
 
         vbox.addWidget(self.buttonBox)
+
+    def onShowAgainChanged(self):
+        get_settings().set_update_show_option(self.show_again_checkbox.isChecked())
 
     def start_update(self):
         self.buttonBox.hide()
@@ -149,11 +156,11 @@ class Updater(QDialog):
 
     def run_installer(self, path):
         if path.startswith("ERROR:"):
-            QMessageBox.critical(self, "Download Failed", path)
+            QtWidgets.QMessageBox.critical(self, "Download Failed", path)
             self.close()
             return
         
-        backup_file(config.db_path, config.app_data_path)
+        backup_file(get_settings().DB_PATH, get_settings().APP_DATA_PATH)
 
         logger.info("Running installer...")
 

@@ -1,9 +1,7 @@
 from qtpy import QtCore, QtGui
 
 
-
 class ProxyModel(QtCore.QSortFilterProxyModel):
-
     def __init__(self, model):
         super().__init__()
         self.setSourceModel(model)
@@ -16,8 +14,9 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         self.types_filter = []
 
     def setPermanentFilter(self, pattern: str, columns: list):
-        self.permanent_filter = QtCore.QRegularExpression(pattern,
-                                                          QtCore.QRegularExpression.PatternOption.CaseInsensitiveOption)
+        self.permanent_filter = QtCore.QRegularExpression(
+            pattern, QtCore.QRegularExpression.PatternOption.CaseInsensitiveOption
+        )
         self.permanent_columns = columns
 
     def setUserFilter(self, pattern: str, columns: list):
@@ -31,8 +30,10 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
     def setTypeFilter(self, signage_types: list, column: int):
         self.types_filter = signage_types
         self.types_column = column
-    
-    def filterAcceptsRow(self, source_row: int, source_parent: QtCore.QModelIndex) -> bool:
+
+    def filterAcceptsRow(
+        self, source_row: int, source_parent: QtCore.QModelIndex
+    ) -> bool:
         user_filter = True
         status_filter = True
         types_filter = True
@@ -43,18 +44,26 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
             data_perm = str(self.sourceModel().data(index_perm))
             if not self.permanent_filter.match(data_perm).hasMatch():
                 return False
-            
+
         if len(self.status_filter) > 0:
-            index_status = self.sourceModel().index(source_row, self.status_column, source_parent)
-            data_status = self.sourceModel().data(index_status, QtCore.Qt.ItemDataRole.DisplayRole)
+            index_status = self.sourceModel().index(
+                source_row, self.status_column, source_parent
+            )
+            data_status = self.sourceModel().data(
+                index_status, QtCore.Qt.ItemDataRole.DisplayRole
+            )
             if data_status in self.status_filter:
                 status_filter = True
             else:
                 status_filter = False
 
         if len(self.types_filter) > 0:
-            index_type = self.sourceModel().index(source_row, self.types_column, source_parent)
-            data_type = self.sourceModel().data(index_type, QtCore.Qt.ItemDataRole.DisplayRole)
+            index_type = self.sourceModel().index(
+                source_row, self.types_column, source_parent
+            )
+            data_type = self.sourceModel().data(
+                index_type, QtCore.Qt.ItemDataRole.DisplayRole
+            )
             if data_type in self.types_filter:
                 types_filter = True
             else:
@@ -63,24 +72,26 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         # Apply the user filter on the specified columns
         for column in self.user_columns:
             index_user = self.sourceModel().index(source_row, column, source_parent)
-            data_user = str(self.sourceModel().data(index_user, QtCore.Qt.ItemDataRole.DisplayRole)).lower()
+            data_user = str(
+                self.sourceModel().data(index_user, QtCore.Qt.ItemDataRole.DisplayRole)
+            ).lower()
 
             if self.user_filter not in data_user:
                 user_filter = False
-            else: 
+            else:
                 user_filter = True
                 break
-            
+
         return user_filter and status_filter and types_filter
 
 
 class TreeItem:
-    def __init__(self, data: list, parent: 'TreeItem' = None):
+    def __init__(self, data: list, parent: "TreeItem" = None):
         self.item_data = data
         self.parent_item = parent
         self.child_items = []
 
-    def child(self, number: int) -> 'TreeItem':
+    def child(self, number: int) -> "TreeItem":
         if number < 0 or number >= len(self.child_items):
             return None
         return self.child_items[number]
@@ -159,8 +170,8 @@ class TreeItem:
 
         self.item_data[column] = value
         return True
-    
-    def findChildById(self, target_id, id_column=0) -> 'TreeItem | None':
+
+    def findChildById(self, target_id, id_column=0) -> "TreeItem | None":
         """Recursively search for a TreeItem whose data[id_column] == target_id."""
         if self.data(id_column) == target_id:
             return self
@@ -179,11 +190,10 @@ class TreeItem:
             result += f' "{d}"' if d else " <None>"
         result += f", {len(self.child_items)} children>"
         return result
-    
+
 
 class TreeModel(QtCore.QAbstractItemModel):
-
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.headers = []
         self.root_item: TreeItem = None
@@ -191,22 +201,27 @@ class TreeModel(QtCore.QAbstractItemModel):
 
     def columnCount(self, parent: QtCore.QModelIndex = None) -> int:
         return self.root_item.columnCount()
-    
+
     def data(self, index: QtCore.QModelIndex, role: int = None):
         if not index.isValid():
             return None
 
-        if role != QtCore.Qt.ItemDataRole.DisplayRole and role != QtCore.Qt.ItemDataRole.EditRole:
+        if (
+            role != QtCore.Qt.ItemDataRole.DisplayRole
+            and role != QtCore.Qt.ItemDataRole.EditRole
+        ):
             return None
         item: TreeItem = self.getItem(index)
 
         return item.data(index.column())
-    
+
     def flags(self, index: QtCore.QModelIndex) -> QtCore.Qt.ItemFlag:
         if not index.isValid():
             return QtCore.Qt.ItemFlag.NoItemFlags
 
-        return QtCore.Qt.ItemFlag.ItemIsEditable | QtCore.QAbstractItemModel.flags(self, index)
+        return QtCore.Qt.ItemFlag.ItemIsEditable | QtCore.QAbstractItemModel.flags(
+            self, index
+        )
 
     def getItem(self, index: QtCore.QModelIndex = QtCore.QModelIndex()) -> TreeItem:
         if index.isValid():
@@ -215,15 +230,24 @@ class TreeModel(QtCore.QAbstractItemModel):
                 return item
 
         return self.root_item
-    
-    def headerData(self, section: int, orientation: QtCore.Qt.Orientation,
-                   role: int = QtCore.Qt.ItemDataRole.DisplayRole):
-        if orientation == QtCore.Qt.Orientation.Horizontal and role == QtCore.Qt.ItemDataRole.DisplayRole:
+
+    def headerData(
+        self,
+        section: int,
+        orientation: QtCore.Qt.Orientation,
+        role: int = QtCore.Qt.ItemDataRole.DisplayRole,
+    ):
+        if (
+            orientation == QtCore.Qt.Orientation.Horizontal
+            and role == QtCore.Qt.ItemDataRole.DisplayRole
+        ):
             return self.root_item.data(section)
 
         return None
-    
-    def index(self, row: int, column: int, parent: QtCore.QModelIndex = QtCore.QModelIndex()) -> QtCore.QModelIndex:
+
+    def index(
+        self, row: int, column: int, parent: QtCore.QModelIndex = QtCore.QModelIndex()
+    ) -> QtCore.QModelIndex:
         if parent.isValid() and parent.column() != 0:
             return QtCore.QModelIndex()
 
@@ -235,17 +259,25 @@ class TreeModel(QtCore.QAbstractItemModel):
         if child_item:
             return self.createIndex(row, column, child_item)
         return QtCore.QModelIndex()
-    
-    def insertColumns(self, position: int, columns: int,
-                      parent: QtCore.QModelIndex = QtCore.QModelIndex()) -> bool:
+
+    def insertColumns(
+        self,
+        position: int,
+        columns: int,
+        parent: QtCore.QModelIndex = QtCore.QModelIndex(),
+    ) -> bool:
         self.beginInsertColumns(parent, position, position + columns - 1)
         success: bool = self.root_item.insertColumns(position, columns)
         self.endInsertColumns()
 
         return success
-    
-    def insertRows(self, position: int, rows: int,
-                   parent: QtCore.QModelIndex = QtCore.QModelIndex()) -> bool:
+
+    def insertRows(
+        self,
+        position: int,
+        rows: int,
+        parent: QtCore.QModelIndex = QtCore.QModelIndex(),
+    ) -> bool:
         parent_item: TreeItem = self.getItem(parent)
         if not parent_item:
             return False
@@ -257,7 +289,9 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         return success
 
-    def parent(self, index: QtCore.QModelIndex = QtCore.QModelIndex()) -> QtCore.QModelIndex:
+    def parent(
+        self, index: QtCore.QModelIndex = QtCore.QModelIndex()
+    ) -> QtCore.QModelIndex:
         if not index.isValid():
             return QtCore.QModelIndex()
 
@@ -272,8 +306,12 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         return self.createIndex(parent_item.childNumber(), 0, parent_item)
 
-    def removeColumns(self, position: int, columns: int,
-                      parent: QtCore.QModelIndex = QtCore.QModelIndex()) -> bool:
+    def removeColumns(
+        self,
+        position: int,
+        columns: int,
+        parent: QtCore.QModelIndex = QtCore.QModelIndex(),
+    ) -> bool:
         self.beginRemoveColumns(parent, position, position + columns - 1)
         success: bool = self.root_item.removeColumns(position, columns)
         self.endRemoveColumns()
@@ -283,8 +321,12 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         return success
 
-    def removeRows(self, position: int, rows: int,
-                   parent: QtCore.QModelIndex = QtCore.QModelIndex()) -> bool:
+    def removeRows(
+        self,
+        position: int,
+        rows: int,
+        parent: QtCore.QModelIndex = QtCore.QModelIndex(),
+    ) -> bool:
         parent_item: TreeItem = self.getItem(parent)
         if not parent_item:
             return False
@@ -312,16 +354,21 @@ class TreeModel(QtCore.QAbstractItemModel):
         result: bool = item.setData(index.column(), value)
 
         if result:
-            self.dataChanged.emit(index,
-                                  index,
-                                  [QtCore.Qt.ItemDataRole.DisplayRole,
-                                   QtCore.Qt.ItemDataRole.EditRole])
+            self.dataChanged.emit(
+                index,
+                index,
+                [QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.EditRole],
+            )
 
         return result
 
-    def setHeaderData(self, section: int, orientation: QtCore.Qt.Orientation, value,
-                      role: int = None) -> bool:
-        if role != QtCore.Qt.ItemDataRole.EditRole or orientation != QtCore.Qt.Orientation.Horizontal:
+    def setHeaderData(
+        self, section: int, orientation: QtCore.Qt.Orientation, value, role: int = None
+    ) -> bool:
+        if (
+            role != QtCore.Qt.ItemDataRole.EditRole
+            or orientation != QtCore.Qt.Orientation.Horizontal
+        ):
             return False
 
         result: bool = self.root_item.setData(section, value)
@@ -330,7 +377,7 @@ class TreeModel(QtCore.QAbstractItemModel):
             self.headerDataChanged.emit(orientation, section, section)
 
         return result
-    
+
     def findIndexById(self, target_id, id_column=0) -> QtCore.QModelIndex:
         """Return QModelIndex for TreeItem with given ID, or invalid index if not found."""
         if not target_id:
@@ -346,7 +393,6 @@ class TreeModel(QtCore.QAbstractItemModel):
 
 
 class SummaryModel(QtCore.QAbstractTableModel):
-
     def __init__(self, data=[[]]):
         super().__init__()
         self._data = data
@@ -356,24 +402,30 @@ class SummaryModel(QtCore.QAbstractTableModel):
     def data(self, index, role):
         if len(self._data) > 0:
             if role == QtCore.Qt.ItemDataRole.DisplayRole:
-
                 if index.row() < len(self._data) - 1:
                     if self._data[-1][index.column()] > 0:
-                        percentage = round(self._data[index.row()][index.column()]/self._data[-1][index.column()] * 100)
+                        percentage = round(
+                            self._data[index.row()][index.column()]
+                            / self._data[-1][index.column()]
+                            * 100
+                        )
                     else:
                         percentage = "-"
                     return f"{self._data[index.row()][index.column()]} ({percentage}%)"
                 return self._data[index.row()][index.column()]
-            
+
         if role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
-            return QtCore.Qt.AlignmentFlag.AlignVCenter + QtCore.Qt.AlignmentFlag.AlignHCenter
-        
-        if role ==  QtCore.Qt.ItemDataRole.ForegroundRole:
+            return (
+                QtCore.Qt.AlignmentFlag.AlignVCenter
+                + QtCore.Qt.AlignmentFlag.AlignHCenter
+            )
+
+        if role == QtCore.Qt.ItemDataRole.ForegroundRole:
             value = self._data[index.row()][index.column()]
 
-            if ((isinstance(value, int) or isinstance(value, float)) and value == 0):
-                return QtGui.QColor('lightGray')
-            
+            if (isinstance(value, int) or isinstance(value, float)) and value == 0:
+                return QtGui.QColor("lightGray")
+
         if role == QtCore.Qt.ItemDataRole.FontRole:
             if index.row() == len(self._data) - 1:
                 return QtGui.QFont.Weight.Bold
@@ -383,22 +435,26 @@ class SummaryModel(QtCore.QAbstractTableModel):
 
     def columnCount(self, index):
         return len(self._data[0])
-    
+
     def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
         if len(self._data) > 0:
-            if orientation == QtCore.Qt.Orientation.Horizontal and role == QtCore.Qt.ItemDataRole.DisplayRole:
+            if (
+                orientation == QtCore.Qt.Orientation.Horizontal
+                and role == QtCore.Qt.ItemDataRole.DisplayRole
+            ):
                 if len(self.hheader) > 0:
                     return self.hheader[section]
-            if orientation == QtCore.Qt.Orientation.Vertical and role == QtCore.Qt.ItemDataRole.DisplayRole:
+            if (
+                orientation == QtCore.Qt.Orientation.Vertical
+                and role == QtCore.Qt.ItemDataRole.DisplayRole
+            ):
                 if len(self.vheader) > 0:
                     return self.vheader[section]
         return super().headerData(section, orientation, role)
-    
+
     def loadData(self, data, vheaders, hheaders):
         self.beginResetModel()
         self._data = data
         self.vheader = vheaders
         self.hheader = hheaders
         self.endResetModel()
-
-

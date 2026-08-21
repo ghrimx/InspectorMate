@@ -1,5 +1,7 @@
 from functools import wraps
-from PyQt6.QtCore import QObject, pyqtSignal as Signal
+
+from qtpy import QtCore, Signal
+
 
 def singleton(cls):
     """Make a class a Singleton class (only one instance)"""
@@ -11,7 +13,7 @@ def singleton(cls):
     wrapper_singleton.instance = None
     return wrapper_singleton
 
-class StatusSignal(QObject):
+class StatusSignal(QtCore.QObject):
     status_message = Signal(str, int)
 
 status_signal = StatusSignal()

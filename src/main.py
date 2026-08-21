@@ -1,14 +1,13 @@
 import logging
 import logging.config
 import sys
-from uuid import uuid4
 
 from qt_theme_manager import Theme, theme_icon_manager
 
 from database.database import AppDatabase
 from mainwindow import MainWindow
 from qtpy import Qt, QtCore, QtGui, QtWidgets
-from utilities import config as mconf
+from utilities.settings import get_settings
 from utilities.utils import trim_file
 
 logger = logging.getLogger(__name__)
@@ -21,26 +20,27 @@ def main() -> int:
         int: The exit status code.
     """
     # Initialize the App
-    QtGui.QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.Round)
+    QtGui.QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.Round
+    )
     app: QtWidgets.QApplication = QtWidgets.QApplication(sys.argv)
-    app.setOrganizationName("FAMHP")
-    app.setOrganizationDomain("famhp.net")
-    app.setApplicationName(mconf.config.app_name)
-    app.setStyle("Fusion") 
-    app.setWindowIcon(QtGui.QIcon(":mylogo"))
-    app.setApplicationVersion(mconf.config.app_version)
 
-    if (mconf.settings.value("InstanceId") is None 
-        or mconf.settings.value("InstanceId") == ""):
-        mconf.settings.setValue("InstanceId", str(uuid4()))
+    # Init settings
+    get_settings().ensure_files()
+    get_settings().instance_id()
 
-    trim_file(mconf.config.log_path.as_posix())
+    app.setOrganizationName(get_settings().ORG_NAME)
+    app.setOrganizationDomain(get_settings().ORG_DOMAIN)
+    app.setApplicationName(get_settings().APP_NAME)
+    app.setStyle(get_settings().app_style())
+    app.setWindowIcon(QtGui.QIcon(get_settings().APP_LOGO))
+    app.setApplicationVersion(get_settings().APP_VERSION)
 
-    app_fontsize = mconf.settings.value("app_fontsize")
-    if app_fontsize is not None:
-        app_font = app.font()
-        app_font.setPointSizeF(float(app_fontsize))
-        app.setFont(app_font)
+    trim_file(get_settings().LOG_PATH.as_posix())
+
+    app_font = app.font()
+    app_font.setPointSizeF(get_settings().get_app_font_size())
+    app.setFont(app_font)
 
     if theme_icon_manager.is_dark_mode(app):
         theme_icon_manager.set_theme(Theme.DARK)
@@ -48,39 +48,45 @@ def main() -> int:
         theme_icon_manager.set_theme(Theme.LIGHT)
 
     # Splashscreen
-    pixmap = QtGui.QPixmap(":mylogo")
+    pixmap = QtGui.QPixmap(get_settings().APP_LOGO)
     splash = QtWidgets.QSplashScreen(pixmap, Qt.WindowType.WindowStaysOnTopHint)
     splash.show()
-    splash.showMessage("Starting ...", Qt.AlignmentFlag.AlignBottom, Qt.GlobalColor.white)
+    splash.showMessage(
+        "Starting ...", Qt.AlignmentFlag.AlignBottom, Qt.GlobalColor.white
+    )
 
     app.processEvents()
 
     # Post init configuration
-    splash.showMessage("Post Init Config ...", Qt.AlignmentFlag.AlignBottom, Qt.GlobalColor.white)
+    splash.showMessage(
+        "Post Init Config ...", Qt.AlignmentFlag.AlignBottom, Qt.GlobalColor.white
+    )
 
     app.processEvents()
 
     # Init logger
-    logging.config.fileConfig(mconf.config.config_path.as_posix(),
-                              disable_existing_loggers=False,
-                              defaults={'logfilepath': mconf.config.log_path.as_posix()})
+    logging.config.fileConfig(
+        get_settings().CONFIG_PATH.as_posix(),
+        disable_existing_loggers=False,
+        defaults={"logfilepath": get_settings().LOG_PATH.as_posix()},
+    )
     logger.info(f"Current logging level: {logging.getLevelName(logging.root.level)}")
 
     # Set Taskbar Icon
     try:
         from ctypes import windll
-        appid = "fahmp.inspectormate.v1.0"
+
+        appid = f"{get_settings().ORG_NAME}.{get_settings().APP_NAME}.{get_settings().APP_VERSION}"
         windll.shell32.SetCurrentProcessExplicitAppUserModelID(appid)
     except ImportError:
         logger.error(ImportError.msg)
-        pass
 
     splash.showMessage("Connecting to the database ...")
 
     logger.info("Starting InspectorMate...")
 
     # Connect to database
-    AppDatabase.connect(mconf.config.db_path.as_posix())
+    AppDatabase.connect(get_settings().DB_PATH.as_posix())
     AppDatabase.setup()
 
     # Initialize the main window
@@ -95,5 +101,6 @@ def main() -> int:
 
     return sys.exit(app.exec())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())

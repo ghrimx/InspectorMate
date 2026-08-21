@@ -1,25 +1,26 @@
 import logging
+from ast import literal_eval
 from base64 import b64decode
 from functools import partial
-from json import dumps, loads
 
-from my_pyqt_widgets import FitContentTextEdit, ReadOnlyLineEdit
+from my_pyqt_widgets import FitContentTextEdit, MultiCheckableComboBox, ReadOnlyLineEdit
 from pyqt6_richtexteditor import RichTextEdit
 from qt_theme_manager import Theme, theme_icon_manager
 
 from base_delegates import CompositeDelegate, NoteColumnDelegate
-from common import ConnectorType, Signage, SignageStatus
+from common import ConnectorType, Signage, SignageOrigin, SignageStatus
 from database.database import AppDatabase
 from qtpy import Qt, QtCore, QtGui, QtSql, QtWidgets, Signal, Slot
 from signage.connector_model import ConnectorModel
-from signage.dialogs import ExportDialog, FilterDialog, ImportDialog, SignageDialog
-from signage.model import DataService, SignageModel, SignageProxyModel, SignageSqlModel
+from signage.dialogs import ExportDialog, ImportDialog, SignageDialog
+from signage.model import DataService, SignageModel, SignageSqlModel
 from signage.signage_style import DARK_TABLE_STYLE, TABLE_STYLE
-from utilities import config as mconf
-from utilities.config import settings
 from utilities.decorators import status_signal
+from utilities.settings import get_settings
 from utilities.utils import open_file
 from widgets.basetab import BaseTab
+from widgets.generic_filter_dialog import FilterField, GenericFilterDialog
+from widgets.generic_proxymodel import FilterKind, GenericFilterProxyModel
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,9 @@ class TypeDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-    def initStyleOption(self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex):
+    def initStyleOption(
+        self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex
+    ):
         super().initStyleOption(option, index)
         title = index.data(Qt.ItemDataRole.DisplayRole)
         sqlmodel: SignageSqlModel = index.model().sourceModel().rootModel()
@@ -40,7 +43,9 @@ class TypeDelegate(QtWidgets.QStyledItemDelegate):
             return
 
         img64str = None
-        display_value = index.sibling(index.row(), SignageSqlModel.Fields.Type.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        display_value = index.sibling(
+            index.row(), SignageSqlModel.Fields.Type.index
+        ).data(QtCore.Qt.ItemDataRole.DisplayRole)
         for r in range(relmodel.rowCount()):
             rec = relmodel.record(r)
             if rec.value(relation.displayColumn()) == display_value:
@@ -52,8 +57,8 @@ class TypeDelegate(QtWidgets.QStyledItemDelegate):
         if img64str is not None:
             try:
                 icon_bytearray = b64decode(img64str)
-            except:
-                pass
+            except Exception as e:
+                logger.debug(e)
             else:
                 pix.loadFromData(icon_bytearray)
 
@@ -66,33 +71,42 @@ class StatusColorDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-    def initStyleOption(self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex) -> None:
+    def initStyleOption(
+        self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex
+    ) -> None:
         super().initStyleOption(option, index)
 
         color_value = None
-        display_status = (index.sibling(index.row(),
-                                       SignageSqlModel.Fields.Status.index)
-                                       .data(QtCore.Qt.ItemDataRole.DisplayRole))
-        
+        display_status = index.sibling(
+            index.row(), SignageSqlModel.Fields.Status.index
+        ).data(QtCore.Qt.ItemDataRole.DisplayRole)
+
         if not display_status:
             return
 
-        status_object: SignageStatus = AppDatabase.cache_signage_status.get(display_status)
-        
+        status_object: SignageStatus = AppDatabase.cache_signage_status.get(
+            display_status
+        )
+
         if status_object:
             color_value = status_object.color
 
         if color_value == "#000000" and theme_icon_manager.get_theme() == Theme.DARK:
-            color_value = theme_icon_manager.get_theme_color().name(QtGui.QColor.NameFormat.HexRgb)
-        
+            color_value = theme_icon_manager.get_theme_color().name(
+                QtGui.QColor.NameFormat.HexRgb
+            )
+
         if color_value:
-            option.palette.setColor(QtGui.QPalette.ColorRole.Text, QtGui.QColor(color_value))
+            option.palette.setColor(
+                QtGui.QPalette.ColorRole.Text, QtGui.QColor(color_value)
+            )
 
 
 class CellBackgroundDelegate(QtWidgets.QStyledItemDelegate):
     def paint(self, painter, option, index):
-        color: str = (index.sibling(index.row(), SignageSqlModel.Fields.Background.index)
-                      .data(Qt.ItemDataRole.DisplayRole))
+        color: str = index.sibling(
+            index.row(), SignageSqlModel.Fields.Background.index
+        ).data(Qt.ItemDataRole.DisplayRole)
 
         if color:
             painter.save()
@@ -101,7 +115,8 @@ class CellBackgroundDelegate(QtWidgets.QStyledItemDelegate):
 
         super().paint(painter, option, index)
 
-#TODO: see CellBackgroundDelegate
+
+# TODO: see CellBackgroundDelegate
 class RoundedColorDotDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -113,11 +128,13 @@ class RoundedColorDotDelegate(QtWidgets.QStyledItemDelegate):
             return
 
         # Get color from model (Qt.UserRole + 1 for example)
-        color: str = index.sibling(index.row(), SignageSqlModel.Fields.Background.index).data(Qt.ItemDataRole.DisplayRole)
+        color: str = index.sibling(
+            index.row(), SignageSqlModel.Fields.Background.index
+        ).data(Qt.ItemDataRole.DisplayRole)
         if color.strip() == "":
             super().paint(painter, option, index)
             return
-        
+
         color = QtGui.QColor(color)
 
         painter.save()
@@ -143,11 +160,7 @@ class RoundedColorDotDelegate(QtWidgets.QStyledItemDelegate):
         painter.setBrush(color)
         painter.setPen(QtGui.QPen(QtGui.QColor("#202020"), 1))
 
-        painter.drawEllipse(
-            QtCore.QPointF(center_x, center_y),
-            radius,
-            radius
-        )
+        painter.drawEllipse(QtCore.QPointF(center_x, center_y), radius, radius)
 
         painter.restore()
 
@@ -160,16 +173,20 @@ class RoundedColorDotDelegate(QtWidgets.QStyledItemDelegate):
 class VirtualProgressBarDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
-            
-    def paint(self, painter, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex):
+
+    def paint(
+        self, painter, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex
+    ):
         percentage = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
-        total = index.sibling(index.row(), SignageSqlModel.Fields.DocCount.index).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        total = index.sibling(index.row(), SignageSqlModel.Fields.DocCount.index).data(
+            QtCore.Qt.ItemDataRole.DisplayRole
+        )
 
         try:
             progress = int(percentage)
         except (ValueError, TypeError):
             return  # skip invalid values
-        
+
         if percentage >= 0 and total > 0:
             progress = int(percentage)
             progressBarOption = QtWidgets.QStyleOptionProgressBar()
@@ -181,16 +198,23 @@ class VirtualProgressBarDelegate(QtWidgets.QStyledItemDelegate):
             progressBarOption.textVisible = True
             progressBarOption.state |= QtWidgets.QStyle.StateFlag.State_Horizontal
 
-            QtWidgets.QApplication.style().drawControl(QtWidgets.QStyle.ControlElement.CE_ProgressBar,
-                                                        progressBarOption,
-                                                        painter)
+            QtWidgets.QApplication.style().drawControl(
+                QtWidgets.QStyle.ControlElement.CE_ProgressBar,
+                progressBarOption,
+                painter,
+            )
         else:
             opt = QtWidgets.QStyleOptionViewItem(option)
             self.initStyleOption(opt, index)
-            opt.text = ""  
-            style = QtWidgets.QApplication.style() if opt.widget is None else opt.widget.style()
-            style.drawControl(QtWidgets.QStyle.ControlElement.CE_ItemViewItem, opt, painter)
-
+            opt.text = ""
+            style = (
+                QtWidgets.QApplication.style()
+                if opt.widget is None
+                else opt.widget.style()
+            )
+            style.drawControl(
+                QtWidgets.QStyle.ControlElement.CE_ItemViewItem, opt, painter
+            )
 
 
 #################################################################
@@ -201,22 +225,20 @@ class SignageTab(BaseTab):
     sigSignageDoubleClicked = Signal(str)
     sigOpenNote = Signal(str, str)
 
-    def __init__(self,
-                 model: SignageModel,
-                 startSpinner: callable = None,
-                 stopSpinner: callable = None,
-                 parent=None):
-        super(SignageTab, self).__init__(parent)
+    def __init__(
+        self,
+        model: SignageModel,
+        startSpinner: callable | None = None,
+        stopSpinner: callable | None = None,
+        parent=None,
+    ):
+        super().__init__(parent)
         self.model = model
-        self.proxymodel = SignageProxyModel(self.model)
-        self.proxymodel.setDynamicSortFilter(False)
+        self.proxymodel = GenericFilterProxyModel(self.model)
         self.startSpinner = startSpinner
         self.stopSpinner = stopSpinner
-        self.createAction()
         self.initUI()
-
-    def signageSource(self) -> dict:
-        return {"application":"InspectorMate", "module":"Signage"}
+        self.createAction()
 
     def initUI(self):
         # --- Left Pane ---
@@ -229,14 +251,21 @@ class SignageTab(BaseTab):
         self.table.setModel(self.proxymodel)
         # self.table.header().sortIndicatorChanged.connect(self.proxymodel.sortTree)
         self.table.setSortingEnabled(True)
-        self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers) # ReadOnly
+        self.table.setEditTriggers(
+            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers
+        )  # ReadOnly
         self.table.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
 
         self.table.customContextMenuRequested.connect(self.show_table_context_menu)
-        self.table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.sortByColumn(SignageSqlModel.Fields.ID.index,
-                                QtCore.Qt.SortOrder.AscendingOrder)
+        self.table.setSelectionMode(
+            QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection
+        )
+        self.table.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.table.sortByColumn(
+            SignageSqlModel.Fields.ID.index, QtCore.Qt.SortOrder.AscendingOrder
+        )
 
         if theme_icon_manager.get_theme() == Theme.DARK:
             self.table.setStyleSheet(DARK_TABLE_STYLE)
@@ -248,8 +277,7 @@ class SignageTab(BaseTab):
                 self.table.hideColumn(field.index)
 
         # Table's connections
-        self.table.clicked.connect(self.onCellClicked)
-        self.table.selectionModel().selectionChanged.connect(self.updateAction)
+        self.table.selectionModel().selectionChanged.connect(self.onTableSelectionChanged)
         self.table.doubleClicked.connect(self.onTableDoubleClicked)
 
         # Table's delegates
@@ -261,13 +289,23 @@ class SignageTab(BaseTab):
         self.progress_delegate = VirtualProgressBarDelegate(self.table)
 
         self.table.setItemDelegate(status_delegate)
-        self.table.setItemDelegateForColumn(SignageSqlModel.Fields.Refkey.index, cell_color_delegate)
-        self.table.setItemDelegateForColumn(SignageSqlModel.Fields.Note.index, note_delegate)
-        self.table.setItemDelegateForColumn(SignageSqlModel.Fields.PublicNote.index, public_note_delegate)
-        self.table.setItemDelegateForColumn(SignageSqlModel.Fields.Progress.index, self.progress_delegate)
+        self.table.setItemDelegateForColumn(
+            SignageSqlModel.Fields.Refkey.index, cell_color_delegate
+        )
+        self.table.setItemDelegateForColumn(
+            SignageSqlModel.Fields.Note.index, note_delegate
+        )
+        self.table.setItemDelegateForColumn(
+            SignageSqlModel.Fields.PublicNote.index, public_note_delegate
+        )
+        self.table.setItemDelegateForColumn(
+            SignageSqlModel.Fields.Progress.index, self.progress_delegate
+        )
 
         combo_delegate = CompositeDelegate([status_delegate, type_delegate], self.table)
-        self.table.setItemDelegateForColumn(SignageSqlModel.Fields.Title.index, combo_delegate)
+        self.table.setItemDelegateForColumn(
+            SignageSqlModel.Fields.Title.index, combo_delegate
+        )
 
         # --- Right Pane ---
         self.title_textedit = FitContentTextEdit(False)
@@ -279,7 +317,7 @@ class SignageTab(BaseTab):
 
         self.refkey_field = QtWidgets.QLineEdit()
         self.type_line = ReadOnlyLineEdit()
-        self.owner_lineinput= QtWidgets.QLineEdit()
+        self.owner_lineinput = QtWidgets.QLineEdit()
         self.source_label = FitContentTextEdit(True)
         self.source_label.setStyleSheet("color: grey;")
 
@@ -297,7 +335,7 @@ class SignageTab(BaseTab):
         to_private = QtWidgets.QPushButton(
             theme_icon_manager.get_icon(":share-forward-2-line"), "Sent to private note"
         )
-        
+
         to_private.clicked.connect(self.sentToPrivate)
         private_note_layout.addWidget(to_private)
         self.public_note = RichTextEdit(":memory", ":memory", "")
@@ -307,88 +345,74 @@ class SignageTab(BaseTab):
         formlayout = QtWidgets.QFormLayout()
         info_widget = QtWidgets.QWidget()
         info_widget.setLayout(formlayout)
-        formlayout.addRow('Title', self.title_textedit)
-        formlayout.addRow('Refkey', self.refkey_field)
-        formlayout.addRow('Status', self.status_combobox)
-        formlayout.addRow('Type', self.type_line)
-        formlayout.addRow('Owner', self.owner_lineinput)
-        formlayout.addRow('Source', self.source_label)
-        formlayout.addRow('Evidence', self.evidence_label)
-        formlayout.addRow('id', self.id_label)
-        formlayout.addRow('Creation date', self.creation_date)
+        formlayout.addRow("Title", self.title_textedit)
+        formlayout.addRow("Refkey", self.refkey_field)
+        formlayout.addRow("Status", self.status_combobox)
+        formlayout.addRow("Type", self.type_line)
+        formlayout.addRow("Owner", self.owner_lineinput)
+        formlayout.addRow("Source", self.source_label)
+        formlayout.addRow("Evidence", self.evidence_label)
+        formlayout.addRow("id", self.id_label)
+        formlayout.addRow("Creation date", self.creation_date)
 
-        spacer = QtWidgets.QSpacerItem(20,
-                                       40,
-                                       QtWidgets.QSizePolicy.Policy.Minimum,
-                                       QtWidgets.QSizePolicy.Policy.Expanding)
+        spacer = QtWidgets.QSpacerItem(
+            20,
+            40,
+            QtWidgets.QSizePolicy.Policy.Minimum,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
         formlayout.addItem(spacer)
         self.right_pane.addTab(info_widget, "Info")
-        self.right_pane.addTab(self.note, theme_icon_manager.get_icon(':lock-2'), "Private Note")
-        self.right_pane.addTab(private_note_widget, theme_icon_manager.get_icon(':glasses-2'), "Public Note")
+        self.right_pane.addTab(
+            self.note, theme_icon_manager.get_icon(":lock-2"), "Private Note"
+        )
+        self.right_pane.addTab(
+            private_note_widget,
+            theme_icon_manager.get_icon(":glasses-2"),
+            "Public Note",
+        )
 
         self.mapper = QtWidgets.QDataWidgetMapper(self)
         self.mapper.setModel(self.model)
         self.mapper.setItemDelegate(QtSql.QSqlRelationalDelegate(self))
-        self.mapper.addMapping(self.status_combobox, SignageSqlModel.Fields.Status.index)
-        self.mapper.addMapping(self.title_textedit, SignageSqlModel.Fields.Title.index, b"plainText")
+        self.mapper.addMapping(
+            self.status_combobox, SignageSqlModel.Fields.Status.index
+        )
+        self.mapper.addMapping(
+            self.title_textedit, SignageSqlModel.Fields.Title.index, b"plainText"
+        )
         self.mapper.addMapping(self.refkey_field, SignageSqlModel.Fields.Refkey.index)
         self.mapper.addMapping(self.type_line, SignageSqlModel.Fields.Type.index)
         self.mapper.addMapping(self.owner_lineinput, SignageSqlModel.Fields.Owner.index)
-        self.mapper.addMapping(self.source_label, SignageSqlModel.Fields.Source.index, b"plainText")
-        self.mapper.addMapping(self.evidence_label, SignageSqlModel.Fields.DocCount.index)
+        self.mapper.addMapping(
+            self.source_label, SignageSqlModel.Fields.Source.index, b"plainText"
+        )
+        self.mapper.addMapping(
+            self.evidence_label, SignageSqlModel.Fields.DocCount.index
+        )
         self.mapper.addMapping(self.id_label, SignageSqlModel.Fields.ID.index)
-        self.mapper.addMapping(self.parentid_label, SignageSqlModel.Fields.ParentID.index)
-        self.mapper.addMapping(self.creation_date, SignageSqlModel.Fields.CreationDatetime.index)
+        self.mapper.addMapping(
+            self.parentid_label, SignageSqlModel.Fields.ParentID.index
+        )
+        self.mapper.addMapping(
+            self.creation_date, SignageSqlModel.Fields.CreationDatetime.index
+        )
         self.mapper.addMapping(self.note, SignageSqlModel.Fields.Note.index)
-        # self.mapper.addMapping(self.public_note.editor, SignageSqlModel.Fields.PublicNote.index)
-        self.mapper.addMapping(self.public_note, SignageSqlModel.Fields.PublicNote.index)
+        self.mapper.addMapping(
+            self.public_note, SignageSqlModel.Fields.PublicNote.index
+        )
         self.mapper.setSubmitPolicy(QtWidgets.QDataWidgetMapper.SubmitPolicy.AutoSubmit)
 
         self.refkey_field.editingFinished.connect(self.updateReviewProgess)
-        self.refkey_field.editingFinished.connect(AppDatabase.update_document_signage_id)
-
-        # --- Toolbar ---
-        self.toolbar.insertAction(self.action_separator, self.action_create_signage)
-        self.toolbar.insertAction(self.action_separator, self.action_create_child_signage)
-        self.toolbar.insertAction(self.action_separator, self.toolbar.addSeparator())
-        self.toolbar.insertAction(self.action_separator, self.action_delete_signage)
-        self.toolbar.insertAction(self.action_separator, self.filtering)
-        self.toolbar.insertAction(self.action_separator, self.reset_filtering)
-        self.toolbar.insertAction(self.action_separator, self.action_expandAll)
-        self.toolbar.insertAction(self.action_separator, self.action_collapseAll)
-        self.toolbar.insertAction(self.action_separator, self.toolbar.addSeparator())
-        self.toolbar.insertAction(self.action_separator, self.action_cite)
-        self.toolbar.insertAction(self.action_separator, self.action_reach_source)
-        self.toolbar.insertAction(self.action_separator, self.action_highlight)
-
-        connector_menu_btn = QtWidgets.QToolButton(self)
-        connector_menu_btn.setIcon(theme_icon_manager.get_icon(':links-line'))
-        connector_menu_btn.setText("Import from Connector")
-        connector_menu_btn.setToolTip("Import from Connector")
-        connector_menu_btn.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
-        connector_menu_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-
-        connector_menu = QtWidgets.QMenu()
-
-        for c in ConnectorType:
-            action = connector_menu.addAction(c.name)
-            slot_func = partial(self.importFromConnector, c)
-            action.triggered.connect(slot_func)
-
-        connector_menu_btn.setMenu(connector_menu)
-        self.toolbar.insertWidget(self.action_separator, connector_menu_btn)
-
-        # --- Shortcuts ---
-        self.shortcut_create_childsignage = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+H"),
-                                                            self,
-                                                            self._createChildSignage,
-                                                            context=QtCore.Qt.ShortcutContext.WindowShortcut)
+        self.refkey_field.editingFinished.connect(
+            AppDatabase.update_document_signage_id
+        )
 
         # --- Dialogs ---
         self.signage_dialog: SignageDialog = None
         self.export_dialog: ExportDialog = None
         self.import_dialog: ImportDialog = None
-        self.filter_dialog: FilterDialog = None
+        self.filter_dialog: GenericFilterDialog = None
 
         # --- Layout ---
         self.splitter.addWidget(self.table)
@@ -404,77 +428,135 @@ class SignageTab(BaseTab):
         self.model.updateReviewProgess()
 
     def createAction(self):
-        self.action_create_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line"),
-                                                   "Create Signage (Ctrl + R)",
-                                                   self,
-                                                   triggered = lambda: self.createSignage(source=self.signageSource()))
-        self.action_create_child_signage = QtGui.QAction(theme_icon_manager.get_icon(":signpost-line-child"),
-                                                         "Create Child Signage (Ctrl + H)",
-                                                         self,
-                                                         triggered = self._createChildSignage)
-        self.action_delete_signage = QtGui.QAction(theme_icon_manager.get_icon(":delete-bin2"),
-                                                   "Delete Signage",
-                                                   self,
-                                                   triggered = self.deleteRow)
-        self.filtering = QtGui.QAction(theme_icon_manager.get_icon(":filter-line"),
-                                       "Filters",
-                                       self,
-                                       triggered=self.setFilters)
-        self.reset_filtering = QtGui.QAction(theme_icon_manager.get_icon(":filter-off-line"),
-                                             "Reset Filters",
-                                             self,
-                                             triggered=self.onResetFilters)
-        self.action_expandAll = QtGui.QAction(theme_icon_manager.get_icon(":expand-vertical-line"),
-                                                "Expand All",
-                                                self,
-                                                triggered=self.expandAll)
-        self.action_collapseAll = QtGui.QAction(theme_icon_manager.get_icon(":collapse-vertical-line"),
-                                                "Collapse All",
-                                                self,
-                                                triggered=self.collapseAll)
-        self.action_edit_owner = QtGui.QAction(theme_icon_manager.get_icon(":collapse-vertical-line"),
-                                                "Collapse All",
-                                                self,
-                                                triggered=self.collapseAll)
-        self.action_cite = QtGui.QAction(theme_icon_manager.get_icon(":double-quotes"),
-                                         "Cite",
-                                         self,
-                                         triggered=self.cite)
-        self.action_reach_source = QtGui.QAction(theme_icon_manager.get_icon(":share-forward-2-line"),
-                                         "Go to Source",
-                                         self,
-                                         triggered=self.reachSource)
-        self.action_highlight = QtGui.QAction(theme_icon_manager.get_icon(":mark_pen"),
-                                              "Highlight",
-                                              self,
-                                              triggered= self.colorCell)
+
+        self.action_create_child_signage = self.toolbar.add_action(
+            "create_child_signage",
+            "Create Child Signage",
+            self._createChildSignage,
+            theme_icon_manager.get_icon(":signpost-line-child"),
+            "Ctrl+H",
+            context=Qt.ShortcutContext.WindowShortcut,
+            before="spacer",
+        )
+        self.action_delete_signage = self.toolbar.add_action(
+            "delete_signage",
+            "Delete Signage",
+            self.deleteRow,
+            theme_icon_manager.get_icon(":delete-bin2"),
+            before="spacer",
+        )
+
+        self.action_filtering = self.toolbar.add_action(
+            "filter_signage",
+            "Filters",
+            self.openFilterDialog,
+            theme_icon_manager.get_icon(":filter-line"),
+            before="spacer",
+        )
+
+        self.reset_filtering = self.toolbar.add_action(
+            "reset_filter",
+            "Reset Filters",
+            self.onResetFilters,
+            theme_icon_manager.get_icon(":filter-off-line"),
+            before="spacer",
+        )
+
+        self.action_expandAll = self.toolbar.add_action(
+            "expand_all",
+            "Expand All",
+            self.table.expandAll,
+            theme_icon_manager.get_icon(":expand-vertical-line"),
+            before="spacer",
+        )
+
+        self.action_collapseAll = self.toolbar.add_action(
+            "collapse_all",
+            "Collapse All",
+            self.table.collapseAll,
+            theme_icon_manager.get_icon(":collapse-vertical-line"),
+            before="spacer",
+        )
+
+        self.action_cite = self.toolbar.add_action(
+            "cite",
+            "Cite",
+            self.cite,
+            theme_icon_manager.get_icon(":double-quotes"),
+            "Ctrl+C",
+            context=Qt.ShortcutContext.WindowShortcut,
+            tooltip="Copy to clipboard the Signage refkey and its title",
+            before="spacer",
+        )
+
+        self.action_reach_source = self.toolbar.add_action(
+            "go_to_source",
+            "Go to Source",
+            self.reachSource,
+            theme_icon_manager.get_icon(":share-forward-2-line"),
+            before="spacer",
+        )
+
+        self.action_highlight = self.toolbar.add_action(
+            "highlight",
+            "Highlight",
+            self.colorCell,
+            theme_icon_manager.get_icon(":mark_pen"),
+            before="spacer",
+        )
         
-    def selectedRows(self) -> set[int]:
-        """Source model's selected rows"""
-        proxy_indexes = self.table.selectedIndexes()
-        rows = set()
-        for idx in proxy_indexes:
-            src_idx = self.proxymodel.mapToSource(idx)
-            rows.add(src_idx.row())
-        return rows
+        self.connector_menu = QtWidgets.QMenu(self.toolbar)
+        for c in ConnectorType:
+            action = self.connector_menu.addAction(c.name)
+            slot_func = partial(self.importFromConnector, c)
+            action.triggered.connect(slot_func)
 
-    def updateAction(self):
-        if len(self.selectedRows()) == 1:
-            self.action_delete_signage.setEnabled(True)
-            self.action_edit_owner.setEnabled(True)
-            self.action_create_child_signage.setEnabled(True)
+        self.toolbar.add_button(
+            "import_from_connector",
+            "Import from connector",
+            None,
+            icon=theme_icon_manager.get_icon(":links-line"),
+            menu=self.connector_menu,
+            popup_mode=QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup,
+            before="spacer",
+        )
 
-        if len(self.selectedRows()) == 0:
-            self.action_delete_signage.setEnabled(False)
-            self.action_edit_owner.setEnabled(False)
-            self.action_create_child_signage.setEnabled(False)
+        # Status menu
+        self.status_menu = QtWidgets.QMenu("Status", self)
+        status_type: SignageStatus
+        for status_type in AppDatabase.cache_signage_status.values():
+            action = self.status_menu.addAction(status_type.name)
+            slot_func = partial(self.setStatus, status_type.name)
+            action.triggered.connect(slot_func)
 
-        if len(self.selectedRows()) > 1:
-            self.action_delete_signage.setEnabled(False)
-            self.action_edit_owner.setEnabled(False)
-            self.action_create_child_signage.setEnabled(False)
+        # Owner menu
+        self.owner_menu = QtWidgets.QMenu("Owner", self)
+        owners: list = get_settings().get_owners()
+        for owner in owners:
+            action = self.owner_menu.addAction(owner)
+            slot_func = partial(self.updateOwner, owner)
+            action.triggered.connect(slot_func)
 
-        msg = f"[Signage selected: {len(self.selectedRows())}]"
+    def onTableSelectionChanged(self, selected: QtCore.QItemSelection, deselected: QtCore.QItemSelection):
+        selection_model = self.table.selectionModel()
+        selected_rows = selection_model.selectedRows()
+        single_row_selected = len(selected_rows) == 1
+
+        if single_row_selected:
+            proxy_index = selected_rows[0]
+            currentIndex = self.proxymodel.mapToSource(proxy_index)
+            self.mapper.setRootIndex(currentIndex.parent())
+            self.mapper.setCurrentModelIndex(currentIndex)
+
+        self.action_delete_signage.setEnabled(single_row_selected)
+        self.action_create_child_signage.setEnabled(single_row_selected)
+        self.action_highlight.setEnabled(single_row_selected)
+        self.action_cite.setEnabled(single_row_selected)
+        self.action_reach_source.setEnabled(single_row_selected)
+        self.status_menu.setEnabled(single_row_selected)
+        self.owner_menu.setEnabled(single_row_selected)
+
+        msg = f"[Signage selected: {len(selected_rows)}]"
         status_signal.status_message.emit(msg, 5000)
 
     def show_table_context_menu(self, pos: QtCore.QPoint):
@@ -482,38 +564,19 @@ class SignageTab(BaseTab):
         indexes = self.table.selectedIndexes()
         if not indexes:
             return
-        
-        # Status menu
-        status_menu = QtWidgets.QMenu("Status", self)
-        status_type: SignageStatus
-        for status_type in AppDatabase.cache_signage_status.values():
-            action = status_menu.addAction(status_type.name)
-            slot_func = partial(self.setStatus, status_type.name)
-            action.triggered.connect(slot_func)
 
-        # Owner menu
-        owner_menu = QtWidgets.QMenu("Owner", self)
-        owners: list = mconf.settings.value("owners", [], "QStringList")
-        for owner in owners:
-            action = owner_menu.addAction(owner)
-            slot_func = partial(self.updateOwner, owner)
-            action.triggered.connect(slot_func)
+        if len(self.table.selectionModel().selectedRows()) != 1:
+            return
 
         menu = QtWidgets.QMenu(self)
-        menu.addMenu(status_menu)
-        menu.addMenu(owner_menu)
+        menu.addMenu(self.status_menu)
+        menu.addMenu(self.owner_menu)
         menu.addAction(self.action_create_child_signage)
         menu.addAction(self.action_delete_signage)
         menu.addAction(self.action_cite)
         menu.addAction(self.action_reach_source)
         menu.addAction(self.action_highlight)
         menu.exec(self.table.viewport().mapToGlobal(pos))
-
-    def onCellClicked(self, index: QtCore.QModelIndex):
-        """ Update mapper """
-        currentIndex = self.proxymodel.mapToSource(index)
-        self.mapper.setRootIndex(currentIndex.parent())
-        self.mapper.setCurrentModelIndex(currentIndex)
 
     def _selectedProxyToSource(self) -> QtCore.QModelIndex:
         proxy_index = self.table.selectionModel().currentIndex()
@@ -523,17 +586,19 @@ class SignageTab(BaseTab):
         if not source_index.isValid():
             return
         return source_index
-    
+
     @Slot(QtCore.QModelIndex)
     def onTableDoubleClicked(self, index: QtCore.QModelIndex):
-        signage_type = (index.sibling(index.row(), SignageSqlModel.Fields.Type.index)
-                        .data(QtCore.Qt.ItemDataRole.DisplayRole))
-        
-        if signage_type != AppDatabase.cache_signage_type.get('Request').name:
+        signage_type = index.sibling(
+            index.row(), SignageSqlModel.Fields.Type.index
+        ).data(QtCore.Qt.ItemDataRole.DisplayRole)
+
+        if signage_type != AppDatabase.cache_signage_type.get("Request").name:
             return
 
-        refkey = (index.sibling(index.row(), SignageSqlModel.Fields.Refkey.index)
-                  .data(QtCore.Qt.ItemDataRole.DisplayRole))
+        refkey = index.sibling(index.row(), SignageSqlModel.Fields.Refkey.index).data(
+            QtCore.Qt.ItemDataRole.DisplayRole
+        )
         self.sigSignageDoubleClicked.emit(refkey)
 
     @Slot()
@@ -541,12 +606,14 @@ class SignageTab(BaseTab):
         source_index = self._selectedProxyToSource()
         if not source_index:
             return
-        status_index = source_index.sibling(source_index.row(), SignageSqlModel.Fields.Status.index)
+        status_index = source_index.sibling(
+            source_index.row(), SignageSqlModel.Fields.Status.index
+        )
         self.model.setData(status_index, status_id, Qt.ItemDataRole.EditRole)
 
     def updateReviewProgess(self):
-        """Update Progressbar 
-        
+        """Update Progressbar
+
         Delay the refresh to allow the database to commit the changes
         """
         QtCore.QTimer.singleShot(1000, self.model.updateReviewProgess)
@@ -556,14 +623,16 @@ class SignageTab(BaseTab):
         source_index = self._selectedProxyToSource()
         if not source_index:
             return
-        owner_index = source_index.sibling(source_index.row(), SignageSqlModel.Fields.Owner.index)
-        self.model.setData(owner_index, owner, Qt.ItemDataRole.EditRole) 
+        owner_index = source_index.sibling(
+            source_index.row(), SignageSqlModel.Fields.Owner.index
+        )
+        self.model.setData(owner_index, owner, Qt.ItemDataRole.EditRole)
 
     @Slot()
     def openSignageDialog(self, title):
         """
-            Open the signage dialog
-            data: [title, source]
+        Open the signage dialog
+        data: [title, source]
         """
         if self.signage_dialog is None:
             self.signage_dialog = SignageDialog(parent=None)
@@ -572,12 +641,12 @@ class SignageTab(BaseTab):
         self.signage_dialog.updateRefkeyField()
         self.signage_dialog.signage_title_lineedit.setText(title)
         self.signage_dialog.signage_title_lineedit.setFocus()
-        
+
         result = self.signage_dialog.exec()
         return result
 
     @Slot(str, dict)
-    def createSignage(self, title: str = "", source: dict = {}):
+    def createSignage(self, signage_origin: SignageOrigin, title: str = ""):
         """Create Parent Signage"""
         if self.signage_dialog is None:
             self.signage_dialog = SignageDialog(parent=None)
@@ -589,20 +658,13 @@ class SignageTab(BaseTab):
         self.signage_dialog.parent_signage_id.clear()
         self.signage_dialog.parent_signage_refkey.clear()
         self.signage_dialog.parent_signage_widget.setVisible(False)
-        
+
         if not self.signage_dialog.exec():
             return False
-        
+
         # Get signage from the dialog
         signage = self.signage_dialog.signage()
-        signage.source = dumps(source)
-
-        # source:
-        # '{"application":"InspectorMate", "module":"Notebook", "item":"note", "item_title":"1.3 Line Listing session", "item_id":"1.3 Line Listing session.html", "position":"anchor123"}'
-        # '{"application":"InspectorMate", "module":"Evidence", "item":"doc", "item_title":"document[:25]", "item_id":"6", "position":"page2"}'
-        # '{"application":"InspectorMate", "module":"Signage", "item":"Request", "item_title":"signage[:25]", "item_id":"2", "position":"child2"}'
-        # '{"application":"InspectorMate", "module":"ImportFromOneNote", "item":"Page", "item_title":"title[:25]", "item_id":"id", "position":"link"}'
-        # '{"application":"InspectorMate", "module":"ImportFromExcel", "item":"xlsx", "item_title":"filename", "item_id":"fileid", "position":"link to file"}'
+        signage.source = signage_origin.as_str()
 
         # Insert signage into the database and into the model
         if self.model.insertSignage(signage=signage):
@@ -613,34 +675,39 @@ class SignageTab(BaseTab):
             status_signal.status_message.emit("⚠️ Fail to create Signage", 7000)
             return False
 
-    @Slot(int, dict)
-    def createChildSignage(self, parent_id: str, source: dict = {}):
+    @Slot(int, object)
+    def createChildSignage(self, parent_id: str, signage_origin: SignageOrigin):
         """Create Child Signage"""
         if self.signage_dialog is None:
             self.signage_dialog = SignageDialog(parent=None)
 
-        parent_index = self.model.findIndexById(int(parent_id),
-                                                SignageSqlModel.Fields.ID.index)
+        parent_index = self.model.findIndexById(
+            int(parent_id), SignageSqlModel.Fields.ID.index
+        )
         if not parent_index:
             return
-        parent_refkey = (parent_index.sibling(parent_index.row(),
-                                              SignageSqlModel.Fields.Refkey.index)
-                                              .data(QtCore.Qt.ItemDataRole.DisplayRole))
+        parent_refkey = parent_index.sibling(
+            parent_index.row(), SignageSqlModel.Fields.Refkey.index
+        ).data(QtCore.Qt.ItemDataRole.DisplayRole)
 
         self.signage_dialog.signage_title_lineedit.setFocus()
         self.signage_dialog.updateRefkeyField()
         self.signage_dialog.signage_title_lineedit.clear()
         self.signage_dialog.signage_title_lineedit.setFocus()
-        self.signage_dialog.parent_signage_id.setText("" if parent_id is None else str(parent_id))
-        self.signage_dialog.parent_signage_refkey.setText("" if parent_refkey is None else str(parent_refkey))
+        self.signage_dialog.parent_signage_id.setText(
+            "" if parent_id is None else str(parent_id)
+        )
+        self.signage_dialog.parent_signage_refkey.setText(
+            "" if parent_refkey is None else str(parent_refkey)
+        )
         self.signage_dialog.parent_signage_widget.setVisible(True)
-        
+
         if not self.signage_dialog.exec():
             return
-        
+
         signage = self.signage_dialog.signage()
         signage.parentID = parent_id
-        signage.source = dumps(source)
+        signage.source = signage_origin.as_str()
         if self.model.insertSignage(signage=signage):
             status_signal.status_message.emit("✔️ Signage created", 7000)
             self.updateReviewProgess()
@@ -653,10 +720,11 @@ class SignageTab(BaseTab):
         index = self.table.selectionModel().currentIndex()
         source_index = self.proxymodel.mapToSource(index)
 
-        parent_id = (source_index.sibling(source_index.row(),
-                                          SignageSqlModel.Fields.ID.index)
-                                          .data(QtCore.Qt.ItemDataRole.DisplayRole))
-        self.createChildSignage(parent_id, self.signageSource())
+        parent_id = source_index.sibling(
+            source_index.row(), SignageSqlModel.Fields.ID.index
+        ).data(QtCore.Qt.ItemDataRole.DisplayRole)
+        signage_orginine = SignageOrigin(get_settings().APP_NAME, "Signage")
+        self.createChildSignage(parent_id, signage_orginine)
 
     @Slot()
     def deleteRow(self) -> None:
@@ -671,57 +739,78 @@ class SignageTab(BaseTab):
 
     @Slot(str)
     def searchfor(self, text: str):
-        self.proxymodel.setUserFilter(text,
-                                       [SignageSqlModel.Fields.Refkey.index,
-                                        SignageSqlModel.Fields.Status.index,
-                                        SignageSqlModel.Fields.Title.index,
-                                        SignageSqlModel.Fields.Note.index,
-                                        SignageSqlModel.Fields.PublicNote.index,
-                                        SignageSqlModel.Fields.Owner.index,
-                                        SignageSqlModel.Fields.Source.index])
-
-        self.proxymodel.invalidateFilter()
-
-    @Slot()
-    def setFilters(self):
-        """Open Signage Filter Dialog"""
-        if self.filter_dialog is None:
-            self.filter_dialog = FilterDialog(parent=self)    
-            self.filter_dialog.accepted.connect(self.applyFilters)
-            
-            # Move the dialog below the button
-            ph = self.toolbar.widgetForAction(self.filtering).geometry().height()
-            pw = self.toolbar.widgetForAction(self.filtering).geometry().width()
-            px = self.toolbar.widgetForAction(self.filtering).geometry().x()
-            py = self.toolbar.widgetForAction(self.filtering).geometry().y()
-            dw = self.filter_dialog.width()
-            dh = self.filter_dialog.height()   
-            self.filter_dialog.setGeometry(px + int(dw / 2), py + (ph * 2) + (dh * 2), dw, dh )
-        
-        self.filter_dialog.exec()
+        cols = [
+            SignageSqlModel.Fields.Refkey.index,
+            SignageSqlModel.Fields.Status.index,
+            SignageSqlModel.Fields.Title.index,
+            SignageSqlModel.Fields.Note.index,
+            SignageSqlModel.Fields.PublicNote.index,
+            SignageSqlModel.Fields.Owner.index,
+            SignageSqlModel.Fields.Source.index,
+        ]
+        self.proxymodel.set_search_text(text, cols)
 
     @Slot()
-    def applyFilters(self):
-        """Apply Filter on the Signage Table"""
+    def openFilterDialog(self):
         if self.filter_dialog is None:
-            return
+            fields = [
+                FilterField(
+                    key="status",
+                    label="Status",
+                    column=SignageSqlModel.Fields.Status.index,
+                    kind=FilterKind.EXACT_LIST,
+                    items=[
+                        (item.name, item.name)
+                        for item in AppDatabase.cache_signage_status.values()
+                    ],
+                    widget_class=MultiCheckableComboBox,
+                ),
+                FilterField(
+                    key="type",
+                    label="Type",
+                    column=SignageSqlModel.Fields.Type.index,
+                    kind=FilterKind.EXACT_LIST,
+                    items=[
+                        (item.name, item.name)
+                        for item in AppDatabase.cache_signage_type.values()
+                    ],
+                    widget_class=MultiCheckableComboBox,
+                ),
+                FilterField(
+                    key="owner",
+                    label="Owner",
+                    column=SignageSqlModel.Fields.Owner.index,
+                    kind=FilterKind.EXACT_LIST,
+                    items=[(item, item) for item in get_settings().get_owners()],
+                    widget_class=MultiCheckableComboBox,
+                ),
+                FilterField(
+                    key="doc",
+                    label="Evidence",
+                    column=SignageSqlModel.Fields.DocCount.index,
+                    kind=FilterKind.TRISTATE_BOOL,
+                    items=[
+                        ("all", QtCore.Qt.CheckState.PartiallyChecked),
+                        ("without", QtCore.Qt.CheckState.Unchecked),
+                        ("with only", QtCore.Qt.CheckState.Checked),
+                    ],
+                ),
+            ]
 
-        self.proxymodel.setSatusFilter(self.filter_dialog.statusFilter(), SignageSqlModel.Fields.Status.index)
-        self.proxymodel.setTypeFilter(self.filter_dialog.typeFilter(), SignageSqlModel.Fields.Type.index)
-        self.proxymodel.setOwnerFilter(self.filter_dialog.ownerFilter(), SignageSqlModel.Fields.Owner.index)
-        self.proxymodel.setEvidenceFilter(self.filter_dialog.evidenceFilter(), SignageSqlModel.Fields.DocCount.index)
-        self.proxymodel.invalidateFilter()
+            self.filter_dialog = GenericFilterDialog(fields, self)
+
+        button = self.toolbar.widgetForAction(self.action_filtering)
+        if button is not None:
+            self.filter_dialog.popupNear(button)
+            if self.filter_dialog.exec():
+                for key, kwargs in self.filter_dialog.get_filters().items():
+                    self.proxymodel.set_filter(key, **kwargs)
 
     @Slot()
     def onResetFilters(self):
         """Reset Signage Table Filters"""
-        self.proxymodel.setSatusFilter([], SignageSqlModel.Fields.Status.index)
-        self.proxymodel.setTypeFilter([], SignageSqlModel.Fields.Type.index)
-        self.proxymodel.setOwnerFilter([], SignageSqlModel.Fields.Owner.index)
-        self.proxymodel.setEvidenceFilter([], SignageSqlModel.Fields.DocCount.index)
-        self.proxymodel.setUserFilter("", [])
-        self.search_tool.setText("")
-        self.proxymodel.invalidateFilter()
+        self.search_tool.clear()
+        self.proxymodel.clear_filters()
 
         if self.filter_dialog is not None:
             self.filter_dialog.resetFields()
@@ -740,43 +829,45 @@ class SignageTab(BaseTab):
         connectors: dict = ConnectorModel.connectors().get(connector_type.value)
 
         if not connectors:
+            QtWidgets.QMessageBox.information(self, "Connector", "No connector defined!")
             return
 
-        regex = (mconf.default_regex if mconf.settings.value("regex") is None 
-                 or mconf.settings.value("regex") == "" else mconf.settings.value("regex"))
+        regex = get_settings().get_signage_pattern()
 
         self.startSpinner()
         if connector_type == ConnectorType.DOCX:
-            DataService.loadFromDocx(connectors=connectors,
-                                     regex=regex,
-                                     cache=self.model.connector_cache,
-                                     on_ready=self._on_signage_ready,
-                                     on_finished=self._on_load_connector_finished)
+            DataService.loadFromDocx(
+                connectors=connectors,
+                regex=regex,
+                cache=self.model.connector_cache,
+                on_ready=self._on_signage_ready,
+                on_finished=self._on_load_connector_finished,
+            )
         elif connector_type == ConnectorType.ONENOTE:
-            DataService.loadFromOneNote(connectors=connectors,
-                                        regex=regex,
-                                        cache=self.model.connector_cache,
-                                        on_ready=self._on_signage_ready,
-                                        on_finished=self._on_load_connector_finished)
+            DataService.loadFromOneNote(
+                connectors=connectors,
+                regex=regex,
+                cache=self.model.connector_cache,
+                on_ready=self._on_signage_ready,
+                on_finished=self._on_load_connector_finished,
+            )
 
-    def expandAll(self):
-        self.table.expandAll()
-
-    def collapseAll(self):
-        self.table.collapseAll()
-    
     def cite(self):
         index: QtCore.QModelIndex = self.table.selectionModel().currentIndex()
-        
+
         if not index.isValid():
             return
-        
+
         src_index = self.proxymodel.mapToSource(index)
-        refkey_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Refkey.index)
+        refkey_idx = src_index.sibling(
+            src_index.row(), SignageSqlModel.Fields.Refkey.index
+        )
         refkey = self.model.data(refkey_idx, Qt.ItemDataRole.DisplayRole)
         type_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Type.index)
         type = self.model.data(type_idx, Qt.ItemDataRole.DisplayRole)
-        title_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Title.index)
+        title_idx = src_index.sibling(
+            src_index.row(), SignageSqlModel.Fields.Title.index
+        )
         title = self.model.data(title_idx, Qt.ItemDataRole.DisplayRole)
 
         citation = f"{type} {refkey} - {title}"
@@ -790,10 +881,16 @@ class SignageTab(BaseTab):
         index = self.table.selectionModel().currentIndex()
         src_index = self.proxymodel.mapToSource(index)
 
-        public_note_index = src_index.sibling(src_index.row(), SignageSqlModel.Fields.PublicNote.index)
-        private_note_index = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Note.index)
+        public_note_index = src_index.sibling(
+            src_index.row(), SignageSqlModel.Fields.PublicNote.index
+        )
+        private_note_index = src_index.sibling(
+            src_index.row(), SignageSqlModel.Fields.Note.index
+        )
 
-        if self.model.setData(private_note_index, self.note.toHtml(), Qt.ItemDataRole.EditRole):
+        if self.model.setData(
+            private_note_index, self.note.toHtml(), Qt.ItemDataRole.EditRole
+        ):
             self.public_note.clear()
             self.model.setData(public_note_index, "", Qt.ItemDataRole.EditRole)
 
@@ -804,19 +901,21 @@ class SignageTab(BaseTab):
 
         if not self.export_dialog.exec():
             return
-        
+
         selected_types = self.export_dialog.selected_types
         selected_statuses = self.export_dialog.selected_statuses
-        outfile_destination = self.export_dialog.outfile_destination 
-        include_public_note = self.export_dialog.include_public_note 
+        outfile_destination = self.export_dialog.outfile_destination
+        include_public_note = self.export_dialog.include_public_note
 
         self.startSpinner()
-        DataService.export2Excel(self.model.rootModel(),
-                                 selected_types,
-                                 selected_statuses,
-                                 outfile_destination,
-                                 include_public_note,
-                                 self.stopSpinner)
+        DataService.export2Excel(
+            self.model.rootModel(),
+            selected_types,
+            selected_statuses,
+            outfile_destination,
+            include_public_note,
+            self.stopSpinner,
+        )
 
     @Slot()
     def onImportTriggered(self):
@@ -825,27 +924,36 @@ class SignageTab(BaseTab):
 
         if not self.import_dialog.exec():
             return
-        
+
         selected_files = self.import_dialog.selectedFiles()
         update_title = self.import_dialog.update_title
-        
+
         self.startSpinner()
-        DataService.loadFromExcel(self.model, 
-                                  selected_files,
-                                  update_title,
-                                  self._on_signage_ready,
-                                  self.stopSpinner)
-        
+        DataService.loadFromExcel(
+            self.model,
+            selected_files,
+            update_title,
+            self._on_signage_ready,
+            self.stopSpinner,
+        )
+
     def reachSource(self):
         index: QtCore.QModelIndex = self.table.selectionModel().currentIndex()
-        
+
         if not index.isValid():
             return
-        
+
         src_index = self.proxymodel.mapToSource(index)
-        source_idx = src_index.sibling(src_index.row(), SignageSqlModel.Fields.Source.index)
+        source_idx = src_index.sibling(
+            src_index.row(), SignageSqlModel.Fields.Source.index
+        )
         source = self.model.data(source_idx, Qt.ItemDataRole.DisplayRole)
-        source_dict: dict = loads(source)
+        try:
+            # source_dict: dict = loads(source)
+            source_dict: dict = literal_eval(source)
+        except Exception as e:
+            status_signal.status_message.emit("⚠️ Unable to identify the source !", 5000)
+            return
 
         app = source_dict.get("application")
         module = source_dict.get("module")
@@ -855,63 +963,61 @@ class SignageTab(BaseTab):
         if target is None:
             return
 
-        if app == "InspectorMate":
-            if module == "RichTextEditor":
-                # fpath = f"{AppDatabase.activeWorkspace().notebook_path}/{target}"
-                self.sigOpenNote.emit(target, anchor)
-            else:
-                status_signal.status_message.emit("Opening target...", 5000)
-                try:
-                    open_file(target)
-                except Exception as e:
-                    logger.error(e)
-                else:
-                    status_signal.status_message.emit("Target opened!", 3000)
-
-        else:
-            if module == "loadFromDocx":
-                open_file(target)
-            elif module == "loadFromOnenote":
+        if app == "InspectorMate" and module == "RichTextEditor":
+            self.sigOpenNote.emit(target, anchor)
+        elif app =="Ms OneNote" and module == "loadFromOnenote":
                 QtGui.QDesktopServices.openUrl(QtCore.QUrl(target))
+        else:
+            status_signal.status_message.emit("Opening target...", 5000)
+            try:
+                open_file(target)
+            except Exception as e:
+                logger.error(e)
+                status_signal.status_message.emit("⚠️ Unable to open the target!")
+            else:
+                status_signal.status_message.emit("Target opened!", 3000)
 
     def colorCell(self):
         indexes = self.table.selectedIndexes()
-        
+
         if not indexes:
             return
-        
+
         color: QtGui.QColor = QtWidgets.QColorDialog.getColor(QtGui.QColor(), self)
         if not color.isValid():
             return
-        
-        if (color.name(QtGui.QColor.NameFormat.HexRgb) == "#ffffff" 
-            and theme_icon_manager.get_theme() == Theme.LIGHT):
-            color_value = ""
-        elif (color.name(QtGui.QColor.NameFormat.HexRgb) == "#000000" 
-            and theme_icon_manager.get_theme() == Theme.DARK):
+
+        if (
+            color.name(QtGui.QColor.NameFormat.HexRgb) == "#ffffff"
+            and theme_icon_manager.get_theme() == Theme.LIGHT
+        ) or (
+            color.name(QtGui.QColor.NameFormat.HexRgb) == "#000000"
+            and theme_icon_manager.get_theme() == Theme.DARK
+        ):
             color_value = ""
         else:
             color_value = color.name(QtGui.QColor.NameFormat.HexRgb)
-        
+
         for idx in indexes:
             src_idx = self.proxymodel.mapToSource(idx)
-            bg_idx = src_idx.sibling(src_idx.row(), SignageSqlModel.Fields.Background.index)
+            bg_idx = src_idx.sibling(
+                src_idx.row(), SignageSqlModel.Fields.Background.index
+            )
             self.model.setData(bg_idx, color_value, Qt.ItemDataRole.EditRole)
 
     def restoreTableColumnWidth(self):
         """Restore table column width upon GUI initialization"""
-        settings.beginGroup("signage")
+        settings = get_settings()
         for column in range(self.model.columnCount()):
-            # if settings.contains(f"column-{column}"):
-            self.table.setColumnWidth(column, settings.value(f"column-{column}", 100, int))
-        settings.endGroup()
+            width = settings.get_column_width("signage", column)
+            self.table.setColumnWidth(column, width)
 
     def saveTableColumnWidth(self):
         """Save table column width upon closing"""
-        settings.beginGroup("signage")
+        settings = get_settings()
         for column in range(self.model.columnCount()):
-            settings.setValue(f"column-{column}", self.table.columnWidth(column))
-        settings.endGroup()
+            width = self.table.columnWidth(column)
+            settings.set_column_width("signage", column, width)
 
     def closeEvent(self, a0):
         self.saveTableColumnWidth()

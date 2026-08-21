@@ -1,8 +1,5 @@
-import PyQt6Ads as QtAds
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from PyQt6.QtGui import QIcon
-
 from documentviewer.viewerwidget import ViewerWidget
+from qtpy import QtAds, QtGui, QtWidgets
 
 
 class DockInDockManager(QtAds.CDockManager):
@@ -53,11 +50,11 @@ class DockInDockManager(QtAds.CDockManager):
         return widgets            
 
 
-class DockInDockWidget(QWidget):
+class DockInDockWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super().__init__(parent)
         
-        layout = QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0,0,0,0)
         self.__mgr = DockInDockManager(self)
         self.__mgr.setConfigFlag(QtAds.CDockManager.eConfigFlag.HideSingleCentralWidgetTitleBar, False)
@@ -71,7 +68,7 @@ class DockInDockWidget(QWidget):
         if getattr(self, "_center_anchor", None) is None:
             anchor = QtAds.CDockWidget("CENTER_ANCHOR")
             anchor.setObjectName("CENTER_ANCHOR")
-            anchor.setWidget(QWidget())  # empty
+            anchor.setWidget(QtWidgets.QWidget())  # empty
             anchor.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetDeleteOnClose, False)
             anchor.setFeature(QtAds.CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
             anchor.setFeature(QtAds.CDockWidget.DockWidgetFeature.NoTab, True)
@@ -82,7 +79,7 @@ class DockInDockWidget(QWidget):
             self._center_area = area
             area.destroyed.connect(lambda: setattr(self, "_center_area", None))
 
-    def addTabWidget(self, new_viewer: ViewerWidget, name: str, icon=QIcon()):
+    def addTabWidget(self, new_viewer: ViewerWidget, name: str, icon=QtGui.QIcon()):
         self.ensure_center_anchor()
 
         # show if already exists

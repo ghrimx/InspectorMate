@@ -1,11 +1,12 @@
 import logging
+
 from mammoth import convert_to_html
-
-from PyQt6 import QtWidgets, QtGui
-from PyQt6.QtCore import Qt, pyqtSlot as Slot
-
-from documentviewer.viewerwidget import ViewerWidget
+from PyQt6 import QtGui, QtWidgets
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSlot as Slot
 from qt_theme_manager import theme_icon_manager
+
+from documentviewer.viewerwidget import SignageOrigin, ViewerWidget
 
 logger = logging.getLogger(__name__)
 
@@ -136,16 +137,16 @@ class WordViewer(ViewerWidget):
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), self.extension] if x)
         return f"[{citation}]"
     
-    def source(self) -> dict:
-        title = self._document.title
-        return {"application":"InspectorMate",
-                "module":self.viewerName(),
-                "item":"document",
-                "item_title":title,
-                "filepath":self._document.filepath.as_posix()}
+    def source(self) -> SignageOrigin:
+        signage_origin = SignageOrigin(
+            "InspectorMate",
+            "DocViewer",
+            self.viewerName(),
+            self._document.title,
+            self._document.filepath.as_posix(),
+        )
+        return signage_origin
     
-    def getAnchor(self):
-        return None
    
 
 

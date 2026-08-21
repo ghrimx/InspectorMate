@@ -1,19 +1,18 @@
-from my_pyqt_widgets import FitContentTextEdit
+from my_pyqt_widgets import FitContentTextEdit, MultiCheckableComboBox
 from qt_theme_manager import theme_icon_manager
 
 from common import Signage, SignageStatus, SignageType
 from database.database import AppDatabase
 from qtpy import QtCore, QtGui, QtWidgets, Slot
-from utilities import config as mconf
+from utilities.settings import get_settings
 from utilities.utils import increment_refKey
-from widgets.combobox import CheckableComboBox
 
 
 class SignageDialog(QtWidgets.QDialog):
     """QDialog to create various type of signage"""
 
     def __init__(self, parent=None):
-        super(SignageDialog, self).__init__(parent=parent)
+        super().__init__(parent=parent)
         self.setWindowTitle("Signage Dialog")
 
         form = QtWidgets.QFormLayout(self)
@@ -100,7 +99,7 @@ class SignageDialog(QtWidgets.QDialog):
         self.populateOwnerCombobox()
 
     def populateOwnerCombobox(self):
-        self._owners: list = mconf.settings.value("owners", [], "QStringList")
+        self._owners: list = get_settings().get_owners()
 
         if self._owners is not None:
             for owner in self._owners:
@@ -141,8 +140,7 @@ class OwnerDialog(QtWidgets.QDialog):
         self.setWindowTitle("Add/Remove Owner")
 
         self.list_widget = QtWidgets.QListWidget()
-
-        self._owners: list = mconf.settings.value("owners", [], "QStringList")
+        self._owners: list = get_settings().get_owners()
 
         if self._owners is not None:
             for owner in self._owners:
@@ -177,7 +175,7 @@ class OwnerDialog(QtWidgets.QDialog):
             list_item.setText(name)
             self.list_widget.addItem(list_item)
             self._owners.append(name)
-            mconf.settings.setValue("owners", self._owners)
+            get_settings().set_owners(self._owners)
             self.owner_name.clear()
 
     def removeOneItem(self):
@@ -185,83 +183,17 @@ class OwnerDialog(QtWidgets.QDialog):
         row = self.list_widget.currentRow()
         item = self.list_widget.takeItem(row)
         self._owners.pop(row)
-        mconf.settings.setValue("owners", self._owners)
+        get_settings().set_owners(self._owners)
         del item
 
     def showEvent(self, a0):
         self.adjustSize()
         return super().showEvent(a0)
-    
-class FilterDialog(QtWidgets.QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-       
-        buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
 
-        self.buttonBox = QtWidgets.QDialogButtonBox(buttons)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-
-        form = QtWidgets.QFormLayout()
-        self.setLayout(form)
-
-        self.status_combobox = CheckableComboBox()
-        for key, item in AppDatabase.cache_signage_status.items():
-            self.status_combobox.addItem(item.name, item.name)
-        form.addRow("Status:", self.status_combobox)
-
-        self.types_combobox = CheckableComboBox()
-        item: SignageType
-        for key, item in AppDatabase.cache_signage_type.items():
-            self.types_combobox.addItem(item.name, item.name)
-        form.addRow("Type:", self.types_combobox)
-
-        _owners: list = mconf.settings.value("owners", [], "QStringList")
-        self.owner_combobox = CheckableComboBox()
-        self.owner_combobox.addItems(_owners)
-        form.addRow("Owner:", self.owner_combobox)
-
-        self.document_received = QtWidgets.QCheckBox("all", self)
-        self.document_received.setCheckState(QtCore.Qt.CheckState.PartiallyChecked)
-        self.document_received.checkStateChanged.connect(self.updateEvidenceCheckbox)
-        form.addRow("Evidence:", self.document_received)
-
-        form.addWidget(self.buttonBox)
-    
-    @Slot(QtCore.Qt.CheckState)
-    def updateEvidenceCheckbox(self, state):
-        if state == QtCore.Qt.CheckState.Unchecked:
-            self.document_received.setText("without only")
-        elif state == QtCore.Qt.CheckState.PartiallyChecked:
-            self.document_received.setText("all")
-        elif state == QtCore.Qt.CheckState.Checked:
-            self.document_received.setText("with only")
-
-    def resetFields(self):
-        self.document_received.setCheckState(QtCore.Qt.CheckState.PartiallyChecked)
-        self.status_combobox.clearSelection()
-        self.types_combobox.clearSelection()
-        self.owner_combobox.clearSelection()
-
-    def accept(self):
-        super().accept()
-
-    def statusFilter(self):
-        return [x for x in self.status_combobox.currentData()]
-
-    def typeFilter(self):
-        return [x for x in self.types_combobox.currentData()]     
-
-    def ownerFilter(self):
-        return [x for x in self.owner_combobox.currentData()]
-    
-    def evidenceFilter(self) -> QtCore.Qt.CheckState:
-        return self.document_received.checkState()
-    
 
 class ExportDialog(QtWidgets.QDialog):
     def __init__(self, parent = None):
-        super(ExportDialog, self).__init__(parent)
+        super().__init__(parent)
 
         self.setWindowTitle("Export Signage")
 
@@ -290,15 +222,15 @@ class ExportDialog(QtWidgets.QDialog):
         self.destination_lineedit.setReadOnly(True)
 
         # Signage type
-        self.type_combobox = CheckableComboBox()
+        self.type_combobox = MultiCheckableComboBox()
         signage_type: SignageType
         for signage_type in AppDatabase.cache_signage_type.values():
             self.type_combobox.addItem(signage_type.name, signage_type)
 
-        self.type_combobox.selectionChanged.connect(self.updateButtonState)
+        self.type_combobox.sigSelectionChanged.connect(self.updateButtonState)
 
         # Signage statuses
-        self.status_combobox = CheckableComboBox()
+        self.status_combobox = MultiCheckableComboBox()
         signage_status: SignageStatus
         for signage_status in AppDatabase.cache_signage_status.values():
             self.status_combobox.addItem(signage_status.name, signage_status)
@@ -350,7 +282,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 class ImportDialog(QtWidgets.QDialog):
     def __init__(self, parent = None):
-        super(ImportDialog, self).__init__(parent)
+        super().__init__(parent)
 
         self._files = []
 

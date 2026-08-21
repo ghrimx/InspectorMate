@@ -1,25 +1,30 @@
 import logging
-import json
+from ast import literal_eval
 from datetime import datetime, timezone
-from qtpy import QtCore, Signal, Slot, QtSql, QSqlRelationalTableModel
+from functools import partial
 from pathlib import Path
 
-from functools import partial
-from database.database import AppDatabase
-
-from common import DatabaseField, Signage, Connector, SignageType, SignageStatus, UpdateItem, OETag
-
-from base_models import TreeItem, TreeModel, ProxyModel
-from openpyxl import Workbook
-from openpyxl.worksheet.table import Table, TableStyleInfo
-from openpyxl.styles import numbers, PatternFill, Font, Alignment
-from openpyxl.formatting.rule import CellIsRule
 from html2text import html2text
-from utilities.utils import mergeExcelFiles, find_match, extract_hash_lines
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, numbers
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
+from base_models import ProxyModel, TreeItem, TreeModel
+from common import (
+    Connector,
+    DatabaseField,
+    OETag,
+    Signage,
+    SignageOrigin,
+    SignageStatus,
+    SignageType,
+    UpdateItem,
+)
+from database.database import AppDatabase
 from onenote.model import getTags
-
-from utilities.config import config as mconf
+from qtpy import QSqlRelationalTableModel, QtCore, QtSql, Signal, Slot
+from utilities.settings import get_settings
+from utilities.utils import extract_hash_lines, find_match, mergeExcelFiles
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +52,7 @@ class LoadWorker(QtCore.QRunnable):
         except Exception as e:
             self.signals.error.emit(e)
             msg = "⚠️ Error while loading data from connector!"
+            logger.error(e)
         else:
             msg = "✔️ Data imported from connector!"
         finally:
@@ -56,7 +62,7 @@ class LoadWorker(QtCore.QRunnable):
 class ExportWorker(QtCore.QRunnable):
     def __init__(self, sql_model, types, statuses, destination, include_publicnote):
         super().__init__()
-        self.sql_model: "SignageSqlModel" = sql_model
+        self.sql_model: SignageSqlModel = sql_model
         self.types: list = types
         self.statuses: list = statuses
         self.destination: str = destination
@@ -98,23 +104,24 @@ class ExportWorker(QtCore.QRunnable):
         record_count = 1
         for row in range(self.sql_model.rowCount()):
             record = self.sql_model.record(row)
-            
-            if record.value(SignageSqlModel.Fields.Type.index) in self.types:
-                if record.value(SignageSqlModel.Fields.Status.index) in self.statuses:
-                    record_count += 1
-                    values = list(map(record.value, model_fields))
 
-                    # Signage Type
-                    values[3] = record.value(SignageSqlModel.Fields.Type.index)
+            if (
+                record.value(SignageSqlModel.Fields.Type.index) in self.types
+                and record.value(SignageSqlModel.Fields.Status.index) in self.statuses
+            ):
+                record_count += 1
+                values = list(map(record.value, model_fields))
 
-                    # Signage Status
-                    values[2] = record.value(SignageSqlModel.Fields.Status.index)
-    
-                    if self.include_publicnote:
-                        if values[-1] is not None:
-                            values[-1] = html2text(values[-1]).strip()
+                # Signage Type
+                values[3] = record.value(SignageSqlModel.Fields.Type.index)
 
-                    ws.append(values)
+                # Signage Status
+                values[2] = record.value(SignageSqlModel.Fields.Status.index)
+
+                if self.include_publicnote and values[-1] is not None:
+                    values[-1] = html2text(values[-1]).strip()
+
+                ws.append(values)
 
         if record_count == 1:
             record_count = 2
@@ -166,7 +173,7 @@ class ExcelLoader(QtCore.QRunnable):
 
     def __init__(self, sql_model, selected_files, update_title, batch_size=100):
         super().__init__()
-        self.sql_model: "SignageSqlModel" = sql_model
+        self.sql_model: SignageSqlModel = sql_model
         self.selected_files = selected_files
         self.update_title = update_title
         self.batch_size = batch_size
@@ -219,11 +226,12 @@ class ExcelLoader(QtCore.QRunnable):
                         break
 
             if not found and df_refkey and cache_signage_type:
+                signage_origin = SignageOrigin("Ms Excel", "loadFromExcel")
                 signage = Signage(
                     refkey=df_refkey,
                     title=df_title,
                     type=cache_signage_type.uid if cache_signage_type else None,
-                    source=f'{{"application":"InspectorMate", "module":"loadFromExcel"}}',
+                    source=signage_origin.as_str(),
                     workspace_id=AppDatabase.activeWorkspace().id,
                 )
                 insertions.append(signage)
@@ -261,7 +269,7 @@ class DataService:
                      regex: str,
                      cache: dict,
                      on_ready: callable,
-                     on_finished: callable = None):
+                     on_finished: callable | None = None):
 
         def func(connectors: dict, regex: str, cache: dict):
 
@@ -278,7 +286,7 @@ class DataService:
                     result = extract_hash_lines(connector.value)
                     
                     for lid, line in result.items():
-                        if lid in cache.get("Docx"):
+                        if lid in cache.get("Ms Word"):
                             continue
                         text = line[1:]
                         signage = Signage()
@@ -286,10 +294,9 @@ class DataService:
                         signage.refkey = find_match(text, regex)
                         signage.type = 3 if line[0] == '!' else 0
                         signage.workspace_id = AppDatabase.activeWorkspace().id
-                        src = (f'{{"application":"Docx", "module":"loadFromDocx",' 
-                               f'"target":"{connector.value}", "object_id":"{lid}"}}')
-                        signage.source = src
-                        cache.get("Docx").add(lid)
+                        signage_origin = SignageOrigin("Ms Word", "loadFromDocx", "Word", fpath.name, lid, connector.value)
+                        signage.source = signage_origin.as_str()
+                        cache.get("Ms Word").add(lid)
                         yield signage
 
         pool = QtCore.QThreadPool().globalInstance()
@@ -316,12 +323,12 @@ class DataService:
                 section_id = connector.value
                 section_name = connector.name
                 
-                ps_script = mconf.app_data_path.joinpath("onenotescrapper.ps1").as_posix()
+                ps_script = get_settings().APP_DATA_PATH.joinpath("onenotescrapper.ps1").as_posix()
                 tags = getTags(ps_script, section_id)                
 
                 tag: OETag
                 for tag in tags:
-                    if tag.ID in cache.get("OneNote"):
+                    if tag.ID in cache.get("Ms OneNote"):
                         continue
                     signage = Signage()
                     signage.title = tag.Text
@@ -335,15 +342,19 @@ class DataService:
 
                     signage.type = signage_type.uid
                     signage.workspace_id = AppDatabase.activeWorkspace().id
-                    src = (f'{{"application":"OneNote", "module":"loadFromOnenote",'
-                           f'"section":"{section_name}", "page":"{tag.PageName}",'
-                           f'"object_id":"{tag.ID}",'
-                           f'"target":"{tag.Link}"}}')
-                    signage.source = src
+                    signage_origin = SignageOrigin(
+                        "Ms OneNote",
+                        "loadFromOnenote",
+                        section_name,
+                        tag.PageName,
+                        tag.ID,
+                        tag.Link,
+                    )
+                    signage.source = signage_origin.as_str()
                     signage.creation_datetime = (datetime.fromisoformat(tag.CreationTime[:-1])
                                                  .astimezone(timezone.utc).strftime('%Y-%m-%d'))
                     signage.modification_datetime = tag.LastModifiedTime
-                    cache.get("OneNote").add(tag.ID)
+                    cache.get("Ms OneNote").add(tag.ID)
                     yield signage
   
         worker = LoadWorker(partial(func, connectors, regex, cache), cache=cache)
@@ -441,8 +452,10 @@ class SignageSqlModel(QSqlRelationalTableModel):
         self.setFilter(f"workspace_id={AppDatabase.activeWorkspace().id}")
         self.select()
 
-    def columnCount(self, parent = QtCore.QModelIndex()):
+    def columnCount(self, parent = None):
         """Add virtual column"""
+        if parent is None:
+            parent = QtCore.QModelIndex()
         return super().columnCount(parent) + 2
     
     def initFields(self):
@@ -535,7 +548,9 @@ class SignageProxyModel(ProxyModel):
             
         return ProxyModel.filterAcceptsRow(self, source_row, source_parent) and owner_filter and evidence_filter
 
-    def sortTree(self, column=0, order=QtCore.Qt.SortOrder.AscendingOrder, parent=QtCore.QModelIndex()):
+    def sortTree(self, column=0, order=QtCore.Qt.SortOrder.AscendingOrder, parent=None):
+        if parent is None:
+            parent = QtCore.QModelIndex()
         self.sort(column, order)
         for row in range(self.rowCount(parent)):
             child = self.index(row, 0, parent)
@@ -553,7 +568,7 @@ class SignageModel(TreeModel):
     connector_cache = {} # word : [refkey_type, ...], onenote: [object_id]}
 
     def __init__(self, parent=None):
-        super(SignageModel, self).__init__(parent)
+        super().__init__(parent)
         self._source_model = SignageSqlModel()
         self.buildFromSqlModel()
         self.initCache()
@@ -666,11 +681,14 @@ class SignageModel(TreeModel):
 
         return result
 
-    def iter_model_rows(self, parent=QtCore.QModelIndex()):
+    def iter_model_rows(self, parent=None):
         """
         Recursively yield QModelIndex objects for every row in a tree model.
         Yields one index per row (column 0 by default).
         """
+        if parent is None:
+            parent=QtCore.QModelIndex()
+
         row_count = self.rowCount(parent)
         for row in range(row_count):
             index = self.index(row, 0, parent)
@@ -688,32 +706,32 @@ class SignageModel(TreeModel):
             This cache is intended to avoid to load the same signage and the duplicate.        
         """
         self.connector_cache.clear()
-        self.connector_cache.setdefault("OneNote", set())
-        self.connector_cache.setdefault("Docx", set())
+        self.connector_cache.setdefault("Ms OneNote", set())
+        self.connector_cache.setdefault("Ms Word", set())
 
         connector_cnt = 0
         for row in range(self.rootModel().rowCount()):
-            source_json = (self.rootModel().index(row,
+            source_str = (self.rootModel().index(row,
                                                   SignageSqlModel.Fields.Source.index)
                                                   .data(QtCore.Qt.ItemDataRole.DisplayRole))
-            if source_json.strip() == "":
+            if source_str.strip() == "":
                 continue
 
             try:
-                source: dict = json.loads(source_json)
+                source: dict = literal_eval(source_str)
             except Exception as e:
-                logger.error(f"Fail to load json: '{source_json}'. error:{e}")
+                logger.error(f"Fail to read signage source: '{source_str}'. error:{e}")
                 continue
 
             if isinstance(source, dict):
                 application = source.get("application")
-                if application == "OneNote":
-                    object_id = source.get("object_id")
-                    self.connector_cache.setdefault("OneNote", set()).add(object_id)
+                if application == "Ms OneNote":
+                    object_id = source.get("item_id")
+                    self.connector_cache.setdefault("Ms OneNote", set()).add(object_id)
                     connector_cnt += 1
-                elif application == "Docx":
-                    object_id = source.get("object_id")
-                    self.connector_cache.setdefault("Docx", set()).add(object_id)        
+                elif application == "Ms Word":
+                    object_id = source.get("item_id")
+                    self.connector_cache.setdefault("Ms Word", set()).add(object_id)        
                     connector_cnt += 1
 
         logger.info(f"Connector cache's size: {connector_cnt}")
