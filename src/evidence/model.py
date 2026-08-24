@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from common import DatabaseField
+from common import DatabaseField, Document
 from database.database import AppDatabase
 from qtpy import QSqlRelationalTableModel, Qt, QtCore, QtSql, Signal
 from utilities import utils
@@ -329,3 +329,66 @@ class EvidenceModel(QSqlRelationalTableModel):
                 data[-1][0] += 1        # Total row
 
         return data, vheaders, hheaders
+
+    def rowById(self, id_value) -> list[QtCore.QModelIndex]:
+        """Returns a list of the row indexes by the Evidence ID"""
+        id_column = self.Fields.ID.index
+
+        indexes = self.match(
+            self.index(0, id_column),
+            Qt.ItemDataRole.DisplayRole,
+            id_value,
+            1,
+            Qt.MatchFlag.MatchExactly
+        )
+
+        return indexes
+
+    def getDocbyIndex(self, idx: QtCore.QModelIndex):
+        """Returns a Document item from the index"""
+        if not idx.isValid():
+            return
+        
+        r = idx.row()
+
+        doc = Document(
+            refkey=idx.sibling(r, self.Fields.Refkey.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            title=idx.sibling(r, self.Fields.Title.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            subtitle=idx.sibling(r, self.Fields.Subtitle.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            reference=idx.sibling(r, self.Fields.Reference.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            status=idx.sibling(r, self.Fields.Status.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            type=idx.sibling(r, self.Fields.Type.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            note=idx.sibling(r, self.Fields.Note.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            id=idx.sibling(r, self.Fields.ID.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            fileid=idx.sibling(r, self.Fields.FileID.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            workspace_id=idx.sibling(r, self.Fields.Workspace.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+            signage_id=idx.sibling(r, self.Fields.SignageID.index).data(
+                QtCore.Qt.ItemDataRole.DisplayRole
+            ),
+        )
+
+        doc.filepath = idx.sibling(r, self.Fields.Filepath.index).data(
+            QtCore.Qt.ItemDataRole.DisplayRole
+        )
+
+        return doc

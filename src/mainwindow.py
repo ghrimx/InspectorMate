@@ -17,7 +17,7 @@ from qt_theme_manager import Theme, theme_icon_manager
 from base_models import SummaryModel
 from common import Document, Signage, SignageOrigin
 from database.database import AppDatabase
-from documentviewer.viewerfactory import ViewerFactory
+from documentviewer.viewerfactory import ViewerFactory, PdfViewer
 from documentviewer.viewermanager import DockInDockWidget
 from documentviewer.viewerwidget import ViewerWidget
 from evidence.model import EvidenceModel
@@ -535,10 +535,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.help_menu.addAction(self.action_check_updates)
 
     def connectSignals(self):
+        # Signage Tab signals
         self.signage_tree_tab.sigSignageDoubleClicked.connect(
             self.onSignageDoubleClicked
         )
         self.signage_tree_tab.sigOpenNote.connect(self.onOpenFileTriggered)
+        self.signage_tree_tab.sigOpenEvidence.connect(self.evidence_tab.openById)
+
+        # Evidence Tab signals
         self.evidence_model.modelReset.connect(self.onEvidenceModelReset)
         self.evidence_tab.sigOpenDocument.connect(self.onOpenEvidenceTriggered)
         self.evidence_tab.sigCreateChildSignage.connect(
@@ -641,7 +645,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.evidence_tab.filterWithRefkey(refkey)
         self.evidence_tab_dock_widget.toggleView(True)
 
-    @Slot(str)
     def onOpenFileTriggered(self, filepath, anchor: str = ""):
         fpath = Path(filepath)
         if not fpath.is_file() or fpath.is_dir():
@@ -653,8 +656,8 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             utils.open_file(filepath)
 
-    @Slot(object, QtCore.QModelIndex)
-    def onOpenEvidenceTriggered(self, doc: Document, index):
+    @Slot(object, QtCore.QModelIndex, str)
+    def onOpenEvidenceTriggered(self, doc: Document, index, anchor: str = ""):
         if self.action_file_open_option.isChecked():
             utils.open_file(doc.filepath)
             return
@@ -667,21 +670,28 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             self.viewer_manager.addTabWidget(self.viewer, doc.title)
             self.viewer_manager_cdock.toggleView(True)
+            if anchor != "" and isinstance(self.viewer, PdfViewer):
+                try:
+                    page = int(anchor)
+                except:
+                    return
+                else:
+                    self.viewer.page_navigator.jump(page)
         else:
             status_signal.status_message.emit(
                 "Cannot open file with InspectorMate - Trying with system app...", 7000
             )
             utils.open_file(doc.filepath)
 
-    @Slot(str, dict, str)
-    def onCreateSignageFromNotepad(self, title, source: dict, anchor: str):
+    @Slot(object, str)
+    def onCreateSignageFromNotepad(self, source: SignageOrigin, title=""):
         """Create a signage from Notepad/Notebook"""
-        if self.signage_tree_tab.createSignage(title, source):
+        if self.signage_tree_tab.createSignage(source, title):
             signage: Signage = self.signage_tree_tab.signage_dialog.signage()
             icon = AppDatabase.cache_signage_type.get(signage.type).icon
             color = AppDatabase.cache_signage_type.get(signage.type).color
             self.notepad_tab.insertSignage(
-                icon, color, signage.type, signage.refkey, signage.title, anchor
+                icon, color, signage.type, signage.refkey, signage.title, source.anchor
             )
 
     def set_window_title(self, text=None):
@@ -797,6 +807,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         self.set_window_title(AppDatabase.activeWorkspace().name)
         self.notepad_tab.close_all()
+        self.notepad_tab.base_folder = AppDatabase.activeWorkspace().notebook_path
         self.listinsight.setRootPath(
             f"{AppDatabase.activeWorkspace().rootpath}/ListInsight"
         )
