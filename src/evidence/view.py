@@ -68,6 +68,9 @@ class SignageFilter(QtWidgets.QWidget):
             QtWidgets.QTableView.SelectionBehavior.SelectRows
         )
         self.table.setAutoScroll(False)
+        self.table.horizontalHeader().setDefaultAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
 
         for field in SignageSqlModel.Fields.fields():
             self.table.hideColumn(field.index)
@@ -193,7 +196,7 @@ class StatusColorDelegate(QtWidgets.QStyledItemDelegate):
 
 
 class EvidenceTab(BaseTab):
-    sigOpenDocument = Signal(object, QtCore.QModelIndex)
+    sigOpenDocument = Signal(object, QtCore.QModelIndex, str)
     sigCreateSignage = Signal(str, dict)
     sigCreateChildSignage = Signal(int, object)
     sigUpdateReviewProgress = Signal()
@@ -680,8 +683,21 @@ class EvidenceTab(BaseTab):
                 for key, kwargs in self.filter_dialog.get_filters().items():
                     self.proxy_model.set_filter(key, **kwargs)
 
+    def openById(self, id: int, anchor: str = ""):
+        indexes = self._model.rowById(id)
+
+        if indexes:
+            idx = indexes[0]
+            doc = self._model.getDocbyIndex(idx)
+            if doc:
+                self.sigOpenDocument.emit(doc, idx, anchor)
+
     @Slot(QtCore.QModelIndex)
     def onTableDoubleClicked(self, index: QtCore.QModelIndex):
+        """
+        Params: 
+            index: ProxyModel's index
+        """
         sidx = self.proxy_model.mapToSource(index)  # Source index
         r = sidx.row()  # row
 
@@ -725,7 +741,7 @@ class EvidenceTab(BaseTab):
             QtCore.Qt.ItemDataRole.DisplayRole
         )
 
-        self.sigOpenDocument.emit(doc, sidx)
+        self.sigOpenDocument.emit(doc, sidx, "")
 
     @Slot()
     def searchfor(self):

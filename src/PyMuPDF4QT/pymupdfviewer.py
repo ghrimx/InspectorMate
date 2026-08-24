@@ -632,6 +632,10 @@ class PdfViewer(ViewerWidget):
         title = f'"{self.title.toPlainText()}"'
         citation = "; ".join(x for x in [refkey, title, self.subtitle.text(), self.reference.text(), "PDF", page] if x)
         return f"[{citation}]"
+
+    def getAnchor(self):
+        anchor = {"type": "pdf", "page": self.page_navigator.currentPageLabel(), "doc_id": self._document.id}
+        return anchor
     
     def source(self) -> SignageOrigin:
         source_origin = SignageOrigin(

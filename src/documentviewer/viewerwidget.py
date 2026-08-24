@@ -83,6 +83,9 @@ class ViewerWidget(QtWidgets.QWidget):
     def document(self, doc: Document):
         self._document = doc
 
+    def getAnchor(self):
+        return None
+
     def createAction(self):
         self.capture_area = QtGui.QAction(theme_icon_manager.get_icon(":capture_area"),
                                           "Capture Area (Ctrl+Alt+S)",

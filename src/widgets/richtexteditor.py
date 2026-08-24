@@ -14,7 +14,7 @@ from utilities.utils import timeuuid
 
 
 class RichTextEditor(RichTextEditManager):
-    sigCreateSignage = Signal(str, object, str)
+    sigCreateSignage = Signal(object, str)
 
     def __init__(self, base_folder="", template_folder="", settings=None, parent=None):
         super().__init__(base_folder, template_folder, settings, parent)
@@ -43,10 +43,11 @@ class RichTextEditor(RichTextEditManager):
             "RichTextEditor",
             "RichTextEdit",
             textedit.userFriendlyFilename(),
-            textedit.filepath(),
-            anchor
+            anchor,
+            target=textedit.filepath(),
+            anchor=anchor
         )
-        self.sigCreateSignage.emit(title, source, anchor)
+        self.sigCreateSignage.emit(source, title)
 
     def insertSignage(
         self,
@@ -61,7 +62,8 @@ class RichTextEditor(RichTextEditManager):
         fmt = QTextCharFormat()
         fmt.setAnchor(True)
         fmt.setAnchorHref("")
-        fmt.setAnchorNames([f"signage_type={signage_type}; id={anchor}", anchor])
+        # fmt.setAnchorNames([f"signage_type={signage_type}; id={anchor}", anchor])
+        fmt.setAnchorNames([anchor])
         fmt.setForeground(QColor(color))
         fmt.setFontUnderline(False)
         fmt.setFontWeight(QFont.Weight.Bold)

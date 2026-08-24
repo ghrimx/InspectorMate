@@ -25,7 +25,8 @@ class ClipboardExporter:
 
             if anchor:
                 page = anchor.get("page", "?")
-                hlink = f'<a href="{href}#page={page}">{caption}</a>'
+                doc_id = anchor.get("doc_id", "")
+                hlink = f'<a href="{href}#page={page}" data-document-id="{doc_id}">{caption}</a>'
             else:
                 hlink = f'<a href="{href}">{caption}</a>'
 

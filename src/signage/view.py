@@ -224,6 +224,7 @@ class VirtualProgressBarDelegate(QtWidgets.QStyledItemDelegate):
 class SignageTab(BaseTab):
     sigSignageDoubleClicked = Signal(str)
     sigOpenNote = Signal(str, str)
+    sigOpenEvidence = Signal(int, str)
 
     def __init__(
         self,
@@ -949,9 +950,8 @@ class SignageTab(BaseTab):
         )
         source = self.model.data(source_idx, Qt.ItemDataRole.DisplayRole)
         try:
-            # source_dict: dict = loads(source)
             source_dict: dict = literal_eval(source)
-        except Exception as e:
+        except:
             status_signal.status_message.emit("⚠️ Unable to identify the source !", 5000)
             return
 
@@ -959,12 +959,15 @@ class SignageTab(BaseTab):
         module = source_dict.get("module")
         target = source_dict.get("target", None)
         anchor = source_dict.get("anchor", "")
+        item_id = source_dict.get("item_id", None)
 
         if target is None:
             return
 
         if app == "InspectorMate" and module == "RichTextEditor":
             self.sigOpenNote.emit(target, anchor)
+        elif app == "InspectorMate" and module == "DocViewer" and item_id:
+            self.sigOpenEvidence.emit(item_id, anchor)
         elif app =="Ms OneNote" and module == "loadFromOnenote":
                 QtGui.QDesktopServices.openUrl(QtCore.QUrl(target))
         else:
