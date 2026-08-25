@@ -268,8 +268,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stopSpinner(msg)
 
     def onCheckForUpdatesTriggered(self):
+        prev_opt = get_settings().get_update_show_option()
         get_settings().set_update_show_option(True)
         self.checkUpdate()
+        get_settings().set_update_show_option(prev_opt)
+
 
     def setupDialogs(self):
         self.concat_excel_dialog: ConcatExcelDialog = None
