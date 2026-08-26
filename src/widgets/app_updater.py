@@ -57,9 +57,9 @@ def backup_file(file_path: Path, backup_dir: Path):
 
     backup_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = backup_dir / f"{file_path.name}.{timestamp}.bak"
-    shutil.copy2(file_path, backup_file)
-    logger.error(f"Backed up {file_path} >>> {backup_file}")
+    bkp_file = backup_dir / f"{file_path.name}.{timestamp}.bak"
+    shutil.copy2(file_path, bkp_file)
+    logger.error(f"Backed up {file_path} >>> {bkp_file}")
 
 
 class Downloader(QtCore.QThread):
@@ -160,7 +160,7 @@ class Updater(QtWidgets.QDialog):
             self.close()
             return
         
-        backup_file(get_settings().DB_PATH, get_settings().APP_DATA_PATH)
+        # backup_file(get_settings().DB_PATH, get_settings().APP_DATA_PATH)
 
         logger.info("Running installer...")
 
