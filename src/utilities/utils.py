@@ -186,8 +186,8 @@ def unpackZip(zippedFile: str, dest: str = "", max_name_length: int | None = Non
     err = None
 
     zpath = Path(zippedFile)
-
-    x = re.search("^eudralink", zpath.stem.lower())
+    pattern = r'^(?:OneDrive|Eudralink)'
+    x = re.search(pattern, zpath.stem)
 
     if x is None and dest != "":
         dest = f"{dest}/{zpath.stem}"  
