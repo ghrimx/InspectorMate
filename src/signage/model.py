@@ -19,6 +19,7 @@ from common import (
     SignageStatus,
     SignageType,
     UpdateItem,
+    SignageExportParam
 )
 from database.database import AppDatabase
 from onenote.model import getTags
@@ -60,13 +61,10 @@ class LoadWorker(QtCore.QRunnable):
 
 
 class ExportWorker(QtCore.QRunnable):
-    def __init__(self, sql_model, types, statuses, destination, include_publicnote):
+    def __init__(self, sql_model, export_params: SignageExportParam):
         super().__init__()
         self.sql_model: SignageSqlModel = sql_model
-        self.types: list = types
-        self.statuses: list = statuses
-        self.destination: str = destination
-        self.include_publicnote: bool = include_publicnote
+        self.export_params = export_params
         self.signals = WorkerSignals()
 
     def func(self):
@@ -75,82 +73,162 @@ class ExportWorker(QtCore.QRunnable):
         ws = wb.active
         ws.title = "main"
 
-        if self.include_publicnote:
-            headers = ["Refkey", "Title", "Status", "Type", "Note"]
-            xrange = "A1:E"
-            model_fields = [SignageSqlModel.Fields.Refkey.index,
-                            SignageSqlModel.Fields.Title.index,
-                            SignageSqlModel.Fields.Status.index,
-                            SignageSqlModel.Fields.Type.index,
-                            SignageSqlModel.Fields.PublicNote.index]
-        else:
-            headers = ["Refkey", "Title", "Status", "Type"]
-            xrange = "A1:D"
-            model_fields = [SignageSqlModel.Fields.Refkey.index,
-                            SignageSqlModel.Fields.Title.index,
-                            SignageSqlModel.Fields.Status.index,
-                            SignageSqlModel.Fields.Type.index]
+        # ------------------------------------------------------------------
+        # Columns to export
+        # ------------------------------------------------------------------
+        headers = ["Refkey", "Title", "Status", "Type"]
 
-        for column in range(len(headers)):
-            ws.cell(row=1, column=column + 1, value=headers[column])
+        model_fields = [
+            SignageSqlModel.Fields.Refkey.index,
+            SignageSqlModel.Fields.Title.index,
+            SignageSqlModel.Fields.Status.index,
+            SignageSqlModel.Fields.Type.index,
+        ]
 
+        if self.export_params.public_note_option:
+            headers.append("Note")
+            model_fields.append(SignageSqlModel.Fields.PublicNote.index)
+
+        if self.export_params.due_date_option:
+            headers.append("Due Date")
+            model_fields.append(SignageSqlModel.Fields.DueDate.index)
+
+        # Write headers
+        for column, header in enumerate(headers, start=1):
+            ws.cell(row=1, column=column, value=header)
+
+        # ------------------------------------------------------------------
         # Selected Status List
-        # Select All if user did not made any choice
-        if len(self.statuses) == 0:
-            value: SignageStatus
+        # Select all if user did not make any choice
+        # ------------------------------------------------------------------
+        if len(self.export_params.statuses) == 0:
             for value in AppDatabase.cache_signage_status.values():
-                self.statuses.append(value.name)
+                self.export_params.statuses.append(value.name)
 
+        # ------------------------------------------------------------------
+        # Export records
+        # ------------------------------------------------------------------
         record_count = 1
+
         for row in range(self.sql_model.rowCount()):
             record = self.sql_model.record(row)
 
             if (
-                record.value(SignageSqlModel.Fields.Type.index) in self.types
-                and record.value(SignageSqlModel.Fields.Status.index) in self.statuses
+                record.value(SignageSqlModel.Fields.Type.index)
+                in self.export_params.types
+                and record.value(SignageSqlModel.Fields.Status.index)
+                in self.export_params.statuses
             ):
                 record_count += 1
+
                 values = list(map(record.value, model_fields))
 
                 # Signage Type
-                values[3] = record.value(SignageSqlModel.Fields.Type.index)
+                type_position = model_fields.index(
+                    SignageSqlModel.Fields.Type.index
+                )
+                values[type_position] = record.value(
+                    SignageSqlModel.Fields.Type.index
+                )
 
                 # Signage Status
-                values[2] = record.value(SignageSqlModel.Fields.Status.index)
+                status_position = model_fields.index(
+                    SignageSqlModel.Fields.Status.index
+                )
+                values[status_position] = record.value(
+                    SignageSqlModel.Fields.Status.index
+                )
 
-                if self.include_publicnote and values[-1] is not None:
-                    values[-1] = html2text(values[-1]).strip()
+                # Public Note
+                if self.export_params.public_note_option:
+                    note_position = model_fields.index(
+                        SignageSqlModel.Fields.PublicNote.index
+                    )
+
+                    if values[note_position] is not None:
+                        values[note_position] = html2text(
+                            values[note_position]
+                        ).strip()
 
                 ws.append(values)
 
+        # ------------------------------------------------------------------
+        # Excel table
+        # ------------------------------------------------------------------
         if record_count == 1:
             record_count = 2
 
-        table = Table(displayName="Table1", ref=f"{xrange}{record_count}")
-        style = TableStyleInfo(name="TableStyleMedium2",
-                               showFirstColumn=False,
-                               showLastColumn=False,
-                               showRowStripes=True,
-                               showColumnStripes=False)
+        from openpyxl.utils import get_column_letter
+
+        last_column = get_column_letter(len(headers))
+
+        table = Table(
+            displayName="Table1",
+            ref=f"A1:{last_column}{record_count}",
+        )
+
+        style = TableStyleInfo(
+            name="TableStyleMedium2",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=False,
+        )
+
         table.tableStyleInfo = style
 
+        # ------------------------------------------------------------------
+        # Column formatting
+        # ------------------------------------------------------------------
+        ws.column_dimensions["A"].width = 18.0
         ws.column_dimensions["B"].width = 80.0
-        ws.column_dimensions["A"].number_format = numbers.FORMAT_TEXT
         ws.column_dimensions["C"].width = 18.0
 
-        # Alignement
-        for cell in ws['A':'A']:
-            cell.alignment = Alignment(horizontal="center")
-        for cell in ws['B': 'B']:
-            cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        ws.column_dimensions["A"].number_format = numbers.FORMAT_TEXT
 
-        if "Note" in headers:
-            ws.column_dimensions["E"].width = 80.0
-            for cell in ws['E': 'E']:
-                cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        # Alignment
+        for cell in ws["A:A"]:
+            cell.alignment = Alignment(horizontal="center")
+
+        for cell in ws["B:B"]:
+            cell.alignment = Alignment(
+                horizontal="left",
+                vertical="top",
+                wrap_text=True,
+            )
+
+        # Note column
+        if self.export_params.public_note_option:
+            note_column = get_column_letter(
+                model_fields.index(SignageSqlModel.Fields.PublicNote.index) + 1
+            )
+
+            ws.column_dimensions[note_column].width = 80.0
+
+            for cell in ws[f"{note_column}:{note_column}"]:
+                cell.alignment = Alignment(
+                    horizontal="left",
+                    vertical="top",
+                    wrap_text=True,
+                )
+
+        # Due date column
+        if self.export_params.due_date_option:
+            due_date_column = get_column_letter(
+                model_fields.index(SignageSqlModel.Fields.DueDate.index) + 1
+            )
+
+            ws.column_dimensions[due_date_column].width = 15.0
+
+            for cell in ws[f"{due_date_column}:{due_date_column}"]:
+                cell.alignment = Alignment(
+                    horizontal="center",
+                    vertical="top",
+                )
 
         ws.add_table(table)
-        wb.save(self.destination)
+
+        wb.save(self.export_params.outfile_path)
 
     def run(self):
         try:
@@ -365,14 +443,11 @@ class DataService:
 
     @staticmethod
     def export2Excel(sql_model: "SignageSqlModel",
-                     types: list,
-                     statuses: list,
-                     destination: str,
-                     include_publicnote: bool,
+                     export_params: SignageExportParam,
                      on_finished: callable):
         
         pool = QtCore.QThreadPool().globalInstance()
-        worker = ExportWorker(sql_model, types, statuses, destination, include_publicnote)
+        worker = ExportWorker(sql_model, export_params)
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(lambda e: logger.error(e))
         pool.start(worker)
@@ -425,6 +500,7 @@ class SignageSqlModel(QSqlRelationalTableModel):
         ParentID: DatabaseField
         Workspace: DatabaseField
         Background: DatabaseField
+        DueDate: DatabaseField
         DocCount: DatabaseField # virtual column
         Progress: DatabaseField # virtual column
 
@@ -472,9 +548,10 @@ class SignageSqlModel(QSqlRelationalTableModel):
         self.Fields.CreationDatetime = DatabaseField('creation_datetime', self.fieldIndex('creation_datetime'), False)
         self.Fields.ModificationDatetime = DatabaseField('modification_datetime', self.fieldIndex('modification_datetime'), False)
         self.Fields.Source = DatabaseField('source', self.fieldIndex('source'), False)
+        self.Fields.Background = DatabaseField('Background', self.fieldIndex('background'), False)
+        self.Fields.DueDate = DatabaseField('Due Date', self.fieldIndex('due_date'), False)
         self.Fields.DocCount = DatabaseField('Doc', self.columnCount() - 2, False)
         self.Fields.Progress = DatabaseField('Progress', self.columnCount() - 1, True)
-        self.Fields.Background = DatabaseField('Background', self.fieldIndex('background'), False)
 
     def _renameHeaders(self):
         for field in self.Fields.fields():
@@ -663,6 +740,12 @@ class SignageModel(TreeModel):
                     result = False
             else:
                 result = self._source_model.setData(sql_index, value, role)
+                if not result:
+                    field_name = self._source_model.record().fieldName(index.column())
+                    logger.error(
+                        f"⚠️ SQL setData failed for column '{field_name}' - idx:{index.column()} "
+                        f"(value={value}): {self._source_model.lastError().text()}"
+                    )
         else:
             result = True
         
@@ -754,6 +837,7 @@ class SignageModel(TreeModel):
         record.setValue(SignageSqlModel.Fields.Workspace.index, signage.workspace_id)
         record.setValue(SignageSqlModel.Fields.CreationDatetime.index, signage.creation_datetime)
         record.setValue(SignageSqlModel.Fields.ModificationDatetime.index, signage.modification_datetime)
+        record.setValue(SignageSqlModel.Fields.DueDate.index, signage.due_date)
 
         if not self._source_model.insertRecord(-1, record):
             logger.error(self._source_model.lastError().text())

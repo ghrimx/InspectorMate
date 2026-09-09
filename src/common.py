@@ -86,6 +86,7 @@ class Signage:
     signage_id: int = None
     parentID: int = None
     workspace_id: int = 0
+    due_date: str = ""
 
     def __post_init__(self):
         if self.creation_datetime == "":
@@ -312,3 +313,12 @@ class SignageOrigin:
 
     def as_str(self):
         return str(asdict(self))
+
+
+@dataclass
+class SignageExportParam:
+    types: list
+    statuses: list
+    outfile_path: str
+    public_note_option: bool
+    due_date_option: bool

@@ -1,7 +1,9 @@
-from my_pyqt_widgets import FitContentTextEdit, MultiCheckableComboBox
+from datetime import date
+
+from my_pyqt_widgets import FitContentTextEdit, MultiCheckableComboBox, DatePickerWidget
 from qt_theme_manager import theme_icon_manager
 
-from common import Signage, SignageStatus, SignageType
+from common import Signage, SignageStatus, SignageType, SignageExportParam
 from database.database import AppDatabase
 from qtpy import QtCore, QtGui, QtWidgets, Slot
 from utilities.settings import get_settings
@@ -18,7 +20,10 @@ class SignageDialog(QtWidgets.QDialog):
         form = QtWidgets.QFormLayout(self)
         self.setLayout(form)
 
-        buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        buttons = (
+            QtWidgets.QDialogButtonBox.StandardButton.Ok
+            | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
 
         self.buttonBox = QtWidgets.QDialogButtonBox(buttons)
         self.buttonBox.accepted.connect(self.accept)
@@ -28,6 +33,8 @@ class SignageDialog(QtWidgets.QDialog):
         item: SignageType
         for key, item in AppDatabase.cache_signage_type.items():
             self.signage_type_combobox.insertItem(key, item.name)
+
+        self.due_date_edit = DatePickerWidget()
 
         self.signage_prefix_lineedit = QtWidgets.QLineEdit()
 
@@ -42,12 +49,9 @@ class SignageDialog(QtWidgets.QDialog):
 
         self.populateOwnerCombobox()
 
-        owner_widget = QtWidgets.QWidget()
-        owner_widget_layout = QtWidgets.QHBoxLayout()
-        owner_widget.setLayout(owner_widget_layout)
-        owner_widget_layout.addWidget(self.owner_combobox)
-        owner_widget_layout.addWidget(self.owner_editbutton)
-        owner_widget_layout.setContentsMargins(0, 0, 0, 0)
+        owner_widget_row = QtWidgets.QHBoxLayout()
+        owner_widget_row.addWidget(self.owner_combobox, stretch=1)
+        owner_widget_row.addWidget(self.owner_editbutton)
 
         self.signage_title_lineedit = FitContentTextEdit()
         self.signage_title_lineedit.setAcceptRichText(False)
@@ -65,27 +69,34 @@ class SignageDialog(QtWidgets.QDialog):
         self.parent_signage_widget.setLayout(hbox)
         hbox.addWidget(QtWidgets.QLabel("Parent Refkey:"))
         hbox.addWidget(self.parent_signage_refkey)
-        hbox.addWidget(QtWidgets.QLabel('Parent ID:'))
+        hbox.addWidget(QtWidgets.QLabel("Parent ID:"))
         hbox.addWidget(self.parent_signage_id)
-        
+
         # --- Layout ---
         form.addWidget(self.parent_signage_widget)
         form.addRow("Type:", self.signage_type_combobox)
-        form.addRow("Owner:", owner_widget)
+        form.addRow("Due date:", self.due_date_edit)
+        form.addRow("Owner:", owner_widget_row)
         form.addRow("Prefix:", self.signage_prefix_lineedit)
         form.addRow("Refkey", self.signage_refkey_lineedit)
         form.addRow("Title", self.signage_title_lineedit)
 
-        spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, 
-                                       QtWidgets.QSizePolicy.Policy.Expanding)
-        
+        spacer = QtWidgets.QSpacerItem(
+            20,
+            40,
+            QtWidgets.QSizePolicy.Policy.Minimum,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
+
         form.addItem(spacer)
         form.addWidget(self.buttonBox)
-        
-        self.shortcut_save = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+S"),
-                                             self,
-                                             self.accept,
-                                             context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        self.shortcut_save = QtGui.QShortcut(
+            QtGui.QKeySequence("Ctrl+S"),
+            self,
+            self.accept,
+            context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut,
+        )
 
         # Connections
         self.signage_type_combobox.activated.connect(self.updateRefkeyField)
@@ -116,17 +127,22 @@ class SignageDialog(QtWidgets.QDialog):
             p = r"^\d+"
         else:
             p = f"^{prefix}"
-        refkey = AppDatabase.fetchSignageLastRefkey(signage_type=signage_type, pattern=p)
+        refkey = AppDatabase.fetchSignageLastRefkey(
+            signage_type=signage_type, pattern=p
+        )
         if refkey == "":
-            refkey = f'{prefix}{0:03d}'
+            refkey = f"{prefix}{0:03d}"
         self.setRefkey(refkey)
 
     def signage(self) -> Signage:
         """Return the new signage from the dialog"""
-        new_signage = Signage(refkey=self.signage_refkey_lineedit.text(),
-                              title=self.signage_title_lineedit.toPlainText(),
-                              owner=self.owner_combobox.currentText(),
-                              type=self.signage_type_combobox.currentIndex())
+        new_signage = Signage(
+            refkey=self.signage_refkey_lineedit.text(),
+            title=self.signage_title_lineedit.toPlainText(),
+            owner=self.owner_combobox.currentText(),
+            type=self.signage_type_combobox.currentIndex(),
+            due_date=self.due_date_edit.date()
+        )
         return new_signage
 
     def accept(self):
@@ -163,9 +179,9 @@ class OwnerDialog(QtWidgets.QDialog):
         vbox = QtWidgets.QVBoxLayout()
         self.setLayout(vbox)
 
-        vbox.addWidget(self.list_widget)        
+        vbox.addWidget(self.list_widget)
         vbox.addWidget(self.owner_name)
-        vbox.addLayout(hbox)        
+        vbox.addLayout(hbox)
 
     def addListItem(self):
         """Add a single item to the list widget."""
@@ -192,7 +208,7 @@ class OwnerDialog(QtWidgets.QDialog):
 
 
 class ExportDialog(QtWidgets.QDialog):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle("Export Signage")
@@ -238,8 +254,15 @@ class ExportDialog(QtWidgets.QDialog):
         # Public note
         self.public_note_checkbox = QtWidgets.QCheckBox("Export Public Note", self)
 
+        # Options
+        self.due_date_checkbox = QtWidgets.QCheckBox("Include Due date", self)
+        self.due_date_checkbox.setChecked(False)
+
         # Standard buttons
-        buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        buttons = (
+            QtWidgets.QDialogButtonBox.StandardButton.Ok
+            | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
 
         self.buttonBox = QtWidgets.QDialogButtonBox(buttons)
         self.buttonBox.accepted.connect(self.accept)
@@ -251,37 +274,49 @@ class ExportDialog(QtWidgets.QDialog):
         form.addRow("Filename", filename_widget)
         form.addRow(self.destination_button, self.destination_lineedit)
         form.addRow("", self.public_note_checkbox)
+        form.addRow("", self.due_date_checkbox)
         form.addWidget(self.buttonBox)
 
         self.updateButtonState()
 
     def updateButtonState(self):
-        if (self.filename.text() != "" 
-            and self.destination_lineedit != "" 
-            and len(self.type_combobox.currentData()) > 0):
-            self.buttonBox.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setEnabled(True)
+        if (
+            self.filename.text() != ""
+            and self.destination_lineedit != ""
+            and len(self.type_combobox.currentData()) > 0
+        ):
+            self.buttonBox.button(
+                QtWidgets.QDialogButtonBox.StandardButton.Ok
+            ).setEnabled(True)
         else:
-            self.buttonBox.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+            self.buttonBox.button(
+                QtWidgets.QDialogButtonBox.StandardButton.Ok
+            ).setEnabled(False)
 
     @Slot()
     def selectFolder(self):
-        folder_path = QtWidgets.QFileDialog.getExistingDirectory(caption='',
-                                                                 directory=AppDatabase.activeWorkspace().rootpath,
-                                                                 options=QtWidgets.QFileDialog.Option.ShowDirsOnly)
+        folder_path = QtWidgets.QFileDialog.getExistingDirectory(
+            caption="",
+            directory=AppDatabase.activeWorkspace().rootpath,
+            options=QtWidgets.QFileDialog.Option.ShowDirsOnly,
+        )
         if folder_path != "":
             self.destination_lineedit.setText(folder_path)
             self.updateButtonState()
 
     def accept(self):
-        self.selected_types = [value.name for value in self.type_combobox.currentData()]
-        self.selected_statuses = [value.name for value in self.status_combobox.currentData()]
-        self.outfile_destination = f"{self.destination_lineedit.text()}/{self.filename.text()}.xlsx"
-        self.include_public_note = self.public_note_checkbox.isChecked()
+        self.export_params = SignageExportParam(
+            [value.name for value in self.type_combobox.currentData()],
+            [value.name for value in self.status_combobox.currentData()],
+            f"{self.destination_lineedit.text()}/{self.filename.text()}.xlsx",
+            self.public_note_checkbox.isChecked(),
+            self.due_date_checkbox.isChecked(),
+        )
         super().accept()
 
 
 class ImportDialog(QtWidgets.QDialog):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         self._files = []
@@ -296,7 +331,10 @@ class ImportDialog(QtWidgets.QDialog):
         self.update_checkbox = QtWidgets.QCheckBox()
         self.update_checkbox.setCheckState(QtCore.Qt.CheckState.Unchecked)
 
-        buttons = (QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        buttons = (
+            QtWidgets.QDialogButtonBox.StandardButton.Ok
+            | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
 
         self.buttonBox = QtWidgets.QDialogButtonBox(buttons)
         self.buttonBox.accepted.connect(self.accept)
@@ -310,18 +348,24 @@ class ImportDialog(QtWidgets.QDialog):
 
     @Slot()
     def selectFiles(self):
-        files = QtWidgets.QFileDialog.getOpenFileNames(caption="Select files",
-                                                       directory=AppDatabase.activeWorkspace().rootpath,
-                                                       filter="*.xls*")
+        files = QtWidgets.QFileDialog.getOpenFileNames(
+            caption="Select files",
+            directory=AppDatabase.activeWorkspace().rootpath,
+            filter="*.xls*",
+        )
         self._files = files[0]
         self.selected_file.setText(f"{len(self._files)} files")
         self.updateButtonState()
 
     def updateButtonState(self):
         if len(self._files) > 0:
-            self.buttonBox.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setEnabled(True)
+            self.buttonBox.button(
+                QtWidgets.QDialogButtonBox.StandardButton.Ok
+            ).setEnabled(True)
         else:
-            self.buttonBox.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+            self.buttonBox.button(
+                QtWidgets.QDialogButtonBox.StandardButton.Ok
+            ).setEnabled(False)
 
     def selectedFiles(self):
         return self._files

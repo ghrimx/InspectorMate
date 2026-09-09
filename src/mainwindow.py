@@ -2,6 +2,7 @@ import logging
 from importlib.metadata import version
 from pathlib import Path
 
+from inspection_plan.widgets import InspectionPlanWidget
 from listinsight import ListinsightWidget
 from listinsight.gui import status_signal as listinsight_status_signal
 from my_pyqt_widgets import (
@@ -17,7 +18,7 @@ from qt_theme_manager import Theme, theme_icon_manager
 from base_models import SummaryModel
 from common import Document, Signage, SignageOrigin
 from database.database import AppDatabase
-from documentviewer.viewerfactory import ViewerFactory, PdfViewer
+from documentviewer.viewerfactory import PdfViewer, ViewerFactory
 from documentviewer.viewermanager import DockInDockWidget
 from documentviewer.viewerwidget import ViewerWidget
 from evidence.model import EvidenceModel
@@ -213,16 +214,32 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         self.listinsight_tab_dock_widget.toggleView(False)
 
-        # Viewer manager
+        # Document Viewer manager
         self.viewer_manager = DockInDockWidget(self)
         self.viewer_manager_cdock = QtAds.CDockWidget("Document Viewer", self)
         self.viewer_manager_cdock.setWidget(self.viewer_manager)
-        self.dock_manager = self.dock_manager.addDockWidget(
+        self.viewer_manager_area = self.dock_manager.addDockWidget(
             QtAds.DockWidgetArea.CenterDockWidgetArea,
             self.viewer_manager_cdock,
             main_dock_area,
         )
         self.viewer_manager_cdock.toggleView(False)
+
+        # Inspection Planner
+        self.planner = InspectionPlanWidget(AppDatabase.activeWorkspace().rootpath)
+        self.planner.setMinimumWidth(1000)
+        self.planner.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Preferred,
+            QtWidgets.QSizePolicy.Policy.Preferred,
+        )
+        self.planner_cdock = QtAds.CDockWidget("Planner")
+        self.planner_cdock.setWidget(self.planner)
+        self.planner_cdock_area = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.CenterDockWidgetArea,
+            self.planner_cdock,
+            main_dock_area,
+        )
+        self.planner_cdock.toggleView(False)
 
         # Menubar
         self.createMenubar()
@@ -388,12 +405,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_menu.addAction(self.notepad_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.listinsight_tab_dock_widget.toggleViewAction())
         self.view_menu.addAction(self.viewer_manager_cdock.toggleViewAction())
+        self.view_menu.addAction(self.planner_cdock.toggleViewAction())
         self.view_menu.addSeparator()
 
         self.action_close_all_viewer_tab = create_action(
             self,
             "close_all_viewer_tab",
-            "Close all document viewer",
+            "Close all doc viewers",
             self.viewer_manager.closeAllTabWidget,
         )
         self.view_menu.addAction(self.action_close_all_viewer_tab)
@@ -815,6 +833,8 @@ class MainWindow(QtWidgets.QMainWindow):
             f"{AppDatabase.activeWorkspace().rootpath}/ListInsight"
         )
         self.viewer_manager.closeAllTabWidget()
+        self.planner.clear()
+        self.planner.set_root_path(AppDatabase.activeWorkspace().rootpath)
 
         status_signal.status_message.emit("Workspace changed!", 5000)
 
