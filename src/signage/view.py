@@ -3,7 +3,7 @@ from ast import literal_eval
 from base64 import b64decode
 from functools import partial
 
-from my_pyqt_widgets import FitContentTextEdit, MultiCheckableComboBox, ReadOnlyLineEdit
+from my_pyqt_widgets import FitContentTextEdit, MultiCheckableComboBox, ReadOnlyLineEdit, DatePickerWidget
 from pyqt6_richtexteditor import RichTextEdit
 from qt_theme_manager import Theme, theme_icon_manager
 
@@ -326,6 +326,7 @@ class SignageTab(BaseTab):
         self.id_label = ReadOnlyLineEdit()
         self.parentid_label = ReadOnlyLineEdit()
         self.creation_date = ReadOnlyLineEdit()
+        self.due_date_edit = DatePickerWidget()
 
         # Private & Public Note
         self.note = RichTextEdit(":memory", ":memory", "")
@@ -353,8 +354,10 @@ class SignageTab(BaseTab):
         formlayout.addRow("Owner", self.owner_lineinput)
         formlayout.addRow("Source", self.source_label)
         formlayout.addRow("Evidence", self.evidence_label)
-        formlayout.addRow("id", self.id_label)
+        formlayout.addRow("ID", self.id_label)
+        formlayout.addRow("ParentID", self.parentid_label)
         formlayout.addRow("Creation date", self.creation_date)
+        formlayout.addRow("Due date", self.due_date_edit)
 
         spacer = QtWidgets.QSpacerItem(
             20,
@@ -389,14 +392,7 @@ class SignageTab(BaseTab):
             self.source_label, SignageSqlModel.Fields.Source.index, b"plainText"
         )
         self.mapper.addMapping(
-            self.evidence_label, SignageSqlModel.Fields.DocCount.index
-        )
-        self.mapper.addMapping(self.id_label, SignageSqlModel.Fields.ID.index)
-        self.mapper.addMapping(
-            self.parentid_label, SignageSqlModel.Fields.ParentID.index
-        )
-        self.mapper.addMapping(
-            self.creation_date, SignageSqlModel.Fields.CreationDatetime.index
+            self.due_date_edit, SignageSqlModel.Fields.DueDate.index, b"isoDate"
         )
         self.mapper.addMapping(self.note, SignageSqlModel.Fields.Note.index)
         self.mapper.addMapping(
@@ -408,6 +404,7 @@ class SignageTab(BaseTab):
         self.refkey_field.editingFinished.connect(
             AppDatabase.update_document_signage_id
         )
+        self.due_date_edit.sigDateSelected.connect(self.mapper.submit)
 
         # --- Dialogs ---
         self.signage_dialog: SignageDialog = None
@@ -538,6 +535,20 @@ class SignageTab(BaseTab):
             slot_func = partial(self.updateOwner, owner)
             action.triggered.connect(slot_func)
 
+    def _refresh_readonly_labels(self, idx: QtCore.QModelIndex) -> None:
+        if not idx.isValid():
+            return
+
+        id_value = idx.sibling(idx.row(), SignageSqlModel.Fields.ID.index).data()
+        parent_id = idx.sibling(idx.row(), SignageSqlModel.Fields.ParentID.index).data()
+        creation_datetime = idx.sibling(idx.row(), SignageSqlModel.Fields.CreationDatetime.index).data()
+        doc_count = idx.sibling(idx.row(), SignageSqlModel.Fields.DocCount.index).data()
+        
+        self.id_label.setText(str(id_value) or "-")
+        self.parentid_label.setText(str(parent_id) or "-")
+        self.creation_date.setText(creation_datetime)
+        self.evidence_label.setText(str(doc_count) or "-")
+
     def onTableSelectionChanged(self, selected: QtCore.QItemSelection, deselected: QtCore.QItemSelection):
         selection_model = self.table.selectionModel()
         selected_rows = selection_model.selectedRows()
@@ -548,6 +559,7 @@ class SignageTab(BaseTab):
             currentIndex = self.proxymodel.mapToSource(proxy_index)
             self.mapper.setRootIndex(currentIndex.parent())
             self.mapper.setCurrentModelIndex(currentIndex)
+            self._refresh_readonly_labels(currentIndex)
 
         self.action_delete_signage.setEnabled(single_row_selected)
         self.action_create_child_signage.setEnabled(single_row_selected)
@@ -903,18 +915,10 @@ class SignageTab(BaseTab):
         if not self.export_dialog.exec():
             return
 
-        selected_types = self.export_dialog.selected_types
-        selected_statuses = self.export_dialog.selected_statuses
-        outfile_destination = self.export_dialog.outfile_destination
-        include_public_note = self.export_dialog.include_public_note
-
         self.startSpinner()
         DataService.export2Excel(
             self.model.rootModel(),
-            selected_types,
-            selected_statuses,
-            outfile_destination,
-            include_public_note,
+            self.export_dialog.export_params,
             self.stopSpinner,
         )
 
