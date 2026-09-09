@@ -15,7 +15,7 @@ class Settings:
     ORG_NAME = "FAMHP"
     ORG_DOMAIN = "famhp.net"
     APP_NAME = "InspectorMate"
-    APP_VERSION = "6.5.0rc.1"
+    APP_VERSION = "6.6.0rc.1"
     APP_AUTHOR = "Debruycker Vincent"
     APP_DATA_PATH: Path = Path(os.getenv("LOCALAPPDATA")).joinpath("Programs/InspectorMate")
     DB_PATH: Path = APP_DATA_PATH.joinpath("inspectormate.sqlite")
