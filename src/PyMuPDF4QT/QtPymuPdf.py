@@ -526,6 +526,43 @@ class RectItem(QtWidgets.QGraphicsRectItem, BaseAnnotation):
         self.setFlags(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
 
+class SelectionHighlightItem(QtWidgets.QGraphicsItem):
+    """Ephemeral, non-persistent visual highlight for a mouse-drag text selection.
+
+    Unlike RectItem, this is never written to the database - it only shows the
+    user what text is currently selected so it can be copied to the clipboard.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._rects: list[QtCore.QRectF] = []
+        self.setZValue(10)
+        self._brush = QtGui.QBrush(QtGui.QColor(0, 120, 215, 90))
+        self._pen = QtGui.QPen(QtCore.Qt.PenStyle.NoPen)
+
+    def setRects(self, rects: list[QtCore.QRectF]):
+        self.prepareGeometryChange()
+        self._rects = rects
+        self.update()
+
+    def clear(self):
+        self.setRects([])
+
+    def boundingRect(self) -> QtCore.QRectF:
+        if not self._rects:
+            return QtCore.QRectF()
+        united = self._rects[0]
+        for r in self._rects[1:]:
+            united = united.united(r)
+        return united
+
+    def paint(self, painter: QtGui.QPainter, option, widget=None):
+        painter.setBrush(self._brush)
+        painter.setPen(self._pen)
+        for r in self._rects:
+            painter.drawRect(r)
+
+
 class LinkBox(QtWidgets.QGraphicsObject):
     sigJumpTo = Signal(int, QtCore.QPointF)
     sigToUri = Signal(str)

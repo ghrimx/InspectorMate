@@ -16,6 +16,7 @@ from PyMuPDF4QT.QtPymuPdf import (
     RectItem,
     SearchItem,
     SearchModel,
+    SelectionHighlightItem,
     TextSelection,
     ZoomSelector,
 )
@@ -68,8 +69,12 @@ class PdfView(QtWidgets.QGraphicsView):
         self.link_boxes = {} # {pno:[RectItems]}
         self._current_graphic_item = None
 
+        # Ad-hoc (non-persistent) text selection by mouse drag
+        self._is_selecting: bool = False
+        self._selected_text: str = ""
+
         self.setMouseTracking(True)
-        self.setDragMode(QtWidgets.QGraphicsView.DragMode.RubberBandDrag)
+        self.setDragMode(QtWidgets.QGraphicsView.DragMode.NoDrag)
     
         self._page_navigator = PageNavigator(parent)
         self._zoom_selector = ZoomSelector(parent)
@@ -84,6 +89,9 @@ class PdfView(QtWidgets.QGraphicsView):
 
         self.page_pixmap_item = self.createPixmapItem()
         self.doc_scene.addItem(self.page_pixmap_item)
+
+        self.selection_highlight = SelectionHighlightItem()
+        self.doc_scene.addItem(self.selection_highlight)
 
         self.setBackgroundBrush(QtGui.QColor(242, 242, 242))
         self.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
@@ -187,6 +195,11 @@ class PdfView(QtWidgets.QGraphicsView):
         """
         page_dlist: pymupdf.DisplayList = self.dlist[pno]
 
+        # A selection made on another page is no longer valid
+        self._is_selecting = False
+        self._selected_text = ""
+        self.selection_highlight.clear()
+
         if not page_dlist :  # create if not yet there
             fitzpage = self.fitzdoc.load_page(pno)
             self.dlist[pno] = fitzpage.get_displaylist()
@@ -216,6 +229,8 @@ class PdfView(QtWidgets.QGraphicsView):
             if isinstance(item, QtWidgets.QGraphicsPixmapItem):
                 continue
             elif isinstance(item, QtWidgets.QGraphicsLineItem):
+                continue
+            elif isinstance(item, SelectionHighlightItem):
                 continue
             elif item.pno == pno:
                 item.setVisible(True)
@@ -303,14 +318,52 @@ class PdfView(QtWidgets.QGraphicsView):
     def getGraphicItems(self) -> dict:
         return self.graphic_items
     
-    def getTextFromSelection(self, pno: int, a0: QtCore.QPointF, b1: QtCore.QPointF) -> TextSelection:
-        """Return TextSelection from selection points"""
+    def getSelectedWords(self, pno: int, a0: QtCore.QPointF, b1: QtCore.QPointF) -> list:
+        """Return the full words (never partial characters) intersected by the a0->b1 drag,
+        in reading order (block, line, word). Both the visual highlight and the copied text
+        are built from this same list so they can never disagree."""
         page: pymupdf.Page = self.fitzdoc.load_page(pno)
         zf = self._zoom_selector.zoomFactor
-        rect = pymupdf.Rect(a0.x() / zf, a0.y() / zf, b1.x() / zf, b1.y() / zf)
+        selection_rect = pymupdf.Rect(a0.x() / zf, a0.y() / zf, b1.x() / zf, b1.y() / zf)
+        selection_rect.normalize()
+
+        words = [
+            w for w in page.get_text("words")
+            if pymupdf.Rect(w[0], w[1], w[2], w[3]).intersects(selection_rect)
+        ]
+        words.sort(key=lambda w: (w[5], w[6], w[7]))  # block_no, line_no, word_no
+        return words
+
+    def getTextFromSelection(self, pno: int, a0: QtCore.QPointF, b1: QtCore.QPointF) -> TextSelection:
+        """Return TextSelection from selection points"""
+        words = self.getSelectedWords(pno, a0, b1)
+
+        lines: list[str] = []
+        current_line_key = None
+        current_line_words: list[str] = []
+        for x0, y0, x1, y1, word, block_no, line_no, word_no in words:
+            line_key = (block_no, line_no)
+            if line_key != current_line_key:
+                if current_line_words:
+                    lines.append(" ".join(current_line_words))
+                current_line_words = []
+                current_line_key = line_key
+            current_line_words.append(word)
+        if current_line_words:
+            lines.append(" ".join(current_line_words))
+
         text_selection = TextSelection()
-        text_selection.text = page.get_textbox(rect)
+        text_selection.text = "\n".join(lines)
         return text_selection
+
+    def getSelectionRects(self, pno: int, a0: QtCore.QPointF, b1: QtCore.QPointF) -> list[QtCore.QRectF]:
+        """Return scene-space rects of the words intersected by the a0->b1 drag, for live highlighting."""
+        zf = self._zoom_selector.zoomFactor
+        words = self.getSelectedWords(pno, a0, b1)
+        return [
+            QtCore.QRectF(x0 * zf, y0 * zf, (x1 - x0) * zf, (y1 - y0) * zf)
+            for x0, y0, x1, y1, *_rest in words
+        ]
     
     @Slot(QtCore.QPointF)
     def scrollTo(self, location: QtCore.QPointF | int):
@@ -332,7 +385,19 @@ class PdfView(QtWidgets.QGraphicsView):
 
     def mousePressEvent(self, event):
         self.a0 = self.mapToScene(event.position().toPoint())
-        self.startMouseInteraction()
+
+        clicked_item = self.itemAt(event.position().toPoint())
+        no_tool_active = self.mouse_interaction.interaction == MouseInteraction.InteractionType.NONE
+        clicked_on_page = clicked_item is None or clicked_item is self.page_pixmap_item
+
+        if event.button() == QtCore.Qt.MouseButton.LeftButton and no_tool_active and clicked_on_page:
+            # Plain text selection (not persisted as an annotation)
+            self._is_selecting = True
+            self._selected_text = ""
+            self.selection_highlight.clear()
+        else:
+            self.startMouseInteraction()
+
         self.update()
         return super().mousePressEvent(event)
     
@@ -343,6 +408,11 @@ class PdfView(QtWidgets.QGraphicsView):
             r = QtCore.QRectF(self.a0, self.mapToScene(event.position().toPoint())).normalized()
             self._current_graphic_item.setRect(r)
             self.update()
+        elif self._is_selecting:
+            b1 = self.mapToScene(event.position().toPoint())
+            rects = self.getSelectionRects(self.pageNavigator().currentPno(), self.a0, b1)
+            self.selection_highlight.setRects(rects)
+            self.update()
         self.sig_mouse_position.emit(self.mapToScene(event.position().toPoint()))
         return super().mouseMoveEvent(event)
     
@@ -352,7 +422,27 @@ class PdfView(QtWidgets.QGraphicsView):
         if self._current_graphic_item is not None:
             self.endMouseInteraction()
             self.update()
+        elif self._is_selecting:
+            self._is_selecting = False
+            text_selection = self.getTextFromSelection(self.pageNavigator().currentPno(), self.a0, self.b1)
+            self._selected_text = text_selection.text
+            if not self._selected_text:
+                # A plain click (no drag) selected nothing - clear the highlight
+                self.selection_highlight.clear()
+            self.update()
         return super().mouseReleaseEvent(event)
+
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
+        """Right-click to copy the current text selection to the clipboard."""
+        if not self._selected_text:
+            return super().contextMenuEvent(event)
+
+        menu = QtWidgets.QMenu(self)
+        copy_action = menu.addAction("Copy")
+        chosen = menu.exec(event.globalPos())
+
+        if chosen == copy_action:
+            QtWidgets.QApplication.clipboard().setText(self._selected_text)
     
     def startMouseInteraction(self):
         if self.mouse_interaction.interaction == MouseInteraction.InteractionType.TEXTSELECTION:
@@ -693,3 +783,4 @@ class PdfViewer(ViewerWidget):
             pass
         else:
             self.page_navigator.jump(p, to)
+
