@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from importlib.metadata import version
 from pathlib import Path
 
@@ -451,6 +452,17 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         self.view_menu.addMenu(self.font_menu)
 
+        # App Style
+        self.app_style_menu = QtWidgets.QMenu("Application Style", self.menubar)
+        APP_STYLE = QtWidgets.QStyleFactory().keys()
+
+        for s in APP_STYLE:
+            slot_func = partial(self.setAppStyle, s)
+            action = self.app_style_menu.addAction(s)
+            action.triggered.connect(slot_func)
+
+        self.view_menu.addMenu(self.app_style_menu)
+
         # Tools Menu
         self.tools_menu = self.menubar.addMenu("Tools")
         self.action_concat_excel = create_action(
@@ -616,6 +628,11 @@ class MainWindow(QtWidgets.QMainWindow):
         font.setPointSizeF(fontsize)
         QtWidgets.QApplication.setFont(font)
         get_settings().set_app_font_size(fontsize)
+
+    @Slot()
+    def setAppStyle(self, style: str|None):
+        QtWidgets.QApplication.setStyle(style)
+        get_settings().set_app_style(style)
 
     @Slot()
     def addRemoveOwner(self):
