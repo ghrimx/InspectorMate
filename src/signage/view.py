@@ -3,7 +3,7 @@ from ast import literal_eval
 from base64 import b64decode
 from functools import partial
 
-from my_pyqt_widgets import FitContentTextEdit, MultiCheckableComboBox, ReadOnlyLineEdit, DatePickerWidget
+from my_pyqt_widgets import FitContentTextEdit, MultiCheckableComboBox, ReadOnlyLineEdit, DatePickerWidget, QToolTipper
 from pyqt6_richtexteditor import RichTextEdit
 from qt_theme_manager import Theme, theme_icon_manager
 
@@ -307,6 +307,8 @@ class SignageTab(BaseTab):
         self.table.setItemDelegateForColumn(
             SignageSqlModel.Fields.Title.index, combo_delegate
         )
+
+        tooltip = QToolTipper(self.table)
 
         # --- Right Pane ---
         self.title_textedit = FitContentTextEdit(False)

@@ -279,6 +279,8 @@ class EvidenceTab(BaseTab):
         if theme_icon_manager.get_theme() == Theme.LIGHT:
             self.table.setStyleSheet(TABLE_STYLE)
 
+        tooltip = QToolTipper(self.table)
+
         # --- Right Pane ---
         self.status = QtWidgets.QComboBox()
         self.status.setModel(self._model.relationModel(4))
